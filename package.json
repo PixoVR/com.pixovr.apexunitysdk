@@ -22,5 +22,12 @@
     "url": "https://github.com/PixoVR/com.pixovr.apexunitysdk.git",
     "type": "git"
   },
-  "type": "library"
+  "type": "library",
+  "samples": [
+    {
+        "displayName": "Apex Demo",
+        "description": "A Demo showing the flow of using the Apex Unity SDK.",
+        "path": "Samples~/DemoApexReporter"
+    }
+  ]
 }
