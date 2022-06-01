@@ -1,0 +1,148 @@
+using System;
+using System.Text.RegularExpressions;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using UnityEngine;
+using PixoVR.Apex.XAPI;
+
+namespace PixoVR.Apex
+{
+    public enum ResponseType
+    {
+        RT_NONE = 0,
+        RT_PING,
+        RT_LOGIN,
+        RT_GET_USER,
+        RT_SESSION_JOINED,
+        RT_SESSION_COMPLETE,
+    }
+
+    
+
+    public class SDK
+    {
+        public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
+        public APIResponse OnAPIResponse;
+
+        public const string TestEnvironmentEndpoint = "https://testmodule.pixovr.com";
+        public const string ProductionEnvironmentEndpoint = "https://module.pixovr.com";
+
+        protected string URL = "";
+        protected HttpClient handlingClient = null;
+
+        public SDK() : this(ProductionEnvironmentEndpoint)
+        {
+        }
+
+        public SDK(string endpointUrl)
+        {
+            handlingClient = new HttpClient();
+            SetEndpoint(endpointUrl);
+        }
+
+        public void SetEndpoint(string endpointUrl)
+        {
+            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
+                    Regex expression = new Regex(Regex.Escape("http"));
+                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
+                }
+                else
+                {
+                    endpointUrl.Insert(0, "https://");
+                }
+            }
+
+            URL = endpointUrl;
+            handlingClient.BaseAddress = new Uri(URL);
+        }
+
+        public async void Ping()
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await handlingClient.GetAsync("/ping");
+            OnAPIResponse.Invoke(ResponseType.RT_PING, response, null);
+        }
+
+        public async void Login(LoginData login)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+
+            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(login));
+            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/login", loginRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonUtility.FromJson<LoginResponseContent>(body);
+            if ((responseContent as LoginResponseContent).HasErrored())
+            {
+                responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
+        }
+
+        public async void GetUserData(string authToken, int userId)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/user/{0}", userId));
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonUtility.FromJson<GetUserResponseContent>(body);
+            GetUserResponseContent userInfo = responseContent as GetUserResponseContent;
+            if ((responseContent as GetUserResponseContent).HasErrored())
+            {
+                responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+        }
+
+        public async void JoinSession(string authToken, JoinSessionData joinData)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpContent joinSessionRequestContent = new StringContent(joinData.ToJSON());
+            joinSessionRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/event", joinSessionRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            if ((responseContent as FailureResponse).HasErrored())
+            {
+                responseContent = null;
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_SESSION_JOINED, response, responseContent);
+        }
+
+        public async void CompleteSession(string authToken, CompleteSessionData completionData)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpContent completeSessionRequestContent = new StringContent(completionData.ToJSON());
+            completeSessionRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/event", completeSessionRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            if ((responseContent as FailureResponse).HasErrored())
+            {
+                responseContent = null;
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_SESSION_COMPLETE, response, responseContent);
+        }
+    }
+}

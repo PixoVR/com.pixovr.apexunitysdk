@@ -1,0 +1,27 @@
+{
+  "name": "com.pixovr.apexunitysdk",
+  "version": "1.0.0",
+  "displayName": "Apex Unity SDK",
+  "description": "Unity Plugin for the implementation of the Apex API.",
+  "unity": "2020.1",
+  "unityRelease": "0b5",
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "keywords": [
+    "PixoVR",
+    "Apex",
+    "SDK"
+  ],
+  "author": {
+    "name": "PixoVR",
+    "email": "help@pixovr.com",
+    "url": "https://www.pixovr.com"
+  },
+  "repository": {
+    "url": "https://github.cds.internal.unity3d.com/unity/com.unity.ide.visualstudio.git",
+    "type": "git",
+    "revision": "f1e8af5df9e2507088a8622d173c9a7d5a03a882"
+  },
+  "type": "library"
+}

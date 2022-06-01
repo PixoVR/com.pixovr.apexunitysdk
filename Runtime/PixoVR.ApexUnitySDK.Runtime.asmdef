@@ -1,0 +1,17 @@
+{
+    "name": "PixoVR.ApexUnitySDK",
+    "rootNamespace": "PixoVR.Apex",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [
+		"Newtonsoft.Json.dll",
+		"TinCan.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
