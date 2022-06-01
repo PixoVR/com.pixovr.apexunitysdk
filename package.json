@@ -19,9 +19,8 @@
     "url": "https://www.pixovr.com"
   },
   "repository": {
-    "url": "https://github.cds.internal.unity3d.com/unity/com.unity.ide.visualstudio.git",
-    "type": "git",
-    "revision": "f1e8af5df9e2507088a8622d173c9a7d5a03a882"
+    "url": "https://github.com/PixoVR/com.pixovr.apexunitysdk.git",
+    "type": "git"
   },
   "type": "library"
 }

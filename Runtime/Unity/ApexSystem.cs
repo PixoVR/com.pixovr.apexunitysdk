@@ -11,7 +11,7 @@ namespace PixoVR.Apex
 
     public class ApexSystem : ApexSingleton<ApexSystem>
     {
-        public string ServerIP = SDK.TestEnvironmentEndpoint;
+        public string ServerIP = SDK.ProductionEnvironmentEndpoint;
         public int ModuleID = 0;
         public string ModuleName = "Generic";
         public string ModuleVersion = "0.00.00";
