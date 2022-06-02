@@ -113,6 +113,7 @@ namespace PixoVR.Apex
         {
             if (currentActiveLogin == null)
             {
+                Debug.LogError("[ApexSystem] Cannot join session with no active login.");
                 return false;
             }
 
@@ -172,6 +173,13 @@ namespace PixoVR.Apex
         {
             if (currentActiveLogin == null)
             {
+                Debug.LogError("[ApexSystem] Cannot complete session with no active login.");
+                return false;
+            }
+
+            if (sessionInProgress == true)
+            {
+                Debug.LogError("[ApexSystem] No session in progress to complete.");
                 return false;
             }
 
