@@ -19,6 +19,10 @@ The ApexSystem is a singleton, all functions are wrapped in static functions to 
 If you want access to the response events in code, you will need to access the ApexSystem Instance.
   (e.g.) ApexSystem.Instance.OnPingSuccess.AddListener(YourFunctionHere);
 
+# Requirements for building with the Apex Plugin
+
+The projects **Api Compatbility Level** needs to be **.NET 4.x** or newer.
+
 ## Important ApexSystem variables
 
 - ServerIP : This is the Apex server IP address that you want to send the information to. By default it will point to our production environment.

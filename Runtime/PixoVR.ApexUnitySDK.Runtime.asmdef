@@ -7,7 +7,6 @@
     "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [
-		"Newtonsoft.Json.dll",
 		"TinCan.dll"
     ],
     "autoReferenced": true,

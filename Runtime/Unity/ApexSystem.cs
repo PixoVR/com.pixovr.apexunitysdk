@@ -177,7 +177,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if (sessionInProgress == true)
+            if (sessionInProgress == false)
             {
                 Debug.LogError("[ApexSystem] No session in progress to complete.");
                 return false;
@@ -287,6 +287,8 @@ namespace PixoVR.Apex
                         }
                         else
                         {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
                             OnLoginFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
@@ -299,6 +301,8 @@ namespace PixoVR.Apex
                         }
                         else
                         {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
                             OnGetUserFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
@@ -312,6 +316,8 @@ namespace PixoVR.Apex
                         }
                         else
                         {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message));
                             currentSessionID = Guid.Empty;
                             sessionInProgress = false;
                             OnJoinSessionFailed.Invoke(responseData as FailureResponse);
@@ -328,6 +334,8 @@ namespace PixoVR.Apex
                         }
                         else
                         {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message));
                             OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
