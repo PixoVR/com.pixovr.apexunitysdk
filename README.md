@@ -68,3 +68,14 @@ Returns false if there is no logged in user or current session.
 **OnCompleteSessionSuccess** is called when the session was completed successfully.
 **OnCompleteSessionFailed** is called when the session was not started, unable to be completed otherwise or when the server is not able to be reached.
 
+### SendSessionEvent(eventName : string, eventStatement : TinCan.Statement) : Boolean
+
+Sends an event with xAPI statement data.
+Returns false if there is no logged in user, current session or *eventStatement* is null.
+
+TinCan.Statement is a data structure compatible with the current xAPI standard.
+The actor information set within *eventStatement* will be set within **SendSessionEvent**.
+The context information for *registration*, *revision* and *platform* within *eventStatement* will be set within **SendSessionEvent**.
+
+**OnSendEventSuccess** is called when the event has been sent successfully.
+**OnSendEventFailed** is called when the session was not started, contains invalid information or when the server is not able to be reached.

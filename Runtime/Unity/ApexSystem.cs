@@ -11,11 +11,46 @@ namespace PixoVR.Apex
 
     public class ApexSystem : ApexSingleton<ApexSystem>
     {
-        public string ServerIP = SDK.ProductionEnvironmentEndpoint;
-        public int ModuleID = 0;
-        public string ModuleName = "Generic";
-        public string ModuleVersion = "0.00.00";
-        public string ScenarioID = "Generic";
+        public static string ServerIP
+        {
+            get { return Instance.serverIP; }
+            set { }
+        }
+
+        public static int ModuleID
+        {
+            get { return Instance.moduleID; }
+            set { }
+        }
+
+        public static string ModuleName
+        {
+            get { return Instance.moduleName; }
+            set { }
+        }
+
+        public static string ModuleVersion
+        {
+            get { return Instance.moduleVersion; }
+            set { }
+        }
+
+        public static string ScenarioID
+        {
+            get { return Instance.scenarioID; }
+            set { }
+        }
+
+        [SerializeField]
+        protected string serverIP = SDK.ProductionEnvironmentEndpoint;
+        [SerializeField]
+        protected int moduleID = 0;
+        [SerializeField]
+        protected string moduleName = "Generic";
+        [SerializeField]
+        protected string moduleVersion = "0.00.00";
+        [SerializeField]
+        protected string scenarioID = "Generic";
         
         protected string deviceID;
         protected string deviceModel;
@@ -36,10 +71,12 @@ namespace PixoVR.Apex
         public OnApexFailureEvent OnJoinSessionFailed = new OnApexFailureEvent();
         public OnHttpResponseEvent OnCompleteSessionSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnCompleteSessionFailed = new OnApexFailureEvent();
+        public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
+        public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
         private void Awake()
         {
-            apexSDK = new SDK(ServerIP);
+            apexSDK = new SDK(serverIP);
             apexSDK.OnAPIResponse += OnAPIResponse;
 
             DontDestroyOnLoad(gameObject);
@@ -78,6 +115,11 @@ namespace PixoVR.Apex
             return Instance._CompleteSession(currentSessionData);
         }
 
+        public static bool SendSessionEvent(string eventName, Statement eventStatement)
+        {
+            return Instance._SendSessionEvent(eventName, eventStatement);
+        }
+
         public static bool GetCurrentUser()
         {
             return GetUser();
@@ -109,7 +151,7 @@ namespace PixoVR.Apex
             return _Login(new LoginData(username, password));
         }
 
-        protected bool _JoinSession(string scenarioID = null)
+        protected bool _JoinSession(string newScenarioID = null)
         {
             if (currentActiveLogin == null)
             {
@@ -117,9 +159,9 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if(scenarioID != null)
+            if(newScenarioID != null)
             {
-                ScenarioID = scenarioID;
+                scenarioID = newScenarioID;
             }
 
             if(sessionInProgress == true)
@@ -141,14 +183,14 @@ namespace PixoVR.Apex
             sessionVerb.display.Add("en","Joined Session");
 
             Activity sessionActivity = new Activity();
-            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", ModuleID, ScenarioID);
+            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", moduleID, scenarioID);
 
             Context sessionContext = new Context();
             sessionContext.registration = currentSessionID;
-            sessionContext.revision = ModuleVersion;
+            sessionContext.revision = moduleVersion;
             sessionContext.platform = deviceModel;
 
-            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, ModuleID);
+            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, moduleID);
             sessionContext.extensions = new Extensions(ApexUtils.ConvertStringToJObject(extensionString));
 
             sessionStatement.actor = sessionActor;
@@ -159,12 +201,75 @@ namespace PixoVR.Apex
             JoinSessionData sessionData = new JoinSessionData();
             sessionData.DeviceId = deviceID;
             sessionData.IpAddress = clientIP;
-            sessionData.ModuleId = ModuleID;
+            sessionData.ModuleId = moduleID;
             sessionData.Uuid = currentSessionID.ToString();
             sessionData.EventType = ApexEventTypes.PIXOVR_SESSION_JOINED;
             sessionData.JsonData = sessionStatement;
 
             apexSDK.JoinSession(currentActiveLogin.Token, sessionData);
+
+            return true;
+        }
+
+        protected bool _SendSessionEvent(string eventName, Statement eventStatement)
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] Cannot send a session event with no active login.");
+                return false;
+            }
+
+            if (sessionInProgress == false)
+            {
+                Debug.LogError("[ApexSystem] No session in progress to send event for.");
+                return false;
+            }
+
+            if(eventStatement == null)
+            {
+                Debug.LogError("[ApexSystem] No event data to send.");
+                return false;
+            }
+
+            if(eventStatement.actor != null)
+            {
+                Debug.LogWarning("[ApexSystem] Actor data should not be filled out.");
+            }
+
+            eventStatement.actor = new Agent();
+            eventStatement.actor.mbox = currentActiveLogin.Email;
+
+            if(eventStatement.verb == null)
+            {
+                eventStatement.verb = new Verb();
+                eventStatement.verb.id = ApexVerbs.SESSION_EVENT;
+                eventStatement.verb.display = new LanguageMap();
+                eventStatement.verb.display.Add("en", "Session Event");
+            }
+
+            if (eventStatement.context == null)
+            {
+                eventStatement.context = new Context();
+            }
+
+            eventStatement.context.registration = currentSessionID;
+            eventStatement.context.revision = ModuleVersion;
+            eventStatement.context.platform = deviceModel;
+
+            SessionEventData sessionEvent = new SessionEventData();
+            sessionEvent.DeviceId = deviceID;
+            sessionEvent.ModuleId = ModuleID;
+            sessionEvent.Uuid = currentSessionID.ToString();
+            if(eventName != null && eventName.Length > 0)
+            {
+                sessionEvent.EventType = eventName;
+            }
+            else
+            {
+                sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
+            }
+
+            apexSDK.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
 
             return true;
         }
@@ -195,16 +300,16 @@ namespace PixoVR.Apex
 
             // Create the session activity
             Activity sessionActivity = new Activity();
-            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", ModuleID, ScenarioID);
+            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", moduleID, scenarioID);
 
             // Create our context
             Context sessionContext = new Context();
             sessionContext.registration = currentSessionID;
-            sessionContext.revision = ModuleVersion;
+            sessionContext.revision = moduleVersion;
             sessionContext.platform = deviceModel;
 
             // Build an extension for the context
-            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, ModuleID);
+            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, moduleID);
             sessionContext.extensions = new Extensions(ApexUtils.ConvertStringToJObject(extensionString));
 
             // Create our results
@@ -229,7 +334,7 @@ namespace PixoVR.Apex
 
             CompleteSessionData sessionData = new CompleteSessionData();
             sessionData.DeviceId = deviceID;
-            sessionData.ModuleId = ModuleID;
+            sessionData.ModuleId = moduleID;
             sessionData.Uuid = currentSessionID.ToString();
             sessionData.EventType = ApexEventTypes.PIXOVR_SESSION_COMPLETE;
             sessionData.JsonData = sessionStatement;
@@ -337,6 +442,21 @@ namespace PixoVR.Apex
                             FailureResponse failureData = responseData as FailureResponse;
                             Debug.Log(string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message));
                             OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_SESSION_EVENT:
+                    {
+                        if (success)
+                        {
+                            Debug.Log("[ApexSystem] Session event sent.");
+                            OnSendEventSuccess.Invoke(message);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message));
+                            OnSendEventFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
                     }

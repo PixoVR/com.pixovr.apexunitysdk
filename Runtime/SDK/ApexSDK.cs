@@ -15,6 +15,7 @@ namespace PixoVR.Apex
         RT_GET_USER,
         RT_SESSION_JOINED,
         RT_SESSION_COMPLETE,
+        RT_SESSION_EVENT
     }
 
     
@@ -143,6 +144,26 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_SESSION_COMPLETE, response, responseContent);
+        }
+
+        public async void SendSessionEvent(string authToken, SessionEventData sessionEvent)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpContent sessionEventRequestContent = new StringContent(sessionEvent.ToJSON());
+            sessionEventRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/event", sessionEventRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            if ((responseContent as FailureResponse).HasErrored())
+            {
+                responseContent = null;
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_SESSION_EVENT, response, responseContent);
         }
     }
 }

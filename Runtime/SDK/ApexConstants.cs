@@ -6,6 +6,7 @@ namespace PixoVR.Apex
     public class ApexVerbs
     {
         public static readonly Uri JOINED_SESSION = new Uri("https://pixovr.com/xapi/verbs/joined_session");
+        public static readonly Uri SESSION_EVENT = new Uri("https://pixovr.com/xapi/verbs/session_event");
         public static readonly Uri COMPLETED_SESSION = new Uri("https://pixovr.com/xapi/verbs/completed_session");
 
         protected ApexVerbs() { }
@@ -14,6 +15,7 @@ namespace PixoVR.Apex
     public class ApexEventTypes
     {
         public const string PIXOVR_SESSION_JOINED = "PIXOVR_SESSION_JOINED";
+        public const string PIXOVR_SESSION_EVENT = "PIXOVR_SESSION_EVENT";
         public const string PIXOVR_SESSION_COMPLETE = "PIXOVR_SESSION_COMPLETE";
 
         protected ApexEventTypes() { }

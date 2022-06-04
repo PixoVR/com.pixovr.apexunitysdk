@@ -185,12 +185,6 @@ namespace PixoVR.Apex.XAPI
                 result.Add("deviceId", DeviceId);
             }
 
-            //result.Add("score", Score);
-            //result.Add("scoreMin", ScoreMin);
-            //result.Add("scoreMax", ScoreMax);
-            //result.Add("scoreScaled", ScoreScaled);
-            //result.Add("sessionDuration", SessionDuration);
-
             // Update the time stamp
             JsonData.Stamp();
 
@@ -205,6 +199,85 @@ namespace PixoVR.Apex.XAPI
                 jsonDataJObject.Add("lessonStatus", (JsonData.result != null) ? (JsonData.result.completion == true ? "passed" : "failed") : "failed");
                 jsonDataJObject.Add("moduleName", ModuleId.ToString());
 
+                result.Add("jsonData", jsonDataJObject);
+            }
+
+            return result;
+        }
+    }
+
+    public class SessionEventData : JsonModel
+    {
+        public string Uuid;
+        public string EventType;
+        public int ModuleId;
+        public string DeviceId;
+        public Statement JsonData;
+
+        public SessionEventData()
+        {
+            JsonData = new Statement();
+        }
+
+        public SessionEventData(Statement sessionData)
+        {
+            JsonData = sessionData;
+        }
+
+        public SessionEventData(StringOfJSON json) : this(json.toJObject()) { }
+
+        public SessionEventData(JObject jobj)
+        {
+            if (jobj["uuid"] != null)
+            {
+                Uuid = jobj.Value<string>("uuid");
+            }
+            if (jobj["eventType"] != null)
+            {
+                EventType = jobj.Value<string>("eventType");
+            }
+            if (jobj["moduleId"] != null)
+            {
+                ModuleId = jobj.Value<int>("moduleId");
+            }
+            if (jobj["deviceId"] != null)
+            {
+                DeviceId = jobj.Value<string>("deviceId");
+            }
+
+            if (jobj["jsonData"] != null)
+            {
+                JsonData = new Statement(jobj.Value<JObject>("jsonData"));
+            }
+        }
+
+        public override JObject ToJObject(TCAPIVersion version)
+        {
+            JObject result = new JObject();
+
+            if (Uuid != null)
+            {
+                result.Add("uuid", Uuid);
+            }
+
+            if (EventType != null)
+            {
+                result.Add("eventType", EventType);
+            }
+
+            result.Add("moduleId", ModuleId);
+
+            if (DeviceId != null)
+            {
+                result.Add("deviceId", DeviceId);
+            }
+
+            // Update the time stamp
+            JsonData.Stamp();
+
+            if (JsonData != null)
+            {
+                JObject jsonDataJObject = JsonData.ToJObject(version);
                 result.Add("jsonData", jsonDataJObject);
             }
 

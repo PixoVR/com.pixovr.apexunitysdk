@@ -11,3 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Updates the Newtonsoft.Json dependency to the latest version and rebuilt TinCan.Net along side it.
 ### Make changes to the Sample to fix UI orientation.
 ### Added new changes to the README to reflect info for building with various versions of Unity.
+
+## [1.0.2] - 2022-06-04
+### Added **SendSessionEvent** to allow sending events during a session.
+### Updated documentation for **SendSessionEvent**.
+### Added static properties to ApexSystem.
