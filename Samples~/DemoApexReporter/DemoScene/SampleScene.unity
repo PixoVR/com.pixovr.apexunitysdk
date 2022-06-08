@@ -7333,9 +7333,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e17ef0e07b7db34c9aea6ffca41e822, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverIP: https://testmodule.pixovr.com/
+  serverIP: https://module.pixovr.com/
   moduleID: 34
-  moduleName: DemoSDK
+  moduleName: TAPP
   moduleVersion: 1.00.00
   scenarioID: Generic
   OnPingSuccess:

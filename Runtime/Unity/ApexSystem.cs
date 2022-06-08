@@ -1,9 +1,9 @@
 using System;
 using System.Net.Http;
 using UnityEngine;
+using UnityEngine.XR;
 using PixoVR.Apex.Events;
 using PixoVR.Apex.XAPI;
-using PixoVR.Apex.Utils;
 using TinCan;
 
 namespace PixoVR.Apex
@@ -54,6 +54,7 @@ namespace PixoVR.Apex
         
         protected string deviceID;
         protected string deviceModel;
+        protected string platform;
         protected string clientIP;
         protected Guid currentSessionID;
         protected bool sessionInProgress;
@@ -87,6 +88,7 @@ namespace PixoVR.Apex
         {
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
+            platform = XRSettings.loadedDeviceName.Length > 0 ? XRSettings.loadedDeviceName : Application.platform.ToString();
             clientIP = Utils.ApexUtils.GetLocalIP();
         }
 
@@ -105,14 +107,14 @@ namespace PixoVR.Apex
             return Instance._Login(username, password);
         }
 
-        public static bool JoinSession(string scenarioID = null)
+        public static bool JoinSession(string scenarioID = null, Extension contextExtension = null)
         {
-            return Instance._JoinSession(scenarioID);
+            return Instance._JoinSession(scenarioID, contextExtension);
         }
 
-        public static bool CompleteSession(SessionData currentSessionData)
+        public static bool CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null)
         {
-            return Instance._CompleteSession(currentSessionData);
+            return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
         }
 
         public static bool SendSessionEvent(string eventName, Statement eventStatement)
@@ -151,7 +153,7 @@ namespace PixoVR.Apex
             return _Login(new LoginData(username, password));
         }
 
-        protected bool _JoinSession(string newScenarioID = null)
+        protected bool _JoinSession(string newScenarioID = null, Extension contextExtension = null)
         {
             if (currentActiveLogin == null)
             {
@@ -188,10 +190,22 @@ namespace PixoVR.Apex
             Context sessionContext = new Context();
             sessionContext.registration = currentSessionID;
             sessionContext.revision = moduleVersion;
-            sessionContext.platform = deviceModel;
+            sessionContext.platform = platform;
 
-            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, moduleID);
-            sessionContext.extensions = new Extensions(ApexUtils.ConvertStringToJObject(extensionString));
+            Extension currentContextExtension;
+            if (contextExtension != null)
+            {
+                currentContextExtension = contextExtension;
+            }
+            else
+            {
+                currentContextExtension = new Extension();
+            }
+
+            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
+            currentContextExtension.Add("deviceId", deviceID);
+            currentContextExtension.Add("deviceModel", deviceModel);
+            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
 
             sessionStatement.actor = sessionActor;
             sessionStatement.verb = sessionVerb;
@@ -254,7 +268,11 @@ namespace PixoVR.Apex
 
             eventStatement.context.registration = currentSessionID;
             eventStatement.context.revision = ModuleVersion;
-            eventStatement.context.platform = deviceModel;
+            eventStatement.context.platform = platform;
+
+            Extension contextExtension = new Extension();
+            contextExtension.Add("deviceId", deviceID);
+            contextExtension.Add("deviceModel", deviceModel);
 
             SessionEventData sessionEvent = new SessionEventData();
             sessionEvent.DeviceId = deviceID;
@@ -268,13 +286,14 @@ namespace PixoVR.Apex
             {
                 sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             }
+            sessionEvent.JsonData = eventStatement;
 
             apexSDK.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
 
             return true;
         }
 
-        protected bool _CompleteSession(SessionData currentSessionData)
+        protected bool _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension)
         {
             if (currentActiveLogin == null)
             {
@@ -306,11 +325,23 @@ namespace PixoVR.Apex
             Context sessionContext = new Context();
             sessionContext.registration = currentSessionID;
             sessionContext.revision = moduleVersion;
-            sessionContext.platform = deviceModel;
+            sessionContext.platform = platform;
 
             // Build an extension for the context
-            string extensionString = string.Format("{{\"{0}\":{1}}}", ApexExtensionStrings.MODULE_ID, moduleID);
-            sessionContext.extensions = new Extensions(ApexUtils.ConvertStringToJObject(extensionString));
+            Extension currentContextExtension;
+            if (contextExtension != null)
+            {
+                currentContextExtension = contextExtension;
+            }
+            else
+            {
+                currentContextExtension = new Extension();
+            }
+
+            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
+            currentContextExtension.Add("deviceId", deviceID);
+            currentContextExtension.Add("deviceModel", deviceModel);
+            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
 
             // Create our results
             Result sessionResult = new Result();
@@ -323,6 +354,10 @@ namespace PixoVR.Apex
             sessionResult.score.raw = currentSessionData.Score;
             sessionResult.score.scaled = currentSessionData.ScaledScore;
             sessionResult.duration = TimeSpan.FromSeconds(currentSessionData.Duration);
+            if(resultExtension != null)
+            {
+                sessionResult.extensions = new Extensions(resultExtension.ToJObject());
+            }
 
             // Create our statement and add the pieces
             Statement sessionStatement = new Statement();

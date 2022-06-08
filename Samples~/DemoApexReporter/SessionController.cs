@@ -71,7 +71,10 @@ public class SessionController : MonoBehaviour
 
     public void JoinSession()
     {
-        ApexSystem.JoinSession();
+        Extension contextExtension = new Extension();
+        contextExtension.Add("https://apexurldemo.com/xapi/extension/extraContextExtension", "This is a test!");
+        contextExtension.AddSimple("demoExtension", "APEX");
+        ApexSystem.JoinSession(contextExtension: contextExtension);
     }
 
     public void CompleteSession()
@@ -81,7 +84,11 @@ public class SessionController : MonoBehaviour
         float min = (float)System.Convert.ToDouble(MinScoreInput.text);
         float max = (float)System.Convert.ToDouble(MaxScoreInput.text);
         int duration = System.Convert.ToInt32(DurationInput.text);
-        ApexSystem.CompleteSession(new SessionData(raw, scaled, min, max, duration, CompleteToggle.isOn, SuccessToggle.isOn));
+
+        Extension resultExtension = new Extension();
+        resultExtension.Add("https://apexurldemo.com/xapi/extension/scoreAverage", "99.99");
+        resultExtension.AddSimple("expectedScorePrediction", "100");
+        ApexSystem.CompleteSession(new SessionData(raw, scaled, min, max, duration, CompleteToggle.isOn, SuccessToggle.isOn), resultExtension: resultExtension);
     }
 
     public void SendSessionEvent()

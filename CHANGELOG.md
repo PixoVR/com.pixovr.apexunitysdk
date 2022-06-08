@@ -16,3 +16,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added **SendSessionEvent** to allow sending events during a session.
 ### Updated documentation for **SendSessionEvent**.
 ### Added static properties to ApexSystem.
+
+## [1.0.3] - 2022-06-07
+### Created Extension which simplifies adding extension data for xAPI.
+### Added Context Extension parameter to **JoinSession**.
+### Added Result and Context Extension parameters to **CompleteSession**.
+### Added the missing Statement to **SendSessionEvent**.
+### Changed the platform variable to reflect the actual platform.
+### Added deviceId and deviceModel to any event within the statement context.

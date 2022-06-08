@@ -1,9 +1,49 @@
 using Newtonsoft.Json.Linq;
 using TinCan;
 using TinCan.Json;
+using System;
+using System.Collections.Generic;
 
 namespace PixoVR.Apex.XAPI
 {
+    public class Extension : JsonModel
+    {
+        public Dictionary<Uri, string> Data;
+
+        public Extension()
+        {
+            Data = new Dictionary<Uri, string>();
+        }
+
+        public void Add(Uri key, string value)
+        {
+            Data.Add(key, value);
+        }
+
+        public void Add(string key, string value)
+        {
+            Add(new Uri(key), value);
+        }
+
+        public void AddSimple(string key, string value)
+        {
+            Uri uriKey = new Uri(string.Format("{0}/{1}", "https://pixovr.com/xapi/extension", key));
+            Add(uriKey, value);
+        }
+
+        public override JObject ToJObject(TCAPIVersion version)
+        {
+            JObject result = new JObject();
+
+            foreach(KeyValuePair<Uri, string> pair in Data)
+            {
+                result.Add(pair.Key.ToString(), pair.Value);
+            }
+
+            return result;
+        }
+    }
+
     public class JoinSessionData : JsonModel
     {
         public string Uuid;

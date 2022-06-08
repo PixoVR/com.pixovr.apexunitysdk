@@ -1,12 +1,14 @@
 # com.pixovr.apexunitysdk
 Unity Plugin for the implementation of the Apex API
 
+Sample provided to show Apex Unity SDK use examples.
+
 # Installing the Unity Package
 To install the Apex Unity SDK, open Window > Package Manager.
 
-Click the '+' in the top left corner and select 'Add package from git URL...'
+Click the '+' in the top left corner and select 'Add package from disk...'
 
-Copy and paste git@github.com:PixoVR/com.pixovr.apexunitysdk.git into the input box and press the 'Add' button.
+Navigate to where you've extracted the downloaded zip file and select package.json.
 
 Now you should be able to see the package in the Package Manager, where you can install it into your project.
 
@@ -50,9 +52,10 @@ Sends the users information to the Apex Server to login. Returns false if the pa
 **OnLoginSuccess** is called when the users information is valid.
 **OnLoginFailed** is called when the users information is not valid or when the server is not able to be reached.
 
-### JoinSession(scenarioID : string) : Boolean
+### JoinSession(scenarioID : string, contextExtension : Extension) : Boolean
 
 Joins a user to a session for a given scenario within the module.
+Adds the given context extensions to the xAPI Statement context if it's not null.
 Returns false if there is no logged in user.
 
 Will throw an error if there is already a session in progress that hasn't been ended.
@@ -60,9 +63,11 @@ Will throw an error if there is already a session in progress that hasn't been e
 **OnJoinSessionSuccess** is called when the user was able to join the session successfully.
 **OnJoinSessionFailed** is called when the user was not able to join the session or when the server is not able to be reached. Ensure the user has access to the given module.
 
-### CompleteSession(currentSessionData : SessionData) : Boolean
+### CompleteSession(currentSessionData : SessionData, contextExtension : Extension, resultExtension : Extension) : Boolean
 
 Completes the current session.
+Adds the given context extensions to the xAPI Statement context if it's not null.
+Adds the given result extensions to the xAPI Statement result if it's not null.
 Returns false if there is no logged in user or current session.
 
 **OnCompleteSessionSuccess** is called when the session was completed successfully.
