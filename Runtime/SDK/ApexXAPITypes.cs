@@ -22,13 +22,29 @@ namespace PixoVR.Apex.XAPI
 
         public void Add(string key, string value)
         {
-            Add(new Uri(key), value);
+            try
+            {
+                Uri keyUri = new Uri(key);
+                Add(keyUri, value);
+            }
+            catch(UriFormatException e)
+            {
+                UnityEngine.Debug.LogError(e);
+            }
         }
 
         public void AddSimple(string key, string value)
         {
-            Uri uriKey = new Uri(string.Format("{0}/{1}", "https://pixovr.com/xapi/extension", key));
-            Add(uriKey, value);
+            try
+            {
+                string url = string.Format("{0}{1}", "https://pixovr.com/xapi/extension/", key);
+                Uri uriKey = new Uri(url);
+                Add(uriKey, value);
+            }
+            catch (UriFormatException e)
+            {
+                UnityEngine.Debug.LogError(e);
+            }
         }
 
         public override JObject ToJObject(TCAPIVersion version)

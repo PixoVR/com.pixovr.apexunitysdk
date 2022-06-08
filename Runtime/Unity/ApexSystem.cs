@@ -203,8 +203,8 @@ namespace PixoVR.Apex
             }
 
             currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
-            currentContextExtension.Add("deviceId", deviceID);
-            currentContextExtension.Add("deviceModel", deviceModel);
+            currentContextExtension.AddSimple("device_id", deviceID);
+            currentContextExtension.AddSimple("device_model", deviceModel);
             sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
 
             sessionStatement.actor = sessionActor;
@@ -271,8 +271,8 @@ namespace PixoVR.Apex
             eventStatement.context.platform = platform;
 
             Extension contextExtension = new Extension();
-            contextExtension.Add("deviceId", deviceID);
-            contextExtension.Add("deviceModel", deviceModel);
+            contextExtension.AddSimple("device_id", deviceID);
+            contextExtension.AddSimple("device_model", deviceModel);
 
             SessionEventData sessionEvent = new SessionEventData();
             sessionEvent.DeviceId = deviceID;
@@ -339,8 +339,8 @@ namespace PixoVR.Apex
             }
 
             currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
-            currentContextExtension.Add("deviceId", deviceID);
-            currentContextExtension.Add("deviceModel", deviceModel);
+            currentContextExtension.AddSimple("device_id", deviceID);
+            currentContextExtension.AddSimple("device_model", deviceModel);
             sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
 
             // Create our results

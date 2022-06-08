@@ -112,7 +112,6 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            Debug.Log(joinData.ToJSON());
             HttpContent joinSessionRequestContent = new StringContent(joinData.ToJSON());
             joinSessionRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
 

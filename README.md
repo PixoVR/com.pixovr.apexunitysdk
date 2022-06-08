@@ -21,6 +21,13 @@ The ApexSystem is a singleton, all functions are wrapped in static functions to 
 If you want access to the response events in code, you will need to access the ApexSystem Instance.
   (e.g.) ApexSystem.Instance.OnPingSuccess.AddListener(YourFunctionHere);
 
+# Understanding xAPI and TinCan.NET
+
+Data sent to Apex is formatted using the xAPI Standard. The Unity Apex SDK Plugin utilizes TinCan.NET to ensure all data is xAPI Compliant.
+
+To understand how TinCan.NET is used, visit the documentation [here](https://rusticisoftware.github.io/TinCan.NET/).
+To get a better understanding of the xAPI Standard, visit the xAPI Spec [here](https://github.com/adlnet/xAPI-Spec).
+
 # Requirements for building with the Apex Plugin
 
 The projects **Api Compatbility Level** needs to be **.NET 4.x** or newer.

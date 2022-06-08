@@ -24,3 +24,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added the missing Statement to **SendSessionEvent**.
 ### Changed the platform variable to reflect the actual platform.
 ### Added deviceId and deviceModel to any event within the statement context.
+
+## [1.0.4] - 2022-06-08
+### Exception catching for Extension.
+### Fixed incorrect IRIs within **JoinSession**, **SendEvent** and **CompleteSession**.
+### Fixed incorrect IRIs within the Sample provided.
+### Added documentation to point to xAPI spec and TinCan.NET documentation.

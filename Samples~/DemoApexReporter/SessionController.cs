@@ -1,4 +1,5 @@
 using PixoVR.Apex;
+using PixoVR.Apex.XAPI;
 using System;
 using System.Net.Http;
 using UnityEngine;
@@ -72,8 +73,9 @@ public class SessionController : MonoBehaviour
     public void JoinSession()
     {
         Extension contextExtension = new Extension();
-        contextExtension.Add("https://apexurldemo.com/xapi/extension/extraContextExtension", "This is a test!");
-        contextExtension.AddSimple("demoExtension", "APEX");
+        //contextExtension.Add(new Uri("https://apexurldemo.com/xapi/extension/extra_context_extension"), "This is a test!");
+        contextExtension.Add("https://apexurldemo.com/xapi/extension/extra_context_extension", "This is a test!");
+        contextExtension.AddSimple("demo_extension", "APEX");
         ApexSystem.JoinSession(contextExtension: contextExtension);
     }
 
@@ -86,8 +88,8 @@ public class SessionController : MonoBehaviour
         int duration = System.Convert.ToInt32(DurationInput.text);
 
         Extension resultExtension = new Extension();
-        resultExtension.Add("https://apexurldemo.com/xapi/extension/scoreAverage", "99.99");
-        resultExtension.AddSimple("expectedScorePrediction", "100");
+        resultExtension.Add("https://apexurldemo.com/xapi/extension/score_average", "99.99");
+        resultExtension.AddSimple("expected_score_prediction", "100");
         ApexSystem.CompleteSession(new SessionData(raw, scaled, min, max, duration, CompleteToggle.isOn, SuccessToggle.isOn), resultExtension: resultExtension);
     }
 
