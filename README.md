@@ -62,6 +62,7 @@ Sends the users information to the Apex Server to login. Returns false if the pa
 ### JoinSession(scenarioID : string, contextExtension : Extension) : Boolean
 
 Joins a user to a session for a given scenario within the module.
+Auto-generates an xAPI statement and sends it to Apex.
 Adds the given context extensions to the xAPI Statement context if it's not null.
 Returns false if there is no logged in user.
 
@@ -73,6 +74,7 @@ Will throw an error if there is already a session in progress that hasn't been e
 ### CompleteSession(currentSessionData : SessionData, contextExtension : Extension, resultExtension : Extension) : Boolean
 
 Completes the current session.
+Auto-generates an xAPI statement and sends it to Apex
 Adds the given context extensions to the xAPI Statement context if it's not null.
 Adds the given result extensions to the xAPI Statement result if it's not null.
 Returns false if there is no logged in user or current session.
@@ -82,6 +84,7 @@ Returns false if there is no logged in user or current session.
 
 ### SendSessionEvent(eventName : string, eventStatement : TinCan.Statement) : Boolean
 
+Constructs an xAPI statement from provided session data
 Sends an event with xAPI statement data.
 Returns false if there is no logged in user, current session or *eventStatement* is null.
 
