@@ -97,16 +97,15 @@ public class SessionController : MonoBehaviour
     {
         TinCan.Statement eventStatement = new TinCan.Statement();
         eventStatement.verb = new TinCan.Verb();
-        string eventName = EventNameInput.text;
-        string url = "https://pixovr.com/xapi/verbs/" + eventName;
+        string url = "https://pixovr.com/xapi/verbs/clicked";
         url = url.Replace(' ', '_').ToLower();
         eventStatement.verb.id = new Uri(url);
         eventStatement.verb.display = new TinCan.LanguageMap();
-        eventStatement.verb.display.Add("en", eventName);
+        eventStatement.verb.display.Add("en", "clicked");
 
         TinCan.Activity activity = new TinCan.Activity();
-        activity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", ApexSystem.ModuleID, eventName.Replace(" ", ""));
+        activity.id = string.Format("https://pixovr.com/xapi/objects/{0}/sessionEventButton", ApexSystem.ModuleID);
         eventStatement.target = activity;
-        ApexSystem.SendSessionEvent(eventName, eventStatement);
+        ApexSystem.SendSessionEvent("x",eventStatement);
     }
 }

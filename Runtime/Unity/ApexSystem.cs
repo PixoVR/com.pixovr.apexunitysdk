@@ -117,9 +117,9 @@ namespace PixoVR.Apex
             return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
         }
 
-        public static bool SendSessionEvent(string eventName, Statement eventStatement)
+        public static bool SendSessionEvent(Statement eventStatement)
         {
-            return Instance._SendSessionEvent(eventName, eventStatement);
+            return Instance._SendSessionEvent(eventStatement);
         }
 
         public static bool GetCurrentUser()
@@ -225,7 +225,7 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _SendSessionEvent(string eventName, Statement eventStatement)
+        protected bool _SendSessionEvent(Statement eventStatement)
         {
             if (currentActiveLogin == null)
             {
@@ -278,14 +278,7 @@ namespace PixoVR.Apex
             sessionEvent.DeviceId = deviceID;
             sessionEvent.ModuleId = ModuleID;
             sessionEvent.Uuid = currentSessionID.ToString();
-            if(eventName != null && eventName.Length > 0)
-            {
-                sessionEvent.EventType = eventName;
-            }
-            else
-            {
-                sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
-            }
+            sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
             apexSDK.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
