@@ -270,7 +270,15 @@ namespace PixoVR.Apex
             eventStatement.context.revision = ModuleVersion;
             eventStatement.context.platform = platform;
 
-            Extension contextExtension = new Extension();
+            Extension contextExtension;
+            if (eventStatement.context.extensions != null)
+            {
+                contextExtension = new Extension(eventStatement.context.extensions.ToJObject());
+            }
+            else
+            {
+                contextExtension = new Extension();
+            }
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
 

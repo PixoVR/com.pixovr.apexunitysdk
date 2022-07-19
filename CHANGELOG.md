@@ -30,3 +30,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed incorrect IRIs within **JoinSession**, **SendEvent** and **CompleteSession**.
 ### Fixed incorrect IRIs within the Sample provided.
 ### Added documentation to point to xAPI spec and TinCan.NET documentation.
+
+## [1.0.5] - 2022-07-19
+### Removed custom event name being passed into the SendSessionEvent function.
+### Added support to create an Extension from a jobject.
+### Merge any existing extensions from the SendSessionEvent context.
