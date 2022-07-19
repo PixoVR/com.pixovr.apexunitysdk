@@ -117,9 +117,9 @@ namespace PixoVR.Apex
             return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
         }
 
-        public static bool SendSessionEvent(string eventName, Statement eventStatement)
+        public static bool SendSessionEvent(Statement eventStatement)
         {
-            return Instance._SendSessionEvent(eventName, eventStatement);
+            return Instance._SendSessionEvent(eventStatement);
         }
 
         public static bool GetCurrentUser()
@@ -225,7 +225,7 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _SendSessionEvent(string eventName, Statement eventStatement)
+        protected bool _SendSessionEvent(Statement eventStatement)
         {
             if (currentActiveLogin == null)
             {
@@ -250,16 +250,36 @@ namespace PixoVR.Apex
                 Debug.LogWarning("[ApexSystem] Actor data should not be filled out.");
             }
 
-            eventStatement.actor = new Agent();
-            eventStatement.actor.mbox = currentActiveLogin.Email;
-
             if(eventStatement.verb == null)
             {
-                eventStatement.verb = new Verb();
-                eventStatement.verb.id = ApexVerbs.SESSION_EVENT;
-                eventStatement.verb.display = new LanguageMap();
-                eventStatement.verb.display.Add("en", "Session Event");
+                Debug.LogError("[ApexSystem] Verb missing from eventStatement.");
+                return false;
             }
+
+            if(eventStatement.verb.id == null)
+            {
+                Debug.LogError("[ApexSystem] verb.id missing from eventStatement.");
+                return false;
+            }
+
+            if(eventStatement.target == null)
+            {
+                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
+                return false;
+            }
+
+            /*
+            Not sure how to access this
+            if(eventStatement.target.id == null)
+            {
+                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
+                return false;
+            }
+            */
+
+
+            eventStatement.actor = new Agent();
+            eventStatement.actor.mbox = currentActiveLogin.Email;
 
             if (eventStatement.context == null)
             {
@@ -286,14 +306,7 @@ namespace PixoVR.Apex
             sessionEvent.DeviceId = deviceID;
             sessionEvent.ModuleId = ModuleID;
             sessionEvent.Uuid = currentSessionID.ToString();
-            if(eventName != null && eventName.Length > 0)
-            {
-                sessionEvent.EventType = eventName;
-            }
-            else
-            {
-                sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
-            }
+            sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
             apexSDK.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
