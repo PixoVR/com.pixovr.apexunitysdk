@@ -268,16 +268,6 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            /*
-            Not sure how to access this
-            if(eventStatement.target.id == null)
-            {
-                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
-                return false;
-            }
-            */
-
-
             eventStatement.actor = new Agent();
             eventStatement.actor.mbox = currentActiveLogin.Email;
 
