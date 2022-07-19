@@ -250,16 +250,36 @@ namespace PixoVR.Apex
                 Debug.LogWarning("[ApexSystem] Actor data should not be filled out.");
             }
 
-            eventStatement.actor = new Agent();
-            eventStatement.actor.mbox = currentActiveLogin.Email;
-
             if(eventStatement.verb == null)
             {
-                eventStatement.verb = new Verb();
-                eventStatement.verb.id = ApexVerbs.SESSION_EVENT;
-                eventStatement.verb.display = new LanguageMap();
-                eventStatement.verb.display.Add("en", "Session Event");
+                Debug.LogError("[ApexSystem] Verb missing from eventStatement.");
+                return false;
             }
+
+            if(eventStatement.verb.id == null)
+            {
+                Debug.LogError("[ApexSystem] verb.id missing from eventStatement.");
+                return false;
+            }
+
+            if(eventStatement.target == null)
+            {
+                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
+                return false;
+            }
+
+            /*
+            Not sure how to access this
+            if(eventStatement.target.id == null)
+            {
+                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
+                return false;
+            }
+            */
+
+
+            eventStatement.actor = new Agent();
+            eventStatement.actor.mbox = currentActiveLogin.Email;
 
             if (eventStatement.context == null)
             {
