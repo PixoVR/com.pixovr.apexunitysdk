@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 namespace PixoVR.Apex.XAPI
 {
+    // (MGruber) ToDo - Remove this extension class entirely to replace with jobjects
     public class Extension : JsonModel
     {
         public Dictionary<Uri, string> Data;
@@ -13,6 +14,14 @@ namespace PixoVR.Apex.XAPI
         public Extension()
         {
             Data = new Dictionary<Uri, string>();
+        }
+
+        public Extension(JObject jobj)
+        {
+            foreach (var item in jobj)
+            {
+                Data.Add(new Uri(item.Key), item.Value.ToString());
+            }
         }
 
         public void Add(Uri key, string value)

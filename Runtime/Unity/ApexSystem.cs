@@ -268,16 +268,6 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            /*
-            Not sure how to access this
-            if(eventStatement.target.id == null)
-            {
-                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
-                return false;
-            }
-            */
-
-
             eventStatement.actor = new Agent();
             eventStatement.actor.mbox = currentActiveLogin.Email;
 
@@ -290,7 +280,15 @@ namespace PixoVR.Apex
             eventStatement.context.revision = ModuleVersion;
             eventStatement.context.platform = platform;
 
-            Extension contextExtension = new Extension();
+            Extension contextExtension;
+            if (eventStatement.context.extensions != null)
+            {
+                contextExtension = new Extension(eventStatement.context.extensions.ToJObject());
+            }
+            else
+            {
+                contextExtension = new Extension();
+            }
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
 
