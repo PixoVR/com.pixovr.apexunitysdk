@@ -94,19 +94,64 @@ public class SessionController : MonoBehaviour
     }
 
     public void SendSessionEvent()
+
     {
+        /*
+        Full Report
+        *
+        TinCan.Statement eventStatement = new TinCan.Statement();
+        // Verb
+        eventStatement.verb = new TinCan.Verb();
+        eventStatement.verb.id = new Uri("https://pixovr.com/xapi/verbs/reported");
+        eventStatement.verb.display = new TinCan.LanguageMap();
+        eventStatement.verb.display.Add("en","Reported");
+        eventStatement.verb.display.Add("es","Reportado");
+
+        //Object
+        //Note: Activity is one of four ObjectTypes, but the one that 99% of statements on
+        //Apex should use.
+        //Note the TinCan API calls Objects "Targets"
+        TinCan.Activity eventActivity = new TinCan.Activity();
+        eventActivity.id = "https://pixovr.com/xapi/currentmodule/exampleObject";
+        eventStatement.target = eventActivity;
+
+        //Result
+        eventStatement.result = new TinCan.Result();
+        eventStatement.result.completion = true; //did they complete the event
+        eventStatement.result.success = true; //did they get a passing score or otherwise succeed at the event
+        eventStatement.result.duration = TimeSpan.FromSeconds(15);//how long did they spend on the event
+        eventStatement.result.response = "answer"; //how they answered a question, or otherwise responded
+        eventStatement.result.score = new TinCan.Score();
+        eventStatement.result.score.max = 100;
+        eventStatement.result.score.min = 0;
+        eventStatement.result.score.raw = 80;
+        eventStatement.result.score.scaled = 0.8;
+
+        //Context
+        eventStatement.context = new TinCan.Context(); 
+        Extension contextExtension = new Extension();
+        contextExtension.Add("https://www.pixovr.com/xapi/extensions/iri_extension","value");
+        contextExtension.AddSimple("simple_key", "value");
+        eventStatement.context.extensions = new TinCan.Extensions(contextExtension.ToJObject());
+
+        ApexSystem.SendSessionEvent(eventStatement);
+
+        */
+
+        /*
+        Minimal Report
+        */
+
+
         TinCan.Statement eventStatement = new TinCan.Statement();
         eventStatement.verb = new TinCan.Verb();
-        string eventName = EventNameInput.text;
-        string url = "https://pixovr.com/xapi/verbs/" + eventName;
-        url = url.Replace(' ', '_').ToLower();
-        eventStatement.verb.id = new Uri(url);
-        eventStatement.verb.display = new TinCan.LanguageMap();
-        eventStatement.verb.display.Add("en", eventName);
+        eventStatement.verb.id = new Uri("https://pixovr.com/xapi/verbs/exampleVerb");
 
-        TinCan.Activity activity = new TinCan.Activity();
-        activity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", ApexSystem.ModuleID, eventName.Replace(" ", ""));
-        eventStatement.target = activity;
-        ApexSystem.SendSessionEvent(eventName, eventStatement);
+        //the target is equivalent to the object in the xAPI specificiation
+        TinCan.Activity eventActivity = new TinCan.Activity();
+        eventActivity.id = "https://pixovr.com/xapi/exampleProject/objects/exampleObject";
+        eventStatement.target = eventActivity; 
+        ApexSystem.SendSessionEvent(eventStatement);
+        
     }
 }
