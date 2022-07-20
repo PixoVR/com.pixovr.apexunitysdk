@@ -18,6 +18,7 @@ namespace PixoVR.Apex.XAPI
 
         public Extension(JObject jobj)
         {
+            Data = new Dictionary<Uri, string>();
             foreach (var item in jobj)
             {
                 Data.Add(new Uri(item.Key), item.Value.ToString());
