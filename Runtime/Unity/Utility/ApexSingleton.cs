@@ -28,7 +28,11 @@ namespace PixoVR.Apex
 
                         if(existingInstances.Length <= 0)
                         {
-                            Debug.LogError("[ApexSingleton] No instances of '{0}' found. Returning null.");
+                            GameObject singleton = new GameObject();
+                            instance = singleton.AddComponent<T>();
+                            instance.name = "Singleton_" + typeof(T).ToString();
+
+                            DontDestroyOnLoad(instance);
                             return instance;
                         }
 
@@ -42,11 +46,8 @@ namespace PixoVR.Apex
 
                         if (instance == null)
                         {
-                            GameObject singleton = new GameObject();
-                            instance = singleton.AddComponent<T>();
-                            instance.name = "Singleton_" + typeof(T).ToString();
-
-                            DontDestroyOnLoad(instance);
+                            Debug.LogAssertion("[ApexSingleton] An instance was found and is still null.");
+                            return null;
                         }
                     }
 

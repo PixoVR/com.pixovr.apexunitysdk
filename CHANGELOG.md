@@ -35,3 +35,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed custom event name being passed into the SendSessionEvent function.
 ### Added support to create an Extension from a jobject.
 ### Merge any existing extensions from the SendSessionEvent context.
+
+## [1.0.6] - 2022-11-28
+### Adds error checking to ensure an instance is created if there is not an existing instance.
