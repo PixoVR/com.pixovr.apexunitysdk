@@ -25,6 +25,13 @@ namespace PixoVR.Apex
                     if (instance == null)
                     {
                         Object[] existingInstances = FindObjectsOfType(typeof(T));
+
+                        if(existingInstances.Length <= 0)
+                        {
+                            Debug.LogError("[ApexSingleton] No instances of '{0}' found. Returning null.");
+                            return instance;
+                        }
+
                         instance = existingInstances[0] as T;
 
                         if (existingInstances.Length > 1)
