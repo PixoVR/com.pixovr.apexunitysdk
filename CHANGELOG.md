@@ -38,3 +38,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.0.6] - 2022-11-28
 ### Adds error checking to ensure an instance is created if there is not an existing instance.
+
+## [1.0.7] - 2023-02-17
+### Determine LessonStatus is passed or failed based on the reported result success instead of result completion.

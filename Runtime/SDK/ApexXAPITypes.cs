@@ -262,7 +262,7 @@ namespace PixoVR.Apex.XAPI
                 jsonDataJObject.Add("scoreMax", ScoreMax);
                 jsonDataJObject.Add("scoreScaled", ScoreScaled);
                 jsonDataJObject.Add("sessionDuration", SessionDuration);
-                jsonDataJObject.Add("lessonStatus", (JsonData.result != null) ? (JsonData.result.completion == true ? "passed" : "failed") : "failed");
+                jsonDataJObject.Add("lessonStatus", (JsonData.result != null) ? (JsonData.result?.success == true ? "passed" : "failed") : "failed");
                 jsonDataJObject.Add("moduleName", ModuleId.ToString());
 
                 result.Add("jsonData", jsonDataJObject);
