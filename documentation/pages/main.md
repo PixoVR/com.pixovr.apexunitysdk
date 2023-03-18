@@ -11,8 +11,11 @@ Log in to the %Apex Server here: $(APEX_SERVER_URL)
 
 Stuff about ApexSDK here, and some subpages:
 
- - \subpage getting_started
+ - \subpage getting_started "Getting Started"
  - \subpage login_and_authentication
  - \subpage blueprints
-
+ - \subpage \ref LICENSE "License"
+ - \subpage [Change Log](\ref CHANGELOG)
+ - \subpage [Notice](NOTICE)
+ - \subpage [Third Party Licenses](Third Party Notices.md)
 

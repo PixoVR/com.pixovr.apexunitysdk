@@ -6,6 +6,7 @@ cd $DIR/doxygen
 source ../env.sh
 
 rm -rf ../html
+cp -rfv ../../*md ../pages
 
 doxygen doxyfile
 
