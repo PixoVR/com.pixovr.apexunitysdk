@@ -1,4 +1,4 @@
-\mainpage
+\mainpage The SDK
 
 ApexSDK for Unity
 
