@@ -1,6 +1,6 @@
-\page getting_started Getting Started
+# Getting Started
 
-Unity Plugin for the implementation of the Apex API
+# Unity Plugin for the implementation of the Apex API
 
 Sample provided to show Apex Unity SDK use examples.
 

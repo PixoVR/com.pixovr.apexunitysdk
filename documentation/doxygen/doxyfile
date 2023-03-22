@@ -1,4 +1,4 @@
-# Doxyfile 1.8.20
+# Doxyfile 1.9.7
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project.
@@ -44,7 +44,7 @@ PROJECT_NUMBER         =
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          =
+PROJECT_BRIEF          = $(PROJECT_BRIEF)
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55
@@ -186,7 +186,7 @@ STRIP_FROM_INC_PATH    =
 # 
 # The default value is: NO.
 
-SHORT_NAMES            = YES
+SHORT_NAMES            = NO
 
 # If the JAVADOC_AUTOBRIEF tag is set to YES then doxygen will interpret the
 # first line (until the first dot) of a Javadoc-style comment as the brief
@@ -325,8 +325,8 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      = js=Javascript \
-                         css=xml
+EXTENSION_MAPPING     = js=Javascript \
+			css=xml
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -469,7 +469,7 @@ LOOKUP_CACHE_SIZE      = 0
 # DOT_NUM_THREADS setting.
 # Minimum value: 0, maximum value: 32, default value: 1.
 
-NUM_PROC_THREADS       = 1
+NUM_PROC_THREADS       = 0
 
 #---------------------------------------------------------------------------
 # Build related configuration options
@@ -593,6 +593,10 @@ HIDE_SCOPE_NAMES       = NO
 # The default value is: NO.
 
 HIDE_COMPOUND_REFERENCE= NO
+
+# show header file include at head of class definition
+
+SHOW_HEADERFILE = YES
 
 # If the SHOW_INCLUDE_FILES tag is set to YES then doxygen will put a list of
 # the files that are included by a file in the documentation of that file.
@@ -813,6 +817,11 @@ WARN_IF_DOC_ERROR      = YES
 
 WARN_NO_PARAMDOC       = NO
 
+# warn about undocumented enums
+
+WARN_IF_UNDOC_ENUM_VAL	= YES
+
+
 # If the WARN_AS_ERROR tag is set to YES then doxygen will immediately stop when
 # a warning is encountered.
 # The default value is: NO.
@@ -831,7 +840,7 @@ WARN_FORMAT            = "$file:$line: $text"
 
 # The WARN_LOGFILE tag can be used to specify a file to which warning and error
 # messages should be written. If left blank the output is written to standard
-# error (stderr).
+# error (stderr). Use - for stdout
 
 WARN_LOGFILE           =
 
@@ -1021,7 +1030,8 @@ INPUT_FILTER           = ./scripts/unity_filter.py
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by doxygen.
 
-FILTER_PATTERNS        = *.js=./scripts/javascriptFilter.bash
+FILTER_PATTERNS       = *.js=./scripts/javascriptFilter.bash \
+			*.md=./scripts/markdownFilter.bash
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -1043,7 +1053,8 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = "../pages/main.md"
+#USE_MDFILE_AS_MAINPAGE = "../pages/main.md"
+USE_MDFILE_AS_MAINPAGE = $(MAIN_PAGE)
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing
@@ -1236,7 +1247,9 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = html/custom.css
+#HTML_EXTRA_STYLESHEET  = html/custom.css
+HTML_EXTRA_STYLESHEET  = html/style.css
+
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1246,7 +1259,8 @@ HTML_EXTRA_STYLESHEET  = html/custom.css
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = html/custom.js
+#HTML_EXTRA_FILES       = html/custom.js
+HTML_EXTRA_FILES	= html/headermenu.js
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to
@@ -1534,6 +1548,8 @@ DISABLE_INDEX          = NO
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
 GENERATE_TREEVIEW      = YES
+
+FULL_SIDEBAR		= YES
 
 # The ENUM_VALUES_PER_LINE tag can be used to set the number of enum values that
 # doxygen will group on one line in the generated HTML documentation.
@@ -2323,6 +2339,9 @@ DOT_NUM_THREADS        = 0
 # This tag requires that the tag HAVE_DOT is set to YES.
 
 #DOT_FONTNAME           = Helvetica
+DOT_COMMON_ATTR		= "fontname=Helvetica,fontsize=10"
+DOT_EDGE_ATTR		= "labelfontname=Helvetica,labelfontsize=10"
+DOT_NODE_ATTR		= "shape=box,height=0.2,width=0.4"
 
 # The DOT_FONTSIZE tag can be used to set the size (in points) of the font of
 # dot graphs.
@@ -2382,6 +2401,9 @@ UML_LOOK               = NO
 # This tag requires that the tag HAVE_DOT is set to YES.
 
 UML_LIMIT_NUM_FIELDS   = 10
+
+#DOT_UML_DETAILS		= YES
+#DOT_WRAP_THRESHOLD	= 17
 
 # If the TEMPLATE_RELATIONS tag is set to YES then the inheritance and
 # collaboration graphs will show the relations between templates and their
@@ -2448,6 +2470,7 @@ GRAPHICAL_HIERARCHY    = YES
 # This tag requires that the tag HAVE_DOT is set to YES.
 
 DIRECTORY_GRAPH        = YES
+DIR_GRAPH_MAX_DEPTH	= 1
 
 # The DOT_IMAGE_FORMAT tag can be used to set the image format of the images
 # generated by dot. For an explanation of the image formats see the section
@@ -2578,4 +2601,7 @@ GENERATE_LEGEND        = YES
 # This tag requires that the tag HAVE_DOT is set to YES.
 
 DOT_CLEANUP            = YES
+
+#MSCGEN_TOOL		=
+#MSCFILE_DIRS		=
 

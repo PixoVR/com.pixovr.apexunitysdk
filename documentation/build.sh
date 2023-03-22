@@ -6,11 +6,12 @@ cd $DIR/doxygen
 source ../env.sh
 
 rm -rf ../html
-cp -rfv ../../*md ../pages
 
 doxygen doxyfile
 
 cp -rv images ../html/images
+mv ../html/images/favicon/* ../html/
+rmdir ../html/images/favicon
 
 cd ../
 

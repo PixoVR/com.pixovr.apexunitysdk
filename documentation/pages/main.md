@@ -1,21 +1,18 @@
-
 \mainpage
 
 ApexSDK for Unity
 
-This is a Unity plugin, supporting Unity version 202X
+This is a Unity plugin which implements the %Apex API, supporting **Unity 2020.1**
 
-It communicates to the %Apex Server using REST https JSON requests.
+Communication to the %Apex Server uses REST https JSON requests which follow the xAPI Standard.
 
-Log in to the %Apex Server here: $(APEX_SERVER_URL)
+ - Github Repo: $(PROJECT_REPO)
+ - %Apex Server: $(APEX_SERVER_URL)
+ - xAPI Spec: https://github.com/adlnet/xAPI-Spec
 
-Stuff about ApexSDK here, and some subpages:
+Some subpages:
 
  - \subpage getting_started "Getting Started"
- - \subpage login_and_authentication
- - \subpage blueprints
- - \subpage \ref LICENSE "License"
- - \subpage [Change Log](\ref CHANGELOG)
- - \subpage [Notice](NOTICE)
- - \subpage [Third Party Licenses](Third Party Notices.md)
+ - \subpage login_auth
+ - \subpage components
 
