@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export PROJECT_NAME='ApexSDK - Unity'
+export PROJECT_VERSION=`git tag | tail -n 1`
 export PROJECT_BRIEF='Documentation for the C# Library'
 export PROJECT_LOGO='images/defaultIcon.png'
 export PROJECT_REPO='https://github.com/PixoVR/com.pixovr.apexunitysdk'

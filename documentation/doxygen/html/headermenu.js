@@ -1,9 +1,15 @@
 
+//yeah, a global variable.  Sorry.
+var headerShiftKey = false;
+
 function loadDocMenu()
 {
 	var menu = $("#projectswitcher");
+	menu.on("mousedown",checkShift);
+	//$(document).on("keydown keyup",checkShift);
+	//menu.on("keydown keyup",checkShift);
 	menu.change(openDocPage);
-	menu.attr("title","Choose a different documentation page.\n\nHold shift to open in a new tab.");
+	menu.attr("title","Choose a different documentation page.\nHold shift to open in a new tab.");
 
 	var url = "/menu.json";
 
@@ -56,10 +62,16 @@ function buildDocMenuError(xhr,status,errorThrown)
 	buildDocMenu(items,status)
 }
 
+function checkShift(evt)
+{
+	console.log("shift: "+evt.shiftKey);
+	headerShiftKey = evt.shiftKey;
+}
+
 function openDocPage(evt)
 {
 	//console.log(arguments);
-	var shift = evt.shiftKey;
+
 	var menu = $(this);
 	var url = menu.val();
 
@@ -69,10 +81,12 @@ function openDocPage(evt)
 	menu.val( menu.data("selected") );
 
 	console.log("will load: "+url);
-	if (shift)
+	if (headerShiftKey)
 		window.open(url,'_blank');
 	else
 		window.open(url,'_self');
+
+	headerShiftKey = false;
 }
 
 //load items when document is ready.

@@ -4,13 +4,14 @@ FROM	nginx AS builder
 MAINTAINER Chris Healer "chris.healer@pixovr.com"
 
 RUN	apt-get update && \
-	apt-get install -y wget tar graphviz python3
+	apt-get install -y graphviz python3
 
 WORKDIR	/build
 
 COPY	. .
 
 RUN	cp documentation/doxygen/doxygen-build-1.9.7/linux/doxygen /usr/local/bin/doxygen && \
+	chmod 777 /usr/local/bin/doxygen && \
 	doxygen -v
 
 RUN	chmod 755 ./documentation/doxygen/scripts/* && \
