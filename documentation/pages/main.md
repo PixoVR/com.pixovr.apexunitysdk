@@ -1,6 +1,4 @@
-\mainpage The SDK
-
-ApexSDK for Unity
+\mainpage The Unity SDK
 
 This is a Unity plugin which implements the %Apex API, supporting **Unity 2020.1**
 

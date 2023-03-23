@@ -5,7 +5,10 @@ function loadDocMenu()
 	menu.change(openDocPage);
 	menu.attr("title","Choose a different documentation page.\n\nHold shift to open in a new tab.");
 
-	var url = "../../../../../documentation/documentation/html/menu.json";
+	var url = "/menu.json";
+
+	if (!window.location.host.includes("pixovr"))
+		url = "../../../../../documentation/documentation/html/menu.json";
 
 	$.ajax({
 		dataType: "json",
@@ -20,16 +23,8 @@ function buildDocMenu(items,status,xhr)
 {
 	var menu = $("#projectswitcher");
 	var title = document.title;
-	var mainurl = "/";
-	mainurl = "../../../../documentation/html";	//dev url
 
 	menu.empty();
-
-	if (status==="success")
-	{
-		//menu.append("<option value=''>Choose...</option>");
-		menu.append("<option value='"+mainurl+"'>Main Menu</option>");
-	}
 
 	//console.log(items);
 	items.forEach( option => {
