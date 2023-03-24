@@ -64,7 +64,7 @@ function buildDocMenuError(xhr,status,errorThrown)
 
 function checkShift(evt)
 {
-	console.log("shift: "+evt.shiftKey);
+	//console.log("shift: "+evt.shiftKey);
 	headerShiftKey = evt.shiftKey;
 }
 
@@ -80,7 +80,7 @@ function openDocPage(evt)
 
 	menu.val( menu.data("selected") );
 
-	console.log("will load: "+url);
+	//console.log("will load: "+url);
 	if (headerShiftKey)
 		window.open(url,'_blank');
 	else
