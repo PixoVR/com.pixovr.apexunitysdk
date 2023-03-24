@@ -3,7 +3,7 @@
 export PROJECT_NAME='ApexSDK - Unity'
 export PROJECT_VERSION=`git tag | tail -n 1`
 export PROJECT_BRIEF='Documentation for the C# Library'
-export PROJECT_LOGO='doxygen-custom/defaultIcon.png'
+export PROJECT_LOGO='../doxygen/doxygen-custom/defaultIcon.png'
 export PROJECT_REPO='https://github.com/PixoVR/com.pixovr.apexunitysdk'
 export PROJECT_URL='/ApexSDK-Unity'
 export DEV_PROJECT_URL='../../../../Unity/com.pixovr.apexunitysdk/documentation/html/index.html'
