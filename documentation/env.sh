@@ -4,11 +4,11 @@ export PROJECT_NAME='ApexSDK - Unity'
 export PROJECT_VERSION=`git tag | tail -n 1`
 export PROJECT_BRIEF='Documentation for the Unity C# Library'
 #export PROJECT_BRIEF='Documentation for the C# Library'
-export PROJECT_LOGO='doxygen-custom/defaultIcon.png'
+export PROJECT_LOGO='docs-doxygen/doxygen-custom/defaultIcon.png'
 export PROJECT_REPO='https://github.com/PixoVR/com.pixovr.apexunitysdk'
 export PROJECT_URL='/ApexSDK-Unity'
 export DEV_PROJECT_URL='../../../../Unity/com.pixovr.apexunitysdk/documentation/html/index.html'
-export PROJECT_MAIN_PAGE='../pages/main.md'
+export PROJECT_MAIN_PAGE='../pages/mainpage.md'
 
 export DOXYGEN_FILTER='../scripts/unity_filter.py'
 #export DOXYGEN_INPUT='"../pages"\n"../../Runtime"\n"../../Lib"\n"../../Samples"'
