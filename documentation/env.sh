@@ -13,7 +13,8 @@ export PROJECT_MAIN_PAGE='../pages/main.md'
 export DOXYGEN_FILTER='../scripts/unity_filter.py'
 #export DOXYGEN_INPUT='"../pages"\n"../../Runtime"\n"../../Lib"\n"../../Samples"'
 #export DOXYGEN_INPUT='"../pages"\n"../../Runtime"\n"../../Samples"'
-export DOXYGEN_INPUT='"../pages"\n"../../Runtime"'
+export DOXYGEN_INPUT='../../Runtime'
 export DOXYGEN_STRIP_FROM_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../Runtime" && pwd)"
+export DOXYGEN_IGNORE_PREFIX=''
 
 export APEX_SERVER_URL='https://apex.pixovr.com'
