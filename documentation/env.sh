@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export PROJECT_NAME='ApexSDK - Unity'
-export PROJECT_VERSION=`git tag | tail -n 1`
+export PROJECT_VERSION=`cd ../; git tag | tail -n 1`
 export PROJECT_BRIEF='Documentation for the Unity C# Library'
 #export PROJECT_BRIEF='Documentation for the C# Library'
 export PROJECT_LOGO='docs-doxygen/doxygen-custom/defaultIcon.png'
