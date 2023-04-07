@@ -11,7 +11,7 @@ export PROJECT_URL='/ApexSDK-Unity'
 export DEV_PROJECT_URL='../../../../Unity/com.pixovr.apexunitysdk/documentation/html/index.html'
 export PROJECT_MAIN_PAGE='../pages/mainpage.md'
 
-export DOXYGEN_FILTER='../scripts/unity_filter.py'
+export DOXYGEN_FILTER='scripts/unity_filter.py'
 #export DOXYGEN_INPUT='"../pages"\n"../../Runtime"\n"../../Lib"\n"../../Samples"'
 #export DOXYGEN_INPUT='"../pages"\n"../../Runtime"\n"../../Samples"'
 export DOXYGEN_INPUT='../../Runtime'
