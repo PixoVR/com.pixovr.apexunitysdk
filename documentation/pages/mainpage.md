@@ -2,7 +2,6 @@
 
 This is a Unity plugin which implements the %Apex API, supporting **Unity 2020.1**
 
-
 Communication to the %Apex Server uses REST https JSON requests which follow the xAPI Standard.
 
  - Github Repo: $(PROJECT_REPO)
