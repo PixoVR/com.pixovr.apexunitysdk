@@ -18,4 +18,4 @@ export DOXYGEN_INPUT='../../Runtime'
 export DOXYGEN_STRIP_FROM_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../Runtime" && pwd)"
 export DOXYGEN_IGNORE_PREFIX=''
 
-export APEX_SERVER_URL='https://apex.pixovr.com'
+export APEX_SERVER_URL='https://modules.apex.pixovr.com'
