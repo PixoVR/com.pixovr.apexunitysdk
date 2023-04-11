@@ -1,5 +1,6 @@
-# com.pixovr.apexunitysdk
-Unity Plugin for the implementation of the Apex API
+# Getting Started
+
+# Unity Plugin for the implementation of the Apex API
 
 Sample provided to show Apex Unity SDK use examples.
 
