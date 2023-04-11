@@ -18,24 +18,20 @@ namespace PixoVR.Apex
         RT_SESSION_EVENT
     }
 
-    
-
-    public class SDK
+    public class APIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
 
-        public const string TestEnvironmentEndpoint = "https://testmodule.pixovr.com";
-        public const string ProductionEnvironmentEndpoint = "https://module.pixovr.com";
-
         protected string URL = "";
         protected HttpClient handlingClient = null;
 
-        public SDK() : this(ProductionEnvironmentEndpoint)
+
+        public APIHandler() : this(ApexEndpoints.ProductionEnvironment)
         {
         }
 
-        public SDK(string endpointUrl)
+        public APIHandler(string endpointUrl)
         {
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);

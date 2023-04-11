@@ -5,12 +5,21 @@ using UnityEngine.XR;
 using PixoVR.Apex.Events;
 using PixoVR.Apex.XAPI;
 using TinCan;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace PixoVR.Apex
 {
 
     public class ApexSystem : ApexSingleton<ApexSystem>
     {
+        private enum VersionParts : int
+        {
+            Major = 0,
+            Minor,
+            Patch
+        }
+
         public static string ServerIP
         {
             get { return Instance.serverIP; }
@@ -42,7 +51,7 @@ namespace PixoVR.Apex
         }
 
         [SerializeField]
-        protected string serverIP = SDK.ProductionEnvironmentEndpoint;
+        protected string serverIP = ApexEndpoints.ProductionEnvironment;
         [SerializeField]
         protected int moduleID = 0;
         [SerializeField]
@@ -60,7 +69,9 @@ namespace PixoVR.Apex
         protected bool sessionInProgress;
 
         protected LoginResponseContent currentActiveLogin = null;
-        protected SDK apexSDK;
+        protected APIHandler apexAPIHandler;
+        protected ApexWebsocket webSocket;
+        protected System.Threading.Tasks.Task<bool> socketConnectTask;
 
         public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
         public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
@@ -75,21 +86,107 @@ namespace PixoVR.Apex
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
-        private void Awake()
+        void Awake()
         {
-            apexSDK = new SDK(serverIP);
-            apexSDK.OnAPIResponse += OnAPIResponse;
+            apexAPIHandler = new APIHandler(serverIP);
+            apexAPIHandler.OnAPIResponse += OnAPIResponse;
+
+            webSocket = new ApexWebsocket();
+            webSocket.OnConnectSuccess.AddListener(() => OnWebSocketConnected());
+            webSocket.OnConnectFailed.AddListener((reason) => OnWebSocketConnectFailed(reason));
+            webSocket.OnReceive.AddListener((data) => OnWebSocketReceive(data));
+            webSocket.OnClosed.AddListener((reason) => OnWebSocketClosed(reason));
+
+            ConnectToWebsocket();
 
             DontDestroyOnLoad(gameObject);
         }
 
-        // Start is called before the first frame update
         void Start()
         {
+            if(!IsModuleVersionValid())
+            {
+                Debug.LogAssertion(moduleVersion + " is an invalid module version.");
+            }
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
             platform = XRSettings.loadedDeviceName.Length > 0 ? XRSettings.loadedDeviceName : Application.platform.ToString();
             clientIP = Utils.ApexUtils.GetLocalIP();
+        }
+
+        void ConnectToWebsocket()
+        {
+            socketConnectTask = Task.Run(() => webSocket.Connect(new Uri("ws://127.0.0.1:8080")));
+        }
+
+        void OnWebSocketConnected()
+        {
+            Debug.Log("Websocket connected successfully.");
+        }
+
+        void OnWebSocketConnectFailed(string reason)
+        {
+            Debug.LogError("Websocket failed to connect with error: " + reason);
+        }
+
+        void OnWebSocketReceive(string data)
+        {
+            Debug.Log("Websocket received: " + data);
+        }
+
+        void OnWebSocketClosed(System.Net.WebSockets.WebSocketCloseStatus reason)
+        {
+            Debug.Log("Websocket closed with reason: " + reason);
+        }
+
+        bool IsModuleVersionValid()
+        {
+            if(IsModuleVersionOnlyNumerical() == false)
+                return false;
+            
+            string[] moduleVersionParts = moduleVersion.Split('.');
+
+            if (moduleVersionParts.Length != 3)
+                return false;
+
+            if (!IsModuleMajorVersionPartValid(moduleVersionParts[(int)VersionParts.Major]))
+                return false;
+
+            if (!IsModuleNonMajorVersionPartValid(moduleVersionParts[(int)VersionParts.Minor]))
+                return false;
+
+            if (!IsModuleNonMajorVersionPartValid(moduleVersionParts[(int)VersionParts.Patch]))
+                return false;
+
+            return true;
+        }
+
+        static readonly Regex VersionValidator = new Regex(@"^[0123456789.]+$");
+        bool IsModuleVersionOnlyNumerical()
+        {
+            return VersionValidator.IsMatch(moduleVersion);
+        }
+
+        bool IsModuleNonMajorVersionPartValid(string modulePart)
+        {
+            if (modulePart.Length <= 0)
+                return false;
+
+            if (modulePart.Length > 2)
+                return false;
+
+            return true;
+        }
+
+        bool IsModuleMajorVersionPartValid(string modulePart)
+        {
+            if (modulePart.Length <= 0)
+                return false;
+
+            if (modulePart.StartsWith("0"))
+                return false;
+
+            return true;
         }
 
         public static void Ping()
@@ -134,7 +231,7 @@ namespace PixoVR.Apex
 
         protected void _Ping()
         {
-            apexSDK.Ping();
+            apexAPIHandler.Ping();
         }
 
         protected bool _Login(LoginData login)
@@ -144,7 +241,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexSDK.Login(login);
+            apexAPIHandler.Login(login);
             return true;
         }
 
@@ -220,7 +317,7 @@ namespace PixoVR.Apex
             sessionData.EventType = ApexEventTypes.PIXOVR_SESSION_JOINED;
             sessionData.JsonData = sessionStatement;
 
-            apexSDK.JoinSession(currentActiveLogin.Token, sessionData);
+            apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData);
 
             return true;
         }
@@ -299,7 +396,7 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
-            apexSDK.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
+            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
 
             return true;
         }
@@ -390,7 +487,7 @@ namespace PixoVR.Apex
             sessionData.ScoreMax = currentSessionData.MaximumScore;
             sessionData.ScoreScaled = currentSessionData.ScaledScore;
 
-            apexSDK.CompleteSession(currentActiveLogin.Token, sessionData);
+            apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData);
 
             return true;
         }
@@ -405,7 +502,7 @@ namespace PixoVR.Apex
                 userId = currentActiveLogin.ID;
             }
 
-            apexSDK.GetUserData(currentActiveLogin.Token, userId);
+            apexAPIHandler.GetUserData(currentActiveLogin.Token, userId);
             return true;
         }
 

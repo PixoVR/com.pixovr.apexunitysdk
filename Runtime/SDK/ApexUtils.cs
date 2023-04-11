@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using TinCan.Json;
-using UnityEngine;
 
 namespace PixoVR.Apex.Utils
 {
