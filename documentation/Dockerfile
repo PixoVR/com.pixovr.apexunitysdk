@@ -2,7 +2,7 @@
 #FROM	docs-docker-base
 FROM	gcr.io/pixo-bootstrap/docs-docker-base:latest
 
-ARG	CACHEBREAKER https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h
+ARG	CACHEBREAKER "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h"
 
 WORKDIR	/build
 
