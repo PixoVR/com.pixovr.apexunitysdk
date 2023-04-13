@@ -2,7 +2,6 @@
     "name": "PixoVR.ApexUnitySDK",
     "rootNamespace": "PixoVR.Apex",
     "references": [
-        "Unity.Networking.Transport"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
