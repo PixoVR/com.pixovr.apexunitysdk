@@ -16,11 +16,12 @@ namespace PixoVR.Apex
     public class FailureResponse : IFailure, IApexErrorable
     {
         public string Error;
+        public string HttpCode;
         public string Message;
 
         public bool HasErrored()
         {
-            return (Error == null || Message == null);
+            return (Error == null || Message == null || HttpCode == null);
         }
     }
 

@@ -30,7 +30,7 @@ namespace PixoVR.Apex
 
     public class ApexEndpoints
     {
-        public const string TestEnvironment = "https://testmodule.pixovr.com";
-        public const string ProductionEnvironment = "https://module.pixovr.com";
+        public const string DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
+        public const string ProductionEnvironment = "https://modules.apex.pixovr.com";
     }
 }

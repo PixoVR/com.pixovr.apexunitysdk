@@ -1,5 +1,6 @@
 
 using Newtonsoft.Json.Linq;
+using System;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using TinCan.Json;
@@ -79,5 +80,13 @@ namespace PixoVR.Apex.Utils
             StringOfJSON stringOfJson = new StringOfJSON(json);
             return stringOfJson.toJObject();
         }
+    }
+}
+
+public static class StringExtensions
+{
+    public static bool Contains(this string source, string value, StringComparison comp)
+    {
+        return source?.IndexOf(value, comp) >= 0;
     }
 }

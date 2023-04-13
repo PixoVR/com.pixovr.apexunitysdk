@@ -7,6 +7,7 @@ using PixoVR.Apex.XAPI;
 using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace PixoVR.Apex
 {
@@ -52,6 +53,7 @@ namespace PixoVR.Apex
 
         [SerializeField]
         protected string serverIP = ApexEndpoints.ProductionEnvironment;
+
         [SerializeField]
         protected int moduleID = 0;
         [SerializeField]
@@ -61,6 +63,7 @@ namespace PixoVR.Apex
         [SerializeField]
         protected string scenarioID = "Generic";
         
+        protected string webSocketUrl;
         protected string deviceID;
         protected string deviceModel;
         protected string platform;
@@ -86,6 +89,8 @@ namespace PixoVR.Apex
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
+        public OnAuthCodeReceived OnAuthorizationCodeReceived = new OnAuthCodeReceived();
+
         void Awake()
         {
             apexAPIHandler = new APIHandler(serverIP);
@@ -97,9 +102,27 @@ namespace PixoVR.Apex
             webSocket.OnReceive.AddListener((data) => OnWebSocketReceive(data));
             webSocket.OnClosed.AddListener((reason) => OnWebSocketClosed(reason));
 
-            ConnectToWebsocket();
+            PopulateWebSocketURL();
+            ConnectWebsocket();
 
             DontDestroyOnLoad(gameObject);
+        }
+
+        void PopulateWebSocketURL()
+        {
+            webSocketUrl = serverIP;
+
+            if(webSocketUrl.Contains("://"))
+            {
+                webSocketUrl = webSocketUrl.Split(new string[]{"://"}, 2, StringSplitOptions.RemoveEmptyEntries)[1];
+            }
+
+            if(webSocketUrl.Contains("/"))
+            {
+                webSocketUrl = webSocketUrl.Split(new string[] { "/" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+            }
+
+            webSocketUrl = "wss://" + webSocketUrl + "/ws";
         }
 
         void Start()
@@ -114,9 +137,14 @@ namespace PixoVR.Apex
             clientIP = Utils.ApexUtils.GetLocalIP();
         }
 
-        void ConnectToWebsocket()
+        private void FixedUpdate()
         {
-            socketConnectTask = Task.Run(() => webSocket.Connect(new Uri("ws://127.0.0.1:8080")));
+            webSocket.Update();
+        }
+
+        void ConnectWebsocket()
+        {
+            socketConnectTask = Task.Run(() => webSocket.Connect(new Uri(webSocketUrl)));
         }
 
         void OnWebSocketConnected()
@@ -132,6 +160,24 @@ namespace PixoVR.Apex
         void OnWebSocketReceive(string data)
         {
             Debug.Log("Websocket received: " + data);
+            try
+            {
+                if(data.Contains("auth_code"))
+                {
+                    var authCode = JsonConvert.DeserializeObject<AuthorizationCode>(data);
+                    OnAuthorizationCodeReceived.Invoke(authCode.Code);
+                }
+
+                if(data.Contains("Token", StringComparison.OrdinalIgnoreCase))
+                {
+                    object loginResponse = JsonConvert.DeserializeObject<LoginResponseContent>(data);
+                    HandleLogin(true, loginResponse);
+                }
+            }
+            catch(Exception ex)
+            {
+                Debug.Log(ex.Message);
+            }
         }
 
         void OnWebSocketClosed(System.Net.WebSockets.WebSocketCloseStatus reason)
@@ -187,6 +233,11 @@ namespace PixoVR.Apex
                 return false;
 
             return true;
+        }
+
+        public static bool RequestAuthorizationCode()
+        {
+            return Instance._RequestAuthorizationCode();
         }
 
         public static void Ping()
@@ -508,7 +559,8 @@ namespace PixoVR.Apex
 
         protected void OnAPIResponse(ResponseType response, HttpResponseMessage message, object responseData)
         {
-            bool success = message.IsSuccessStatusCode && !(responseData is IFailure);
+            bool success = message.IsSuccessStatusCode && 
+                !((responseData is IFailure) && (responseData as FailureResponse).Error.Equals("true", StringComparison.OrdinalIgnoreCase));
 
             switch(response)
             {
@@ -528,17 +580,7 @@ namespace PixoVR.Apex
                     }
                 case ResponseType.RT_LOGIN:
                     {
-                        if (success)
-                        {
-                            currentActiveLogin = responseData as LoginResponseContent;
-                            OnLoginSuccess.Invoke(currentActiveLogin);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
-                            OnLoginFailed.Invoke(responseData as FailureResponse);
-                        }
+                        HandleLogin(success, responseData);
                         break;
                     }
                 case ResponseType.RT_GET_USER:
@@ -608,6 +650,30 @@ namespace PixoVR.Apex
                         break;
                     }
             }
+        }
+
+        protected void HandleLogin(bool successful, object responseData)
+        {
+            if (successful)
+            {
+                currentActiveLogin = responseData as LoginResponseContent;
+                OnLoginSuccess.Invoke(currentActiveLogin);
+            }
+            else
+            {
+                FailureResponse failureData = responseData as FailureResponse;
+                Debug.Log(string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
+                OnLoginFailed.Invoke(responseData as FailureResponse);
+            }
+        }
+
+        bool _RequestAuthorizationCode()
+        {
+            if(!webSocket.IsConnected())
+            {
+                ConnectWebsocket();
+            }
+            return webSocket.RequestAuthorizationCode();
         }
     }
 }

@@ -23,4 +23,7 @@ namespace PixoVR.Apex.Events
 
     [System.Serializable]
     public class OnWebSocketClosed : UnityEvent<System.Net.WebSockets.WebSocketCloseStatus> { };
+
+    [System.Serializable]
+    public class OnAuthCodeReceived : UnityEvent<string> { };
 }

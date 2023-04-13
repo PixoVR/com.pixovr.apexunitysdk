@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System;
 using System.Text.RegularExpressions;
 using System.Net.Http;
@@ -75,10 +76,10 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/login", loginRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonUtility.FromJson<LoginResponseContent>(body);
+            object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
             if ((responseContent as LoginResponseContent).HasErrored())
             {
-                responseContent = JsonUtility.FromJson<FailureResponse>(body);
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
@@ -92,11 +93,11 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/user/{0}", userId));
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonUtility.FromJson<GetUserResponseContent>(body);
+            object responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
             GetUserResponseContent userInfo = responseContent as GetUserResponseContent;
             if ((responseContent as GetUserResponseContent).HasErrored())
             {
-                responseContent = JsonUtility.FromJson<FailureResponse>(body);
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
@@ -113,7 +114,7 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/event", joinSessionRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
                 responseContent = null;
@@ -133,7 +134,7 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/event", completeSessionRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
                 responseContent = null;
@@ -153,7 +154,7 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/event", sessionEventRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonUtility.FromJson<FailureResponse>(body);
+            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
                 responseContent = null;
