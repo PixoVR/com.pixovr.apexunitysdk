@@ -44,3 +44,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### [1.0.7] - 2023-02-17
  - Determine LessonStatus is passed or failed based on the reported result success instead of result completion.
+
+### [1.1.0] - 2023-04-13
+ - Adds Pin SSO, to use on https://apex.pixovr.com/authenticate
+ - Makes sure that the module version matches the required pattern

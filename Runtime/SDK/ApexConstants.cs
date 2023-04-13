@@ -27,4 +27,10 @@ namespace PixoVR.Apex
 
         protected ApexExtensionStrings() { }
     }
+
+    public class ApexEndpoints
+    {
+        public const string DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
+        public const string ProductionEnvironment = "https://modules.apex.pixovr.com";
+    }
 }
