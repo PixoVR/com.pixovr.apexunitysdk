@@ -46,5 +46,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Determine LessonStatus is passed or failed based on the reported result success instead of result completion.
 
 ### [1.1.0] - 2023-04-13
- - Adds Pin SSO, to use on https://apex.pixovr.com/authenticate
- - Makes sure that the module version matches the required pattern
+ - Adds Pin SSO, to use on https://apex.pixovr.com/authenticate.
+ - Makes sure that the module version matches the required pattern.
+ 
+### [1.1.1] - 2023-04-14
+ - Wraps the Ping call with an exception to handle when there is no connection.
+ - Adds SendSimpleSessionEvent to allow sending a custom session event simply.
+ - Adds a constructor to Extension to accept a Dictionary<string, string>.
+ - Sets the execution order of the ApexSystem to -50 to execute before other scripts.

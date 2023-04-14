@@ -1,8 +1,10 @@
 
 using Newtonsoft.Json.Linq;
+using PixoVR.Apex.XAPI;
 using System;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using TinCan;
 using TinCan.Json;
 
 namespace PixoVR.Apex.Utils
