@@ -96,7 +96,7 @@ The context information for *registration*, *revision* and *platform* within *ev
 **OnSendEventSuccess** is called when the event has been sent successfully.
 **OnSendEventFailed** is called when the session was not started, contains invalid information or when the server is not able to be reached.
 
-### SendUserSessionEvent(action : string, targetObject : string, contextExtension : Extension) : Boolean
+### SendSimpleSessionEvent(action : string, targetObject : string, contextExtension : Extension) : Boolean
 
 Constructs an xAPI Statement from provided session data
 Sends an event with xAPI statement data formed from the current users information, action as the verb and targetObject as the activity/object.
