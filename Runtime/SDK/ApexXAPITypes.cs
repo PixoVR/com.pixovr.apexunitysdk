@@ -16,6 +16,16 @@ namespace PixoVR.Apex.XAPI
             Data = new Dictionary<Uri, string>();
         }
 
+        public Extension(Dictionary<string, string> data)
+        {
+            Data = new Dictionary<Uri, string>();
+
+            foreach(KeyValuePair<string, string> dataPair in data)
+            {
+                AddSimple(dataPair.Key, dataPair.Value);
+            }
+        }
+
         public Extension(JObject jobj)
         {
             Data = new Dictionary<Uri, string>();

@@ -11,6 +11,7 @@ namespace PixoVR.Apex
     public enum ResponseType
     {
         RT_NONE = 0,
+        RT_FAILED_RESPONSE,
         RT_PING,
         RT_LOGIN,
         RT_GET_USER,
@@ -38,6 +39,14 @@ namespace PixoVR.Apex
             SetEndpoint(endpointUrl);
         }
 
+        HttpResponseMessage HandleException(Exception exception)
+        {
+            Debug.LogWarning("Exception has occurred: " + exception.Message);
+            HttpResponseMessage badRequestResponse = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
+            OnAPIResponse.Invoke(ResponseType.RT_FAILED_RESPONSE, badRequestResponse, null);
+            return badRequestResponse;
+        }
+
         public void SetEndpoint(string endpointUrl)
         {
             if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
@@ -63,7 +72,16 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpResponseMessage response = await handlingClient.GetAsync("/ping");
+            HttpResponseMessage response;
+            try
+            {
+                response = await handlingClient.GetAsync("/ping");
+            }
+            catch(Exception ex)
+            {
+                response = HandleException(ex);
+            }
+
             OnAPIResponse.Invoke(ResponseType.RT_PING, response, null);
         }
 

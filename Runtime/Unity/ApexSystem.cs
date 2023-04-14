@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using UnityEngine;
 using UnityEngine.XR;
@@ -12,6 +13,7 @@ using Newtonsoft.Json;
 namespace PixoVR.Apex
 {
 
+    [DefaultExecutionOrder(-50)]
     public class ApexSystem : ApexSingleton<ApexSystem>
     {
         private enum VersionParts : int
@@ -62,7 +64,7 @@ namespace PixoVR.Apex
         protected string moduleVersion = "0.00.00";
         [SerializeField]
         protected string scenarioID = "Generic";
-        
+
         protected string webSocketUrl;
         protected string deviceID;
         protected string deviceModel;
@@ -74,7 +76,7 @@ namespace PixoVR.Apex
         protected LoginResponseContent currentActiveLogin = null;
         protected APIHandler apexAPIHandler;
         protected ApexWebsocket webSocket;
-        protected System.Threading.Tasks.Task<bool> socketConnectTask;
+        protected Task<bool> socketConnectTask;
 
         public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
         public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
@@ -112,12 +114,12 @@ namespace PixoVR.Apex
         {
             webSocketUrl = serverIP;
 
-            if(webSocketUrl.Contains("://"))
+            if (webSocketUrl.Contains("://"))
             {
-                webSocketUrl = webSocketUrl.Split(new string[]{"://"}, 2, StringSplitOptions.RemoveEmptyEntries)[1];
+                webSocketUrl = webSocketUrl.Split(new string[] { "://" }, 2, StringSplitOptions.RemoveEmptyEntries)[1];
             }
 
-            if(webSocketUrl.Contains("/"))
+            if (webSocketUrl.Contains("/"))
             {
                 webSocketUrl = webSocketUrl.Split(new string[] { "/" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
             }
@@ -127,7 +129,7 @@ namespace PixoVR.Apex
 
         void Start()
         {
-            if(!IsModuleVersionValid())
+            if (!IsModuleVersionValid())
             {
                 Debug.LogAssertion(moduleVersion + " is an invalid module version.");
             }
@@ -162,19 +164,19 @@ namespace PixoVR.Apex
             Debug.Log("Websocket received: " + data);
             try
             {
-                if(data.Contains("auth_code"))
+                if (data.Contains("auth_code"))
                 {
                     var authCode = JsonConvert.DeserializeObject<AuthorizationCode>(data);
                     OnAuthorizationCodeReceived.Invoke(authCode.Code);
                 }
 
-                if(data.Contains("Token", StringComparison.OrdinalIgnoreCase))
+                if (data.Contains("Token", StringComparison.OrdinalIgnoreCase))
                 {
                     object loginResponse = JsonConvert.DeserializeObject<LoginResponseContent>(data);
                     HandleLogin(true, loginResponse);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Debug.Log(ex.Message);
             }
@@ -187,9 +189,9 @@ namespace PixoVR.Apex
 
         bool IsModuleVersionValid()
         {
-            if(IsModuleVersionOnlyNumerical() == false)
+            if (IsModuleVersionOnlyNumerical() == false)
                 return false;
-            
+
             string[] moduleVersionParts = moduleVersion.Split('.');
 
             if (moduleVersionParts.Length != 3)
@@ -265,6 +267,11 @@ namespace PixoVR.Apex
             return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
         }
 
+        public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension)
+        {
+            return Instance._SendSimpleSessionEvent(action, targetObject, contextExtension);
+        }
+
         public static bool SendSessionEvent(Statement eventStatement)
         {
             return Instance._SendSessionEvent(eventStatement);
@@ -309,12 +316,12 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if(newScenarioID != null)
+            if (newScenarioID != null)
             {
                 scenarioID = newScenarioID;
             }
 
-            if(sessionInProgress == true)
+            if (sessionInProgress == true)
             {
                 Debug.LogError("[ApexSystem] Session is already in progress." +
                     " The previous session didn't complete or a new session was started during an active session.");
@@ -322,7 +329,6 @@ namespace PixoVR.Apex
 
             currentSessionID = Guid.NewGuid();
 
-            // Finish filling this out
             Statement sessionStatement = new Statement();
             Agent sessionActor = new Agent();
             sessionActor.mbox = currentActiveLogin.Email;
@@ -330,7 +336,7 @@ namespace PixoVR.Apex
             Verb sessionVerb = new Verb();
             sessionVerb.id = ApexVerbs.JOINED_SESSION;
             sessionVerb.display = new LanguageMap();
-            sessionVerb.display.Add("en","Joined Session");
+            sessionVerb.display.Add("en", "Joined Session");
 
             Activity sessionActivity = new Activity();
             sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}", moduleID, scenarioID);
@@ -369,6 +375,63 @@ namespace PixoVR.Apex
             sessionData.JsonData = sessionStatement;
 
             apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData);
+
+            return true;
+        }
+
+        protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension)
+        {
+            if (verbName == null)
+                return false;
+
+            if (verbName.Length == 0)
+                return false;
+
+            Statement sessionStatement = new Statement();
+            Agent sessionActor = new Agent();
+            sessionActor.mbox = currentActiveLogin.Email;
+
+            Verb sessionVerb = new Verb();
+            sessionVerb.id = new Uri("https://pixovr.com/xapi/verbs/" + verbName.Replace(' ', '_').ToLower());
+            sessionVerb.display = new LanguageMap();
+            sessionVerb.display.Add("en", verbName);
+
+            Activity sessionActivity = new Activity();
+            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}/{2}", moduleID, scenarioID, targetObject.Replace(' ', '_').ToLower());
+
+            Context sessionContext = new Context();
+            sessionContext.registration = currentSessionID;
+            sessionContext.revision = moduleVersion;
+            sessionContext.platform = platform;
+
+            Extension currentContextExtension;
+            if (contextExtension != null)
+            {
+                currentContextExtension = contextExtension;
+            }
+            else
+            {
+                currentContextExtension = new Extension();
+            }
+
+            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
+            currentContextExtension.AddSimple("device_id", deviceID);
+            currentContextExtension.AddSimple("device_model", deviceModel);
+            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
+
+            sessionStatement.actor = sessionActor;
+            sessionStatement.verb = sessionVerb;
+            sessionStatement.target = sessionActivity;
+            sessionStatement.context = sessionContext;
+
+            SessionEventData sessionEvent = new SessionEventData();
+            sessionEvent.DeviceId = deviceID;
+            sessionEvent.ModuleId = ModuleID;
+            sessionEvent.Uuid = currentSessionID.ToString();
+            sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
+            sessionEvent.JsonData = sessionStatement;
+
+            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
 
             return true;
         }
