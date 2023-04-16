@@ -8,7 +8,7 @@ export PROJECT_STATUS='active'
 export PROJECT_LOGO='docs-doxygen/doxygen-custom/defaultIcon.png'
 export PROJECT_REPO='https://github.com/PixoVR/com.pixovr.apexunitysdk'
 export PROJECT_URL='/ApexSDK-Unity'
-export DEV_PROJECT_URL='../../../../Unity/com.pixovr.apexunitysdk/documentation/html/index.html'
+export DEV_PROJECT_URL='../../../../Unity/com.pixovr.apexunitysdk/documentation/html'
 export PROJECT_MAIN_PAGE='../pages/mainpage.md'
 
 export DOXYGEN_FILTER='scripts/unity_filter.py'
