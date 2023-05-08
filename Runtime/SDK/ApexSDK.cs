@@ -17,7 +17,8 @@ namespace PixoVR.Apex
         RT_GET_USER,
         RT_SESSION_JOINED,
         RT_SESSION_COMPLETE,
-        RT_SESSION_EVENT
+        RT_SESSION_EVENT,
+        RT_GET_USER_ACCESS,
     }
 
     public class APIHandler
@@ -77,7 +78,7 @@ namespace PixoVR.Apex
             {
                 response = await handlingClient.GetAsync("/ping");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 response = HandleException(ex);
             }
@@ -139,6 +140,24 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_SESSION_JOINED, response, responseContent);
+        }
+
+        public async void GetModuleAccess(int moduleId, int userId)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+
+            HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}", userId, moduleId));
+            string body = await response.Content.ReadAsStringAsync();
+
+
+            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            if ((responseContent as FailureResponse).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
+
+            }
+            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_ACCESS, response, responseContent);
         }
 
         public async void CompleteSession(string authToken, CompleteSessionData completionData)

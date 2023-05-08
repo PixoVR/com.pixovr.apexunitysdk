@@ -1,6 +1,6 @@
 {
   "name": "com.pixovr.apexunitysdk",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "displayName": "Apex Unity SDK",
   "description": "Unity Plugin for the implementation of the Apex API.",
   "unity": "2020.1",
@@ -27,7 +27,7 @@
     {
       "displayName": "Apex Demo",
       "description": "A Demo showing the flow of using the Apex Unity SDK.",
-      "path": "Samples~/DemoApexReporter"
+      "path": "Samples/DemoApexReporter"
     }
   ]
 }
