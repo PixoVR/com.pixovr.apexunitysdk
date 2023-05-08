@@ -48,10 +48,25 @@ namespace PixoVR.Apex
         public string Email;
         public string Token;
         public Organization Org;
+        public int MinimumPassingScore;
 
         public bool HasErrored()
         {
             return (Email == null || Token == null);
+        }
+    }
+
+    [Serializable]
+    public class UserAccessResponseContent: IApexErrorable
+    {
+        public int UserId = -1;
+        public int ModuleId = -1;
+        public bool Access;
+        public int? PassingScore;
+
+        public bool HasErrored()
+        {
+            return (UserId == -1 || ModuleId == -1);
         }
     }
 
@@ -97,7 +112,7 @@ namespace PixoVR.Apex
             ScaledScore = scaled;
             MinimumScore = min;
             MaximumScore = max;
-            Duration = duration; 
+            Duration = duration;
             Complete = completed;
             Success = success;
         }

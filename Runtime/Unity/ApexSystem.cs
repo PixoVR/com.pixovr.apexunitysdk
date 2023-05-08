@@ -708,6 +708,38 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
+                case ResponseType.RT_GET_USER_ACCESS:
+                    {
+                        if (success)
+                        {
+                            var userAccessResponseContent = responseData as UserAccessResponseContent;
+                            if (userAccessResponseContent.Access)
+                            {
+                                if (userAccessResponseContent.PassingScore.HasValue)
+                                {
+                                    currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
+                                }
+                                OnLoginSuccess.Invoke(currentActiveLogin);
+                            }
+                            else
+                            {
+                                currentActiveLogin = null;
+                                HandleLogin(false, new FailureResponse()
+                                {
+                                    HttpCode = "401",
+                                    Message = "User does not have access to module",
+                                });
+                            }
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get users module access data.\nError: {0}", failureData.Message));
+
+                            OnLoginFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
                 default:
                     {
                         break;
@@ -720,7 +752,8 @@ namespace PixoVR.Apex
             if (successful)
             {
                 currentActiveLogin = responseData as LoginResponseContent;
-                OnLoginSuccess.Invoke(currentActiveLogin);
+                
+                apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID);
             }
             else
             {

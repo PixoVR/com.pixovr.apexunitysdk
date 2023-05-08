@@ -54,3 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Adds SendSimpleSessionEvent to allow sending a custom session event simply.
  - Adds a constructor to Extension to accept a Dictionary<string, string>.
  - Sets the execution order of the ApexSystem to -50 to execute before other scripts.
+
+
+ ### [1.1.2] - 2023-05-08
+ - Added module access check on user login.
+ - Added passing score to logged in user property on successful login.
