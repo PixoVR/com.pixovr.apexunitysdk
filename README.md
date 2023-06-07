@@ -16,7 +16,21 @@ Now you should be able to see the package in the Package Manager, where you can 
 # Using the Apex Plugin
 
 After installing the Apex Unity SDK, navigate to Runtime > Unity. Add the ApexSystem script to any object in the scene.
-Any object that the ApexSystem script is added to will **NOT** be deleted between level changes.
+Any object that the [ApexSystem](@ref ApexSystem) script is added to will **NOT** be deleted between level changes.
+
+The following properties will need to be set on the ApexSystem component once it's added to the scene.
+- Server IP
+  + This is the Apex server IP address that you want to send the information to. By default it will point to our production environment.
+  + Use https://modules.apex.pixovr.com/.
+- Module ID
+  + This is the ID of the module that will be distributed to customers. This will be generated when you create a project on the Apex platform. This must be set for the data to be reported to the proper module.
+- Module Name
+  + This is the name of your module.
+- Module Version
+  + The version number for your module currently being distributed.
+  + The Module Version is based on Semantic numbering with a Major, Minor and Patch number. Both Minor and Patch numbers are always 2 digits, using a 0 as the first value when the number is below 10. (e.g.) 1.03.08. This is enforced on the platform itself as well.
+- Scenario ID
+  + The name of the current scenario within your module that the user is taking part in. You can have multiple scenarios within a module.
 
 The ApexSystem is a singleton, all functions are wrapped in static functions to make the use simpler.
 If you want access to the response events in code, you will need to access the ApexSystem Instance.
@@ -32,14 +46,6 @@ To get a better understanding of the xAPI Standard, visit the xAPI Spec [here](h
 # Requirements for building with the Apex Plugin
 
 The projects **Api Compatbility Level** needs to be **.NET 4.x** or newer.
-
-## Important ApexSystem variables
-
-- ServerIP : This is the Apex server IP address that you want to send the information to. By default it will point to our production environment.
-- ModuleID : This is the ID of the module that will be distributed to customers. This will be generated when you create a project on the Apex platform. This must be set for the data to be reported to the proper module.
-- ModuleName : This is the name of your module.
-- ModuleVersion : The version number for your module currently being distributed.
-- ScenarioID : The name of the current scenario within your module that the user is taking part in. You can have multiple scenarios within a module.
 
 ## Function Explination
 
