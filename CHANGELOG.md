@@ -55,7 +55,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Adds a constructor to Extension to accept a Dictionary<string, string>.
  - Sets the execution order of the ApexSystem to -50 to execute before other scripts.
 
-
  ### [1.1.2] - 2023-05-08
  - Added module access check on user login.
  - Added passing score to logged in user property on successful login.
+
+ ### [1.1.3] - 2023-06-07
+ - Added logic to calculate the scaled score when scaled score is invalid, or set to 0 when the score is not 0.
+ - Added the SDK version to the context extension when event API calls are made.
+ - Removed the need for a password when using One-Time Login codes.
+ - Fixed the Sample project for the package.
+ - Added the minimum passing score in sample project 'Current User' display.
+ - Added example of the Request Authorization Pin functionality to the sample project.

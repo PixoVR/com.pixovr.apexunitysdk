@@ -9,6 +9,7 @@ using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using UnityEditor.PackageManager;
 
 namespace PixoVR.Apex
 {
@@ -294,9 +295,14 @@ namespace PixoVR.Apex
 
         protected bool _Login(LoginData login)
         {
-            if (login.Password.Length <= 0 || login.Login.Length <= 0)
+            if (login.Login.Length <= 0)
             {
                 return false;
+            }
+
+            if(login.Password.Length <= 0)
+            {
+                login.Password = "<empty>";
             }
 
             apexAPIHandler.Login(login);
@@ -346,20 +352,7 @@ namespace PixoVR.Apex
             sessionContext.revision = moduleVersion;
             sessionContext.platform = platform;
 
-            Extension currentContextExtension;
-            if (contextExtension != null)
-            {
-                currentContextExtension = contextExtension;
-            }
-            else
-            {
-                currentContextExtension = new Extension();
-            }
-
-            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
-            currentContextExtension.AddSimple("device_id", deviceID);
-            currentContextExtension.AddSimple("device_model", deviceModel);
-            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
+            sessionContext.extensions = AppendStandardContextExtension(contextExtension);
 
             sessionStatement.actor = sessionActor;
             sessionStatement.verb = sessionVerb;
@@ -404,20 +397,7 @@ namespace PixoVR.Apex
             sessionContext.revision = moduleVersion;
             sessionContext.platform = platform;
 
-            Extension currentContextExtension;
-            if (contextExtension != null)
-            {
-                currentContextExtension = contextExtension;
-            }
-            else
-            {
-                currentContextExtension = new Extension();
-            }
-
-            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
-            currentContextExtension.AddSimple("device_id", deviceID);
-            currentContextExtension.AddSimple("device_model", deviceModel);
-            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
+            sessionContext.extensions = AppendStandardContextExtension(contextExtension);
 
             sessionStatement.actor = sessionActor;
             sessionStatement.verb = sessionVerb;
@@ -491,17 +471,7 @@ namespace PixoVR.Apex
             eventStatement.context.revision = ModuleVersion;
             eventStatement.context.platform = platform;
 
-            Extension contextExtension;
-            if (eventStatement.context.extensions != null)
-            {
-                contextExtension = new Extension(eventStatement.context.extensions.ToJObject());
-            }
-            else
-            {
-                contextExtension = new Extension();
-            }
-            contextExtension.AddSimple("device_id", deviceID);
-            contextExtension.AddSimple("device_model", deviceModel);
+            eventStatement.context.extensions = AppendStandardContextExtension(eventStatement.context.extensions);
 
             SessionEventData sessionEvent = new SessionEventData();
             sessionEvent.DeviceId = deviceID;
@@ -549,21 +519,7 @@ namespace PixoVR.Apex
             sessionContext.revision = moduleVersion;
             sessionContext.platform = platform;
 
-            // Build an extension for the context
-            Extension currentContextExtension;
-            if (contextExtension != null)
-            {
-                currentContextExtension = contextExtension;
-            }
-            else
-            {
-                currentContextExtension = new Extension();
-            }
-
-            currentContextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
-            currentContextExtension.AddSimple("device_id", deviceID);
-            currentContextExtension.AddSimple("device_model", deviceModel);
-            sessionContext.extensions = new Extensions(currentContextExtension.ToJObject());
+            sessionContext.extensions = AppendStandardContextExtension(contextExtension);
 
             // Create our results
             Result sessionResult = new Result();
@@ -574,7 +530,7 @@ namespace PixoVR.Apex
             sessionResult.score.min = currentSessionData.MinimumScore;
             sessionResult.score.max = currentSessionData.MaximumScore;
             sessionResult.score.raw = currentSessionData.Score;
-            sessionResult.score.scaled = currentSessionData.ScaledScore;
+            sessionResult.score.scaled = DetermineScaledScore(currentSessionData.ScaledScore, currentSessionData.Score, currentSessionData.MaximumScore);
             sessionResult.duration = TimeSpan.FromSeconds(currentSessionData.Duration);
             if(resultExtension != null)
             {
@@ -599,7 +555,7 @@ namespace PixoVR.Apex
             sessionData.Score = currentSessionData.Score;
             sessionData.ScoreMin = currentSessionData.MinimumScore;
             sessionData.ScoreMax = currentSessionData.MaximumScore;
-            sessionData.ScoreScaled = currentSessionData.ScaledScore;
+            sessionData.ScoreScaled = DetermineScaledScore(currentSessionData.ScaledScore, currentSessionData.Score, currentSessionData.MaximumScore);
 
             apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData);
 
@@ -618,6 +574,42 @@ namespace PixoVR.Apex
 
             apexAPIHandler.GetUserData(currentActiveLogin.Token, userId);
             return true;
+        }
+        private float DetermineScaledScore(float scaledScore, float score, float maxScore)
+        {
+            float determinedScaledScore = scaledScore;
+            
+            if(scaledScore < Mathf.Epsilon && score >= Mathf.Epsilon)
+            {
+                determinedScaledScore = (score / maxScore) * 100f;
+            }
+
+            return determinedScaledScore;
+        }
+
+        private Extensions AppendStandardContextExtension(Extensions currentContextExtensions)
+        {
+            return AppendStandardContextExtension(new Extension(currentContextExtensions.ToJObject()));
+        }
+
+        private Extensions AppendStandardContextExtension(Extension currentContextExtension)
+        {
+            Extension contextExtension;
+            if (currentContextExtension != null)
+            {
+                contextExtension = currentContextExtension;
+            }
+            else
+            {
+                contextExtension = new Extension();
+            }
+
+            contextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
+            contextExtension.AddSimple("device_id", deviceID);
+            contextExtension.AddSimple("device_model", deviceModel);
+            contextExtension.AddSimple("sdk_version", "unity-" + Utils.ApexUtils.GetSDKVersion());
+
+            return new Extensions(contextExtension.ToJObject());
         }
 
         protected void OnAPIResponse(ResponseType response, HttpResponseMessage message, object responseData)

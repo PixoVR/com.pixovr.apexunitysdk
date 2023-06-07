@@ -10,6 +10,7 @@ public class LoggedInUserDisplay : MonoBehaviour
     public Text UserId;
     public Text OrgName;
     public Text OrgId;
+    public Text MinimumPassingScore;
 
     // Start is called before the first frame update
     void Start()
@@ -26,6 +27,7 @@ public class LoggedInUserDisplay : MonoBehaviour
         UserId.text = "N/A";
         OrgName.text = "N/A";
         OrgId.text = "N/A";
+        MinimumPassingScore.text = "N/A";
     }
 
     void OnLoginSuccess(LoginResponseContent loginResponse)
@@ -36,6 +38,7 @@ public class LoggedInUserDisplay : MonoBehaviour
         UserId.text = loginResponse.ID.ToString();
         OrgName.text = loginResponse.Org.Name;
         OrgId.text = loginResponse.Org.ID.ToString();
+        MinimumPassingScore.text = loginResponse.MinimumPassingScore.ToString();
     }
 
     // Update is called once per frame
