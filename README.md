@@ -47,7 +47,7 @@ To get a better understanding of the xAPI Standard, visit the xAPI Spec [here](h
 
 The projects **Api Compatbility Level** needs to be **.NET 4.x** or newer.
 
-## Function Explination
+## Quick Function Explination
 
 All server functions have corresponding Success and Failed events.
 
