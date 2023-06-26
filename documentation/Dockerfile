@@ -13,7 +13,7 @@ RUN	doxygen -v	# confirm doxygen version from docs-docker-base
 RUN	git submodule set-branch --branch main documentation/docs-doxygen && \
 	git submodule update --init documentation/docs-doxygen
 
-ADD	$CACHEBREAKER skipcache
+ADD	$CACHEBREAKER skipcache2
 
 RUN	./documentation/build.sh && \
 	eval "$(cat ./documentation/env.sh | grep "PROJECT_URL")" && \
