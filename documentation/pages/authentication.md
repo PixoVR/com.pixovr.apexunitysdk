@@ -44,15 +44,16 @@ The approach in the Unity Apex SDK is done through specific Success and Fail uni
 ApexSystem::OnLoginSuccess(LoginResponseContent loginResponse) - This Delegate is called when the users information is valid and has access to the module.
 `loginResponse` contains information about the user that has logged in.
 
-For more information on what is in `loginResponse`, checkout the [LoginResponseContent](@ref LoginResponseContent) class.
+For more information on what is in `loginResponse`, checkout the [LoginResponseContent](@ref PixoVR::Apex::LoginResponseContent) class.
 
 ApexSystem::OnLoginFailed(FailureResponse response) - This Delegate is called when the users information is invalid, does not have access to the module or the server is not able to be reached.
 `response` contains the error code and error message from why the login failed.
 
-For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
+For more information on what is in `response`, checkout the [FailureResponse](@ref PixoVR::Apex::FailureResponse) class.
 
-In the [Example Code](#example-code) section, you'll see C# examples on how to bind to the event delegates.
+In the [Example Code](#example-code1) section you'll see C# examples on how to bind to the event delegates.
 
+\anchor example-code1
 ## Example Code
 
 ### Calling Login

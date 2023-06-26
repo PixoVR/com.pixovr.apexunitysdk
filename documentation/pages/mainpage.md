@@ -12,8 +12,7 @@ Communication to the %Apex Server uses REST https JSON requests which follow the
 
 Some subpages:
 
- - \subpage getting_started "Getting Started"
+ - \subpage getting_started
  - \subpage authentication
- - \subpage platform_sessions "Sessions & Data Tracking"
- - \subpage components
+ - \subpage platform_sessions
 

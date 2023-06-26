@@ -20,8 +20,8 @@ Session Join is used to denote the start of a users session. Using this event wi
 public static bool JoinSession(string scenarioID, Extension contextExtension);
 \endcode
 
-*(Optional)* The `scenarioID` is up to the developer of the module to describe.
-*(Optional)* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
+ - *Optional* The `scenarioID` is up to the developer of the module to describe.
+ - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
 
 JoinSession returns `false` if there is no current user logged in. In all other cases, `true` will be returned.
 
@@ -36,8 +36,9 @@ public static bool CompleteSession(SessionData currentSessionData, Extension con
 \endcode
 
 `currentSessionData` contains scoring information as well as if the session was completed.
-*(Optional)* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
-*(Optional)* `resultExtension` is packaged as part of the [Result](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#result) in the xAPI structure. The `resultExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
+
+ - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
+ - *Optional* `resultExtension` is packaged as part of the [Result](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#result) in the xAPI structure. The `resultExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
 
 CompleteSession returns `false` if there is no current user logged in or session in progress. In all other cases, `true` will be returned.
 
@@ -52,11 +53,11 @@ Simple session event:
 public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension);
 \endcode
 
-The `action` is the name of the event that has occurred within the module. The `action` is the name of the [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
-The `targetObject` is the name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
-*(Optional)* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
+ - The `action` is the name of the event that has occurred within the module. The `action` is the name of the [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
+ - The `targetObject` is the name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
+ - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
 
-SendSimpleSessionEvent returns `false` if there `action` is null or an emptry string. In all other cases, `true` will be returned.
+\ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent "SendSimpleSessionEvent" returns `false` if there `action` is null or an emptry string. In all other cases, `true` will be returned.
 
 Custom session event:
 \code{.cs}
@@ -65,16 +66,17 @@ public static bool SendSessionEvent(Statement eventStatement);
 
 The `eventStatement` is an xAPI [Statement](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#statement), which contains the whole structure within the required xAPI Spec.
 
-SendSessionEvent will return `false` if there is no current user logged in or session in progress.
-SendSessionEvent will return `false` if the `eventStatement` is null.
-SendSessionEvent will return `false` if the `eventStatement` has a null [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
-SendSessionEvent will return `false` if the `eventStatement` has a [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb) with no ID.
-SendSessionEvent will return `false` if the `eventStatement` has a null [Target](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#object).
-SendSessionEvent will return `true` in all other cases.
+ - SendSessionEvent will return `false` if there is no current user logged in or session in progress.
+ - SendSessionEvent will return `false` if the `eventStatement` is null.
+ - SendSessionEvent will return `false` if the `eventStatement` has a null [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
+ - SendSessionEvent will return `false` if the `eventStatement` has a [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb) with no ID.
+ - SendSessionEvent will return `false` if the `eventStatement` has a null [Target](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#object).
+ - SendSessionEvent will return `true` in all other cases.
 
 # Handling Authentication API Responses
 
 All Session Event responses do not contain important information other than to indicate a failure to reach the server or if there was an error in the format of the data once it reached the server.
+
 The approach in the Unity Apex SDK is done through specific Success and Fail unity events.
 
 If you want more information on the data types in the events, check out the sections below.
@@ -84,42 +86,43 @@ If you want more information on the data types in the events, check out the sect
 
 ## Session Join
 
-ApexSystem::OnJoinSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session joined was sent successfully.
+PixoVR::Apex::ApexSystem::OnJoinSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session joined was sent successfully.
 `response` contains the HTTP response.
 
 For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
 
-ApexSystem::OnJoinSessionFailed(FailureResponse response)
+PixoVR::Apex::ApexSystem::OnJoinSessionFailed(FailureResponse response)
 `response` contains the error code and error message for why the user failed to join the session.
 
 For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
 
 ## Session Complete
 
-ApexSystem::OnCompleteSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session completed was sent successfully.
+PixoVR::Apex::ApexSystem::OnCompleteSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session completed was sent successfully.
 `response` contains the HTTP response.
 
 For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
 
-ApexSystem::OnCompleteSessionFailed(FailureResponse response)
+PixoVR::Apex::ApexSystem::OnCompleteSessionFailed(FailureResponse response)
 `response` contains the error code and error message for why the user failed to complete the session.
 
 For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
 
 ## Session Event
 
-ApexSystem::OnSendEventSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session event was sent successfully.
+PixoVR::Apex::ApexSystem::OnSendEventSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session event was sent successfully.
 `response` contains the HTTP response.
 
 For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
 
-ApexSystem::OnSendEventFailed(FailureResponse response)
+PixoVR::Apex::ApexSystem::OnSendEventFailed(FailureResponse response)
 `response` contains the error code and error message for why the user failed to send the session event.
 
-For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
+For more information on what is in `response`, check out the [FailureResponse](@ref FailureResponse) class.
 
-In the [Example Code](#example-code) section, you'll see C# examples on how to bind to the event delegates.
+In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
 
+\anchor example-code2
 # Example Code
 
 ## Calling JoinSession
