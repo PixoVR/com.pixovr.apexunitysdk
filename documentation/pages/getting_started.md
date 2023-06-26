@@ -112,3 +112,4 @@ PixoVR::Apex::ApexSystem::SendSimpleSessionEvent(string action, string targetObj
 - Returns false if there is no logged in user, there is no current session or no action is assigned.
 - PixoVR::Apex::ApexSystem::OnSendEventSuccess() is called when the event has been sent successfully.
 - PixoVR::Apex::ApexSystem::OnSendEventFailed() is called when the session was not started, contains invalid information or when the server is not able to be reached.
+
