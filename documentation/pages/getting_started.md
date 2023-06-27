@@ -53,7 +53,7 @@ All server functions have corresponding Success and Failed events.
 
 ### Ping
 
-- PixoVR::Apex::APIHandler::Ping() Contacts the Apex Server for status.
+- PixoVR::Apex::ApexSystem::Ping() Contacts the Apex Server for status.
 - PixoVR::Apex::ApexSystem::OnPingSuccess() is called when there is a successful response from the server.
 - PixoVR::Apex::ApexSystem::OnPingFailed() is called when the server is not able to be reached.
 
