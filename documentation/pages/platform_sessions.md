@@ -138,7 +138,8 @@ The ApexSystem::SendSimpleSessionEvent() function has 2 required parameters and 
 PixoVR::Apex::ApexSystem::OnSendEventSuccess() - Called when the platform indicates that the session event was sent successfully.
  - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage).
 
-PixoVR::Apex::ApexSystem::OnSendEventFailed()
+PixoVR::Apex::ApexSystem::OnSendEventFailed() - Called when the platform indicates that the session event was not received successfully, had invalid data or
+the server was not reachable.
  - `response:FailureResponse` - Contains the error code and error message for why the user failed to send the session event.
 
 In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
@@ -170,7 +171,8 @@ The `eventStatement` is an xAPI [Statement](https://github.com/adlnet/xAPI-Spec/
 PixoVR::Apex::ApexSystem::OnSendEventSuccess() - Called when the platform indicates that the session event was sent successfully.
  - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage).
 
-PixoVR::Apex::ApexSystem::OnSendEventFailed()
+PixoVR::Apex::ApexSystem::OnSendEventFailed() - Called when the platform indicates that the session event was not received successfully, had invalid data or
+the server was not reachable.
  - `response:FailureResponse` - Contains the error code and error message for why the user failed to send the session event.
 
 In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
