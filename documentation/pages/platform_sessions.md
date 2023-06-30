@@ -4,10 +4,10 @@
 
 There are 4 functions used for manipulating session and data reporting:
 
- - ApexSystem::JoinSession() is used to indicate the start of a session. It also includes information about the module and user.
- - ApexSystem::CompleteSession() is used to indicate the end of a session. It also includes information about the user's session, such as length, completion status and score.
- - ApexSystem::SendSimpleSessionEvent() is used during a session to signal events or report module specific data. This is a simplified version of ApexSystem::SendSimpleSessionEvent().
- - ApexSystem::SendSessionEvent() is used during a session to signal events or report module specific data. This requires nearly a fully described xAPI Statement to be passed in.
+ - [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()) is used to indicate the start of a session. It also includes information about the module and user.
+ - [ApexSystem::CompleteSession()](@ref PixoVR::Apex::ApexSystem::CompleteSession()) is used to indicate the end of a session. It also includes information about the user's session, such as length, completion status and score.
+ - [ApexSystem::SendSimpleSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent()) is used during a session to signal events or report module specific data. This is a simplified version of [SendSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSessionEvent()).
+ - [ApexSystem::SendSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSessionEvent()) is used during a session to signal events or report module specific data. This requires nearly a fully described xAPI Statement to be passed in.
 
 All events used for when these functions are called are the same for when calling Authentication functionality. To see how to use the events, see <a href="authentication.html#requesthandling">Handling Authentication API Responses</a> in the \ref authentication "Authentication" page.
 
@@ -37,27 +37,25 @@ Other modules just have a front end menu, but the concept is the same- the sessi
 from the menu.
 
 Every time a user enters a scenario, (whether directly from the login screen, from a lobby, from a front-end menu, or from
-any other system you have set up), you need to call ApexSystem::JoinSession(). Similarly, once they have finished a scenario you
-need to call ApexSystem::CompleteSession().
+any other system you have set up), you need to call [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()). Similarly, once they have finished a scenario you
+need to call [ApexSystem::CompleteSession()](@ref PixoVR::Apex::ApexSystem::CompleteSession()).
 
 \subsection joinSession JoinSession()
 
 ### Overview
 
-The ApexSystem::JoinSession() function should be called every time the user starts a new session.
+The [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()) function should be called every time the user starts a new session.
 
  - Joins a user to a session for a given scenario within the module.
  - Auto-generates an xAPI statement and sends it to Apex as a \ref Apex::EventTypes::PIXOVR_SESSION_JOINED "PIXOVR_SESSION_JOINED" event.
  - Adds the given context extensions to the xAPI Statement context if it's not null.
  - Returns `FALSE` if there is no logged in user. Otherwise returns `TRUE`.
  - Will log a warning message if there is already a session in progress that hasn't been ended with a
-   \ref Apex::EventTypes::PIXOVR_SESSION_COMPLETE "PIXOVR_SESSION_COMPLETE" event, sent via the UApexAPI::CompleteSession() function.
- - UApexAPI::OnRequestComplete and UApexAPI::OnStaticRequestComplete with the type `EApexRequestType::JoinSession` is called when the user was able to join the session successfully. 
- - UApexAPI::OnRequestFail and UApexAPI::OnStaticRequestFail with the type `EApexRequestType::JoinSession` is called when the user was not able to join the session or when the server is not
-   able to be reached. 
- - Ensures the user has access to the given module.
+   \ref Apex::EventTypes::PIXOVR_SESSION_COMPLETE "PIXOVR_SESSION_COMPLETE" event, sent via the [ApexSystem::CompleteSession()](@ref PixoVR::Apex::ApexSystem::CompleteSession()) function.
 
 ### Parameters
+
+The [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()) function has 2 optional parameters:
 
  - `scenarioID:String` - Sets the ApexSystem::scenarioID, which is then used as part of the `id` property of
    the `object` object. If this is not set, then whatever the ApexSystem::scenarioID was previously set to will
@@ -80,7 +78,7 @@ In the [Example Code](#example-code2) section, you'll see C# examples on how to 
 
 ### Overview
 
-The ApexSystem::CompleteSession() function should be called every time the user completes a session.
+The [ApexSystem::CompleteSession()](@ref PixoVR::Apex::ApexSystem::CompleteSession()) function should be called every time the user completes a session.
 
 It:
 
@@ -91,7 +89,7 @@ It:
 
 ### Parameters
 
-The ApexSystem::CompleteSession() function has 1 required parameter and 2 optional parameters:
+The [ApexSystem::CompleteSession()](@ref PixoVR::Apex::ApexSystem::CompleteSession()) function has 1 required parameter and 2 optional parameters:
 
  - `currentSessionData:SessionData` - Contains scoring information as well as if the session was completed.
  - `contextExtension:Extension` - Use this parameter to add data to the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure.
@@ -111,21 +109,16 @@ In the [Example Code](#example-code2) section, you'll see C# examples on how to 
 
 ### Overview
 
-The ApexSystem::SendSimpleSessionEvent() function is how you send any simplified data to Apex during a session.
+The [ApexSystem::SendSimpleSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent()) function is how you send any simplified data to Apex during a session.
 
 It:
  - Constructs an xAPI statement from provided session data.
  - Sends an event with xAPI statement data.
- - Returns `FALSE` if there is no logged in user, if ApexSystem::JoinSession() has not been called to start a session, if the `action` is null or an empty string.
+ - Returns `FALSE` if there is no logged in user, if [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()) has not been called to start a session, if the `action` is null or an empty string.
 
 ### Parameters
 
-Simple session event:
-\code{.cs}
-public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension);
-\endcode
-
-The ApexSystem::SendSimpleSessionEvent() function has 2 required parameters and 1 optional parameter:
+The [ApexSystem::SendSimpleSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent()) function has 2 required parameters and 1 optional parameter:
 
  - `action:string` - The name of the event that has occurred within the module. The `action` is the name of the [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
  - `targetObject:string` - The name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
@@ -148,19 +141,19 @@ In the [Example Code](#example-code2) section, you'll see C# examples on how to 
 
 ### Overview
 
-The ApexSystem::SendSessionEvent() function is how you send any full or custom set of data to Apex during a session.
+The [ApexSystem::SendSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSessionEvent())::SendSessionEvent() function is how you send any full or custom set of data to Apex during a session.
 
 It:
  - Constructs an xAPI statement from provided session data.
  - Sends an event with xAPI statement data.
- - Returns `FALSE` if there is no logged in user, if ApexSystem::JoinSession() has not been called to start a session, or if any of the following members in `eventStatement` are null:
+ - Returns `FALSE` if there is no logged in user, if [ApexSystem::JoinSession()](@ref PixoVR::Apex::ApexSystem::JoinSession()) has not been called to start a session, or if any of the following members in `eventStatement` are null:
    + `eventStatement.verb`
    + `eventStatement.verb.id`
    + `eventStatement.target`
 
 ### Parameters
 
-The ApexSystem::SendSessionEvent() function has 1 required parameter:
+The [ApexSystem::SendSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSessionEvent()) function has 1 required parameter:
 
  - `eventStatement:Statement` - Provides all the necessary data to generate the xAPI statement.
 
@@ -177,8 +170,7 @@ the server was not reachable.
 
 In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
 
-\anchor example-code2
-# Example Code
+\section example-code2 Example Code
 
 ## Calling JoinSession
 
