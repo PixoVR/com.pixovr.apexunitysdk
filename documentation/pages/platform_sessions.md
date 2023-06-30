@@ -124,7 +124,7 @@ The [ApexSystem::SendSimpleSessionEvent()](@ref PixoVR::Apex::ApexSystem::SendSi
  - `targetObject:string` - The name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
  - `contextExtension:Extension` - Use this parameter to add data to the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure.
 
-\ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent "SendSimpleSessionEvent" returns `false` if there `action` is null or an emptry string. In all other cases, `true` will be returned.
+\ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent "SendSimpleSessionEvent" returns `FALSE` if there `action` is null or an emptry string. In all other cases, `TRUE` will be returned.
 
 ### Handling Responses
 

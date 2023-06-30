@@ -76,8 +76,8 @@ void OnLoginSuccess(LoginResponseContent loginResponse)
 
 We've decided to provide some notes on questions we've been asked about authentication.
 
-Q. Is the users information encrypted?
-A. Yes, but not by anything internal to the Apex SDK or API calls. Instead, we use TLS over HTTPS.
+**Q.** Is the users information encrypted? \n
+**A.** Yes, but not by anything internal to the Apex SDK or API calls. Instead, we use TLS over HTTPS.
 
-Q. Does the Login call do anything besides log-in the user?
-A. Yes, Login goes beyond and checks the user against the module to see if they have access to module. During this, we also pass back some module and user specific information which will be seen a successful login response.
+**Q.** Does the Login call do anything besides log-in the user? \n
+**A.** Yes, Login goes beyond and checks the user against the module to see if they have access to module. During this, we also pass back some module and user specific information which will be seen a successful login response.
