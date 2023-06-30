@@ -1,77 +1,15 @@
-\page platform_sessions Session & Data Tracking
+\page platform_sessions Session And Data Reporting
 
-To track the users progression through a Session and information, a module needs to send Session Events.
-There are multiple kind of Session Events and serve specific purposes listed in the Session Event Types section.
+# Functions
 
-The ApexSDK does help with sending session events to the PixoVR Platform, such as including information about the user, module and device.
-However, all other information will need to be provided by the module through the function inputs. This data is formatted using the xAPI Standard.
+There are 4 functions used for manipulating session and data reporting:
 
-To get a better understanding of the xAPI Standard, visit the <a href='https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#parttwo'>xAPI Spec</a>.
+ - ApexSystem::JoinSession() is used to indicate the start of a session. It also includes information about the module and user.
+ - ApexSystem::CompleteSession() is used to indicate the end of a session. It also includes information about the user's session, such as length, completion status and score.
+ - ApexSystem::SendSimpleSessionEvent() is used during a session to signal events or report module specific data. This is a simplified version of ApexSystem::SendSimpleSessionEvent().
+ - ApexSystem::SendSessionEvent() is used during a session to signal events or report module specific data. This requires nearly a fully described xAPI Statement to be passed in.
 
-# Session Event Types
-
-There are currently three types of Session Events.
-
-## Session Join
-
-Session Join is used to denote the start of a users session. Using this event will always start a new session, even if the prior session was not completed or ended. It should only be called once per module session.
-
-\code{.cs}
-public static bool JoinSession(string scenarioID, Extension contextExtension);
-\endcode
-
- - *Optional* The `scenarioID` is up to the developer of the module to describe.
- - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
-
-JoinSession returns `false` if there is no current user logged in. In all other cases, `true` will be returned.
-
-There will be a message logged if JoinSession is called while there is already a session in progress.
-
-## Session Complete
-
-Session Complete is used to denote the completion and end of a users session. This will flag a completed session on the platform. This event also contains information on if the user completed the module, passed the module and scoring of the module. It should only be called once per module session.
-
-\code{.cs}
-public static bool CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension);
-\endcode
-
-`currentSessionData` contains scoring information as well as if the session was completed.
-
- - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
- - *Optional* `resultExtension` is packaged as part of the [Result](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#result) in the xAPI structure. The `resultExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
-
-CompleteSession returns `false` if there is no current user logged in or session in progress. In all other cases, `true` will be returned.
-
-## Session Event
-
-Session Event is a catch-all event. It helps capture data or events that the module wants to track. These can be customized with any information that will fit within the <a href='https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#parttwo'>xAPI Spec</a>.
-
-The Apex SDK helps developers capture these events with two functions, allowing delivery of a very simple session event or a fully customized session event.
-
-Simple session event:
-\code{.cs}
-public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension);
-\endcode
-
- - The `action` is the name of the event that has occurred within the module. The `action` is the name of the [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
- - The `targetObject` is the name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
- - *Optional* `contextExtension` is packaged as part of the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure. The `contextExtension` is an xAPI [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) object.
-
-\ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent "SendSimpleSessionEvent" returns `false` if there `action` is null or an emptry string. In all other cases, `true` will be returned.
-
-Custom session event:
-\code{.cs}
-public static bool SendSessionEvent(Statement eventStatement);
-\endcode
-
-The `eventStatement` is an xAPI [Statement](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#statement), which contains the whole structure within the required xAPI Spec.
-
- - SendSessionEvent will return `false` if there is no current user logged in or session in progress.
- - SendSessionEvent will return `false` if the `eventStatement` is null.
- - SendSessionEvent will return `false` if the `eventStatement` has a null [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
- - SendSessionEvent will return `false` if the `eventStatement` has a [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb) with no ID.
- - SendSessionEvent will return `false` if the `eventStatement` has a null [Target](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#object).
- - SendSessionEvent will return `true` in all other cases.
+All events used for when these functions are called are the same for when calling Authentication functionality. To see how to use the events, see <a href="authentication.html#requesthandling">Handling Authentication API Responses</a> in the \ref authentication "Authentication" page.
 
 # Handling Authentication API Responses
 
@@ -81,44 +19,159 @@ The approach in the Unity Apex SDK is done through specific Success and Fail uni
 
 If you want more information on the data types in the events, check out the sections below.
 
-\section HttpResponseMessage HttpResponseMessage
-\section FailureResponse FailureResponse
+\ref httpresponsemessage HttpResponseMessage
+\ref failureresponse FailureResponse
 
-## Session Join
+\section session Sessions
 
-PixoVR::Apex::ApexSystem::OnJoinSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session joined was sent successfully.
-`response` contains the HTTP response.
+\subsection whatissessions What is a session?
 
-For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
+A session is one complete play-through of single scenario. Different modules handle this in different ways, but the main
+idea is that a session should be the scenario itself, not the process of selecting an experience. 
 
-PixoVR::Apex::ApexSystem::OnJoinSessionFailed(FailureResponse response)
-`response` contains the error code and error message for why the user failed to join the session.
+Some modules have a lobby that a user loads into after authentication and return to after running through a scenario.
+Time in the lobby should not count towards any session- the session begins when you choose an experience from the lobby,
+and the session ends when you finish the experience, either by completing it, or using a menu option to return to the lobby.
 
-For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
+Other modules just have a front end menu, but the concept is the same- the session begins once you have selected the experience
+from the menu.
 
-## Session Complete
+Every time a user enters a scenario, (whether directly from the login screen, from a lobby, from a front-end menu, or from
+any other system you have set up), you need to call ApexSystem::JoinSession(). Similarly, once they have finished a scenario you
+need to call ApexSystem::CompleteSession().
 
-PixoVR::Apex::ApexSystem::OnCompleteSessionSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session completed was sent successfully.
-`response` contains the HTTP response.
+\subsection joinSession JoinSession()
 
-For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
+### Overview
 
-PixoVR::Apex::ApexSystem::OnCompleteSessionFailed(FailureResponse response)
-`response` contains the error code and error message for why the user failed to complete the session.
+The ApexSystem::JoinSession() function should be called every time the user starts a new session.
 
-For more information on what is in `response`, checkout the [FailureResponse](@ref FailureResponse) class.
+ - Joins a user to a session for a given scenario within the module.
+ - Auto-generates an xAPI statement and sends it to Apex as a \ref Apex::EventTypes::PIXOVR_SESSION_JOINED "PIXOVR_SESSION_JOINED" event.
+ - Adds the given context extensions to the xAPI Statement context if it's not null.
+ - Returns `FALSE` if there is no logged in user. Otherwise returns `TRUE`.
+ - Will log a warning message if there is already a session in progress that hasn't been ended with a
+   \ref Apex::EventTypes::PIXOVR_SESSION_COMPLETE "PIXOVR_SESSION_COMPLETE" event, sent via the UApexAPI::CompleteSession() function.
+ - UApexAPI::OnRequestComplete and UApexAPI::OnStaticRequestComplete with the type `EApexRequestType::JoinSession` is called when the user was able to join the session successfully. 
+ - UApexAPI::OnRequestFail and UApexAPI::OnStaticRequestFail with the type `EApexRequestType::JoinSession` is called when the user was not able to join the session or when the server is not
+   able to be reached. 
+ - Ensures the user has access to the given module.
 
-## Session Event
+### Parameters
 
-PixoVR::Apex::ApexSystem::OnSendEventSuccess(HttpResponseMessage response) - This Delegate is called when the platform indicates that the session event was sent successfully.
-`response` contains the HTTP response.
+ - `scenarioID:String` - Sets the ApexSystem::scenarioID, which is then used as part of the `id` property of
+   the `object` object. If this is not set, then whatever the ApexSystem::scenarioID was previously set to will
+   be used.
+ - `contextExtension:Extension` - Allows you to include any custom extensions in the context object. This is
+   used to include any additional information you want to report that is not in the standard JoinSession() report.
+   See [Extensions](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#miscext) for more details.
 
-For more information on what is in `responseMessage`, checkout the [HttpResponseMessage](@ref HttpResponseMessage) class.
+### Handling Response
 
-PixoVR::Apex::ApexSystem::OnSendEventFailed(FailureResponse response)
-`response` contains the error code and error message for why the user failed to send the session event.
+PixoVR::Apex::ApexSystem::OnJoinSessionSuccess() - This Delegate is called when the platform indicates that the new session was started.
+ - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage)
 
-For more information on what is in `response`, check out the [FailureResponse](@ref FailureResponse) class.
+PixoVR::Apex::ApexSystem::OnJoinSessionFailed() - Called when the user failed to start a new session.
+ - `response:FailureResponse` - Contains the error code and error message for why the user failed to join the session.
+
+In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
+
+\subsection completeSession CompleteSession()
+
+### Overview
+
+The ApexSystem::CompleteSession() function should be called every time the user completes a session.
+
+It:
+
+ - Completes the current session.
+ - Auto-generates an xAPI statement and sends it to Apex as a \ref Apex::EventTypes::PIXOVR_SESSION_COMPLETE "PIXOVR_SESSION_COMPLETE" event.
+ - Adds the given context extensions to the xAPI Statement context if it's not null. 
+ - Returns `FALSE` if there is no logged in user or current session.
+
+### Parameters
+
+The ApexSystem::CompleteSession() function has 1 required parameter and 2 optional parameters:
+
+ - `currentSessionData:SessionData` - Contains scoring information as well as if the session was completed.
+ - `contextExtension:Extension` - Use this parameter to add data to the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure.
+ - `resultExtension:Extension` Use this parameter to add data to the [Result](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#result) in the xAPI structure.
+
+### Handling Responses
+
+PixoVR::Apex::ApexSystem::OnCompleteSessionSuccess() - Called when the platform indicates that the session was completed.
+ - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage).
+
+PixoVR::Apex::ApexSystem::OnCompleteSessionFailed() - Called when the user either had not started a session before calling this or passed invalid information.
+ - `response:FailureResponse` - Contains the error code and error message for why the user failed to join the session.
+
+In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
+
+\subsection sendsimplesessionevent SendSimpleSessionEvent()
+
+### Overview
+
+The ApexSystem::SendSimpleSessionEvent() function is how you send any simplified data to Apex during a session.
+
+It:
+ - Constructs an xAPI statement from provided session data.
+ - Sends an event with xAPI statement data.
+ - Returns `FALSE` if there is no logged in user, if ApexSystem::JoinSession() has not been called to start a session, if the `action` is null or an empty string.
+
+### Parameters
+
+Simple session event:
+\code{.cs}
+public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension);
+\endcode
+
+The ApexSystem::SendSimpleSessionEvent() function has 2 required parameters and 1 optional parameter:
+
+ - `action:string` - The name of the event that has occurred within the module. The `action` is the name of the [Verb](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#verb).
+ - `targetObject:string` - The name of the object or person that the `action` is taking place against or on. The `targetObject` is the name of the [Activity](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#activity) and used in the activity ID.
+ - `contextExtension:Extension` - Use this parameter to add data to the [Context](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#context) in the xAPI structure.
+
+\ref PixoVR::Apex::ApexSystem::SendSimpleSessionEvent "SendSimpleSessionEvent" returns `false` if there `action` is null or an emptry string. In all other cases, `true` will be returned.
+
+### Handling Responses
+
+PixoVR::Apex::ApexSystem::OnSendEventSuccess() - Called when the platform indicates that the session event was sent successfully.
+ - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage).
+
+PixoVR::Apex::ApexSystem::OnSendEventFailed()
+ - `response:FailureResponse` - Contains the error code and error message for why the user failed to send the session event.
+
+In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
+
+\subsection sendsessionevent SendSessionEvent()
+
+### Overview
+
+The ApexSystem::SendSessionEvent() function is how you send any full or custom set of data to Apex during a session.
+
+It:
+ - Constructs an xAPI statement from provided session data.
+ - Sends an event with xAPI statement data.
+ - Returns `FALSE` if there is no logged in user, if ApexSystem::JoinSession() has not been called to start a session, or if any of the following members in `eventStatement` are null:
+   + `eventStatement.verb`
+   + `eventStatement.verb.id`
+   + `eventStatement.target`
+
+### Parameters
+
+The ApexSystem::SendSessionEvent() function has 1 required parameter:
+
+ - `eventStatement:Statement` - Provides all the necessary data to generate the xAPI statement.
+
+The `eventStatement` is an xAPI [Statement](https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#statement), which contains the whole structure within the required xAPI Spec.
+
+### Handling Responses
+
+PixoVR::Apex::ApexSystem::OnSendEventSuccess() - Called when the platform indicates that the session event was sent successfully.
+ - `response:HttpResponseMessage` - Contains the [HTTP response message](@ref HttpResponseMessage).
+
+PixoVR::Apex::ApexSystem::OnSendEventFailed()
+ - `response:FailureResponse` - Contains the error code and error message for why the user failed to send the session event.
 
 In the [Example Code](#example-code2) section, you'll see C# examples on how to bind to the event delegates.
 
