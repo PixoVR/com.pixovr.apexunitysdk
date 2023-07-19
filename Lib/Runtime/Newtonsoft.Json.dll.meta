@@ -6,7 +6,7 @@ PluginImporter:
   iconMap: {}
   executionOrder: {}
   defineConstraints:
-  - UNITY_2020 || UNITY_2019
+  - UNITY_2019_1_OR_NEWER
   isPreloaded: 0
   isOverridable: 1
   isExplicitlyReferenced: 0
@@ -30,6 +30,7 @@ PluginImporter:
     second:
       enabled: 1
       settings:
+        AndroidSharedLibraryType: Executable
         CPU: ARMv7
   - first:
       Any: 
