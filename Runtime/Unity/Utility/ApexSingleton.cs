@@ -24,9 +24,13 @@ namespace PixoVR.Apex
                 {
                     if (instance == null)
                     {
+#if UNITY_2020_1_OR_NEWER
+                        Object[] existingInstances = FindObjectsByType<T>(FindObjectsSortMode.None);
+#else
                         Object[] existingInstances = FindObjectsOfType(typeof(T));
+#endif
 
-                        if(existingInstances.Length <= 0)
+                        if (existingInstances.Length <= 0)
                         {
                             GameObject singleton = new GameObject();
                             instance = singleton.AddComponent<T>();
