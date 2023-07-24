@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using UnityEngine;
 using UnityEngine.XR;
@@ -9,10 +8,10 @@ using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using UnityEditor.PackageManager;
 
 namespace PixoVR.Apex
 {
+    public delegate void PlatformResponse(ResponseType type, bool wasSuccessful, object responseData);
 
     [DefaultExecutionOrder(-50)]
     public class ApexSystem : ApexSingleton<ApexSystem>
@@ -54,8 +53,18 @@ namespace PixoVR.Apex
             set { }
         }
 
+        public static LoginResponseContent CurrentActiveLogin
+        {
+            get { return Instance.currentActiveLogin; }
+            set { }
+        }
+
+
+        [SerializeField, EndpointDisplay]
+        protected PlatformServer platformTargetServer = PlatformServer.NA_PRODUCTION;
+
         [SerializeField]
-        protected string serverIP = ApexEndpoints.ProductionEnvironment;
+        protected string serverIP = "";
 
         [SerializeField]
         protected int moduleID = 0;
@@ -78,6 +87,7 @@ namespace PixoVR.Apex
         protected APIHandler apexAPIHandler;
         protected ApexWebsocket webSocket;
         protected Task<bool> socketConnectTask;
+        protected Task socketDisconnectTask;
 
         public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
         public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
@@ -92,12 +102,36 @@ namespace PixoVR.Apex
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
+        public PlatformResponse OnPlatformResponse;
+
         public OnAuthCodeReceived OnAuthorizationCodeReceived = new OnAuthCodeReceived();
 
         void Awake()
         {
+            SetupAPI();
+
+            DontDestroyOnLoad(gameObject);
+        }
+
+        void SetupAPI()
+        {
+            if (serverIP.Length == 0)
+            {
+                serverIP = GetEndpointFromTarget(platformTargetServer);
+            }
+
             apexAPIHandler = new APIHandler(serverIP);
+            // TODO: Move to new plugin
+            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(platformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
+
+            if(webSocket != null)
+            {
+                if(webSocket.IsConnected())
+                {
+                    DisconnectWebsocket();
+                }
+            }
 
             webSocket = new ApexWebsocket();
             webSocket.OnConnectSuccess.AddListener(() => OnWebSocketConnected());
@@ -106,9 +140,21 @@ namespace PixoVR.Apex
             webSocket.OnClosed.AddListener((reason) => OnWebSocketClosed(reason));
 
             PopulateWebSocketURL();
-            ConnectWebsocket();
+        }
 
-            DontDestroyOnLoad(gameObject);
+        string GetEndpointFromTarget(PlatformServer target)
+        {
+            return target.ToUrlString();
+        }
+
+
+        // TODO: Move to new plugin
+        string GetWebEndpointFromPlatformTarget(PlatformServer target)
+        {
+            int targetValue = (int)target;
+            WebPlatformServer webTarget = (WebPlatformServer)targetValue;
+
+            return webTarget.ToUrlString();
         }
 
         void PopulateWebSocketURL()
@@ -148,6 +194,11 @@ namespace PixoVR.Apex
         void ConnectWebsocket()
         {
             socketConnectTask = Task.Run(() => webSocket.Connect(new Uri(webSocketUrl)));
+        }
+
+        void DisconnectWebsocket()
+        {
+            socketDisconnectTask = Task.Run(() => webSocket.CloseSocket());
         }
 
         void OnWebSocketConnected()
@@ -243,6 +294,11 @@ namespace PixoVR.Apex
             return Instance._RequestAuthorizationCode();
         }
 
+        public static void ChangePlatformServer(PlatformServer newServer)
+        {
+            Instance._ChangePlatformServer(newServer);
+        }
+
         public static void Ping()
         {
             Instance._Ping();
@@ -286,6 +342,13 @@ namespace PixoVR.Apex
         public static bool GetUser(int userId = -1)
         {
             return Instance._GetUser(userId);
+        }
+
+        protected void _ChangePlatformServer(PlatformServer newServer)
+        {
+            platformTargetServer = newServer;
+
+            SetupAPI();
         }
 
         protected void _Ping()
@@ -623,12 +686,12 @@ namespace PixoVR.Apex
                     {
                         if(success)
                         {
-                            Debug.Log("Yay! Ping success!");
+                            Debug.Log("[ApexSystem] Ping successful.");
                             OnPingSuccess.Invoke(message);
                         }
                         else
                         {
-                            Debug.Log("Boo! No ping succcess!");
+                            Debug.Log("[ApexSystem] Ping failed.");
                             OnPingFailed.Invoke(message);
                         }
                         break;
@@ -737,6 +800,8 @@ namespace PixoVR.Apex
                         break;
                     }
             }
+
+            OnPlatformResponse.Invoke(response, success, responseData);
         }
 
         protected void HandleLogin(bool successful, object responseData)
@@ -762,6 +827,40 @@ namespace PixoVR.Apex
                 ConnectWebsocket();
             }
             return webSocket.RequestAuthorizationCode();
+        }
+
+        // TODO: Move to new plugin
+        public static bool GenerateOneTimeLoginForCurrentUser()
+        {
+            if (Instance.currentActiveLogin == null)
+                return false;
+
+            return Instance._GenerateOneTimeLoginForUser(Instance.currentActiveLogin.ID);
+        }
+
+        // TODO: Move to new plugin
+        bool _GenerateOneTimeLoginForCurrentUser()
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No current user logged in.");
+                return false;
+            }
+
+            return _GenerateOneTimeLoginForUser(currentActiveLogin.ID);
+        }
+
+        // TODO: Move to new plugin
+        bool _GenerateOneTimeLoginForUser(int userId)
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to generate code.");
+                return false;
+            }
+
+            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, userId);
+            return true;
         }
     }
 }

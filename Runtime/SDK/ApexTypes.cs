@@ -2,7 +2,7 @@ using System;
 
 namespace PixoVR.Apex
 {
-    public interface IApexErrorable
+    public interface IPlatformErrorable
     {
         public abstract bool HasErrored();
     }
@@ -13,7 +13,7 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class FailureResponse : IFailure, IApexErrorable
+    public class FailureResponse : IFailure, IPlatformErrorable
     {
         public string Error;
         public string HttpCode;
@@ -39,7 +39,7 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class LoginResponseContent : IApexErrorable
+    public class LoginResponseContent : IPlatformErrorable
     {
         public int ID;
         public int OrgId;
@@ -57,7 +57,7 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class UserAccessResponseContent: IApexErrorable
+    public class UserAccessResponseContent: IPlatformErrorable
     {
         public int UserId = -1;
         public int ModuleId = -1;
@@ -80,7 +80,7 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class GetUserResponseContent : IApexErrorable
+    public class GetUserResponseContent : IPlatformErrorable
     {
         public int ID;
         public string First;
@@ -92,6 +92,23 @@ namespace PixoVR.Apex
         {
             return (Email == null);
         }
+    }
+
+    [Serializable]
+    public class GeneratedAssistedLogin : IPlatformErrorable
+    {
+        public AssistedLoginCode AssistedLogin;
+
+        public bool HasErrored()
+        {
+            return (AssistedLogin == null);
+        }
+    }
+
+    public class AssistedLoginCode
+    {
+        public string AuthCode;
+        public string Expires;
     }
 
     [Serializable]
