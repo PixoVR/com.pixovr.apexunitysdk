@@ -10,10 +10,14 @@ COPY	. .
 
 RUN	doxygen -v	# confirm doxygen version from docs-docker-base
 
-RUN	git submodule set-branch --branch main documentation/docs-doxygen && \
-	git submodule update --init documentation/docs-doxygen
+# ensure the doxygen stuff is most up to date
+RUN	cd /build && \
+	git submodule update --init --recursive && \
+	cd documentation/docs-doxygen && git pull origin main
 
-ADD	$CACHEBREAKER skipcache2
+RUN	git fetch --tags
+
+#ADD	$CACHEBREAKER skipcache2
 
 RUN	./documentation/build.sh && \
 	eval "$(cat ./documentation/env.sh | grep "PROJECT_URL")" && \
@@ -22,3 +26,5 @@ RUN	./documentation/build.sh && \
 
 #ENTRYPOINT ["/docker-entrypoint.sh"]
 #CMD	["nginx", "-g", "daemon off;"]
+
+
