@@ -5,12 +5,18 @@ namespace PixoVR.Apex.Events
 {
     [System.Serializable]
     public class OnHttpResponseEvent : UnityEvent<HttpResponseMessage> { };
+    
     [System.Serializable]
     public class OnApexFailureEvent : UnityEvent<FailureResponse> { };
+    
     [System.Serializable]
     public class OnLoginSuccessEvent : UnityEvent<LoginResponseContent> { };
+    
     [System.Serializable]
     public class OnGetUserSuccessEvent : UnityEvent<GetUserResponseContent> { };
+
+    [System.Serializable]
+    public class OnGetUserModulesSuccessEvent : UnityEvent<GetUserModulesResponse> { };
 
     [System.Serializable]
     public class OnWebSocketConnectSuccessful : UnityEvent { };

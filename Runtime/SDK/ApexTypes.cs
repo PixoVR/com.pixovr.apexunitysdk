@@ -1,4 +1,8 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace PixoVR.Apex
 {
@@ -23,6 +27,55 @@ namespace PixoVR.Apex
         {
             return (Error == null || Message == null || HttpCode == null);
         }
+    }
+
+    [Serializable]
+    public class GetUserModulesResponse : IFailure, IPlatformErrorable
+    {
+        public string Error;
+        public string HttpCode;
+        public string Message;
+        public JObject Data;
+        public List<UserModulesData> ParsedData;
+        public bool HasErrored()
+        {
+            return (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        public void ParseData()
+        {
+            ParsedData = new List<UserModulesData>();
+            IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
+            UserModulesData currentUser;
+            foreach(JProperty currentProperty in dataPropertyEnumerator)
+            {
+                currentUser = new UserModulesData();
+
+                currentUser.UserId = currentProperty.Name;
+                currentUser.AvailableModules = JsonConvert.DeserializeObject<List<int>>(currentProperty.Value.ToString());
+
+                ParsedData.Add(currentUser);
+            }
+        }
+    }
+
+    [Serializable]
+    public class UserModulesData
+    {
+        public string UserId;
+        public List<int> AvailableModules;
+
+        public UserModulesData()
+        {
+            AvailableModules = new List<int>();
+        }
+    }
+
+    [Serializable]
+    public class UserModulesRequestData
+    {
+        [JsonProperty(PropertyName = "userIds")]
+        public List<int> UserIds = new List<int>();
     }
 
     [Serializable]

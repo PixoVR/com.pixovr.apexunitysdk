@@ -19,6 +19,7 @@ namespace PixoVR.Apex
         RT_SESSION_COMPLETE,
         RT_SESSION_EVENT,
         RT_GET_USER_ACCESS,
+        RT_GET_USER_MODULES,
         RT_GEN_AUTH_LOGIN,
     }
 
@@ -167,6 +168,32 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+        }
+
+        public async void GetUserModules(string authToken, int userId)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            UserModulesRequestData usersModulesRequest = new UserModulesRequestData();
+            usersModulesRequest.UserIds.Add(userId);
+            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(usersModulesRequest));
+            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/access/users", loginRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
+            if ((responseContent as GetUserModulesResponse).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+            else
+            {
+                (responseContent as GetUserModulesResponse).ParseData();
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
         }
 
         public async void JoinSession(string authToken, JoinSessionData joinData)
