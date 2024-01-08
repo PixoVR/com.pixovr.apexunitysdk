@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace PixoVR.Apex
 {
@@ -28,9 +27,23 @@ namespace PixoVR.Apex
         protected ApexExtensionStrings() { }
     }
 
-    public class ApexEndpoints
+    public class PlatformEndpoints
     {
-        public const string DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
-        public const string ProductionEnvironment = "https://modules.apex.pixovr.com";
+        public const string NorthAmerica_ProductionEnvironment = "https://modules.apex.pixovr.com";
+        public const string NorthAmerica_StagingEnvironment = "https://modules.apex.stage.pixovr.com";
+        public const string NorthAmerica_DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
+        public const string Saudi_ProductionEnvironment = "https://modules.apexsa.pixovr.com";
+        public const string Saudi_StagingEnvironment = "https://modules.apexsa.stage.pixovr.com";
+        public const string Saudi_DevelopmentEnvironment = "https://modules.apexsa.dev.pixovr.com";
+    }
+
+    public class WebPlatformEndpoints
+    {
+        public const string NorthAmerica_ProductionEnvironment = "https://api.apex.pixovr.com";
+        public const string NorthAmerica_StagingEnvironment = "https://api.apex.stage.pixovr.com";
+        public const string NorthAmerica_DevelopmentEnvironment = "https://api.apex.dev.pixovr.com";
+        public const string Saudi_ProductionEnvironment = "https://api.apexsa.pixovr.com";
+        public const string Saudi_StagingEnvironment = "https://api.apexsa.stage.pixovr.com";
+        public const string Saudi_DevelopmentEnvironment = "https://api.apexsa.dev.pixovr.com";
     }
 }

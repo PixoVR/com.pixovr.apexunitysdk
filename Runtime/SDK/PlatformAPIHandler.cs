@@ -19,6 +19,8 @@ namespace PixoVR.Apex
         RT_SESSION_COMPLETE,
         RT_SESSION_EVENT,
         RT_GET_USER_ACCESS,
+        RT_GET_USER_MODULES,
+        RT_GEN_AUTH_LOGIN,
     }
 
     public class APIHandler
@@ -29,8 +31,12 @@ namespace PixoVR.Apex
         protected string URL = "";
         protected HttpClient handlingClient = null;
 
+        // Move to a separate plugin
+        protected string webURL = "";
+        protected HttpClient webHandlingClient = null;
 
-        public APIHandler() : this(ApexEndpoints.ProductionEnvironment)
+
+        public APIHandler() : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment)
         {
         }
 
@@ -38,6 +44,8 @@ namespace PixoVR.Apex
         {
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);
+
+            webHandlingClient = new HttpClient();
         }
 
         HttpResponseMessage HandleException(Exception exception)
@@ -68,6 +76,26 @@ namespace PixoVR.Apex
             handlingClient.BaseAddress = new Uri(URL);
         }
 
+        public void SetWebEndpoint(string endpointUrl)
+        {
+            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
+                    Regex expression = new Regex(Regex.Escape("http"));
+                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
+                }
+                else
+                {
+                    endpointUrl.Insert(0, "https://");
+                }
+            }
+
+            webURL = endpointUrl;
+            webHandlingClient.BaseAddress = new Uri(webURL);
+        }
+
         public async void Ping()
         {
             handlingClient.DefaultRequestHeaders.Clear();
@@ -84,6 +112,26 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_PING, response, null);
+        }
+
+        public async void GenerateAssistedLogin(string authToken, int userId)
+        {
+            webHandlingClient.DefaultRequestHeaders.Clear();
+            webHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            webHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            webHandlingClient.DefaultRequestHeaders.Add("x-access-token", authToken);
+
+            HttpResponseMessage response = await webHandlingClient.GetAsync(string.Format("api/user/{0}/assisted-login", userId));
+            string body = await response.Content.ReadAsStringAsync();
+            Debug.Log(body);
+            object responseContent = JsonConvert.DeserializeObject<GeneratedAssistedLogin>(body);
+            GeneratedAssistedLogin assistedLogin = responseContent as GeneratedAssistedLogin;
+            if ((responseContent as GeneratedAssistedLogin).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, responseContent);
         }
 
         public async void Login(LoginData login)
@@ -120,6 +168,32 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+        }
+
+        public async void GetUserModules(string authToken, int userId)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            UserModulesRequestData usersModulesRequest = new UserModulesRequestData();
+            usersModulesRequest.UserIds.Add(userId);
+            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(usersModulesRequest));
+            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/access/users", loginRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
+            if ((responseContent as GetUserModulesResponse).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+            else
+            {
+                (responseContent as GetUserModulesResponse).ParseData();
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
         }
 
         public async void JoinSession(string authToken, JoinSessionData joinData)

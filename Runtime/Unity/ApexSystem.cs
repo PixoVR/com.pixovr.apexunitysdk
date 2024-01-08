@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using UnityEngine;
 using UnityEngine.XR;
@@ -9,10 +8,10 @@ using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using UnityEditor.PackageManager;
 
 namespace PixoVR.Apex
 {
+    public delegate void PlatformResponse(ResponseType type, bool wasSuccessful, object responseData);
 
     [DefaultExecutionOrder(-50)]
     public class ApexSystem : ApexSingleton<ApexSystem>
@@ -33,29 +32,45 @@ namespace PixoVR.Apex
         public static int ModuleID
         {
             get { return Instance.moduleID; }
-            set { }
+            set { Instance.moduleID = value; }
         }
 
         public static string ModuleName
         {
             get { return Instance.moduleName; }
-            set { }
+            set { Instance.moduleName = value; }
         }
 
         public static string ModuleVersion
         {
             get { return Instance.moduleVersion; }
-            set { }
+            set { Instance.moduleVersion = value; }
         }
 
         public static string ScenarioID
         {
             get { return Instance.scenarioID; }
+            set { Instance.scenarioID = value; }
+        }
+
+        public static LoginResponseContent CurrentActiveLogin
+        {
+            get { return Instance.currentActiveLogin; }
             set { }
         }
 
+        public static bool RunSetupOnAwake
+        {
+            get { return Instance.runSetupOnAwake; }
+            set { Instance.runSetupOnAwake = value; }
+        }
+
+
+        [SerializeField, EndpointDisplay]
+        protected PlatformServer platformTargetServer = PlatformServer.NA_PRODUCTION;
+
         [SerializeField]
-        protected string serverIP = ApexEndpoints.ProductionEnvironment;
+        protected string serverIP = "";
 
         [SerializeField]
         protected int moduleID = 0;
@@ -65,6 +80,8 @@ namespace PixoVR.Apex
         protected string moduleVersion = "0.00.00";
         [SerializeField]
         protected string scenarioID = "Generic";
+        [SerializeField]
+        public bool runSetupOnAwake = true;
 
         protected string webSocketUrl;
         protected string deviceID;
@@ -78,26 +95,62 @@ namespace PixoVR.Apex
         protected APIHandler apexAPIHandler;
         protected ApexWebsocket webSocket;
         protected Task<bool> socketConnectTask;
+        protected Task socketDisconnectTask;
 
         public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
         public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
+        
         public OnLoginSuccessEvent OnLoginSuccess = new OnLoginSuccessEvent();
         public OnApexFailureEvent OnLoginFailed = new OnApexFailureEvent();
+        
         public OnGetUserSuccessEvent OnGetUserSuccess = new OnGetUserSuccessEvent();
         public OnApexFailureEvent OnGetUserFailed = new OnApexFailureEvent();
+
+        public OnGetUserModulesSuccessEvent OnGetUserModulesSuccess = new OnGetUserModulesSuccessEvent();
+        public OnApexFailureEvent OnGetUserModulesFailed = new OnApexFailureEvent();
+        
         public OnHttpResponseEvent OnJoinSessionSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnJoinSessionFailed = new OnApexFailureEvent();
+        
         public OnHttpResponseEvent OnCompleteSessionSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnCompleteSessionFailed = new OnApexFailureEvent();
+        
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
+
+        public PlatformResponse OnPlatformResponse = null;
 
         public OnAuthCodeReceived OnAuthorizationCodeReceived = new OnAuthCodeReceived();
 
         void Awake()
         {
+            if(runSetupOnAwake)
+            {
+                SetupAPI();
+            }
+
+            DontDestroyOnLoad(gameObject);
+        }
+
+        void SetupAPI()
+        {
+            if (serverIP.Length == 0)
+            {
+                serverIP = GetEndpointFromTarget(platformTargetServer);
+            }
+
             apexAPIHandler = new APIHandler(serverIP);
+            // TODO: Move to new plugin
+            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(platformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
+
+            if(webSocket != null)
+            {
+                if(webSocket.IsConnected())
+                {
+                    DisconnectWebsocket();
+                }
+            }
 
             webSocket = new ApexWebsocket();
             webSocket.OnConnectSuccess.AddListener(() => OnWebSocketConnected());
@@ -106,9 +159,21 @@ namespace PixoVR.Apex
             webSocket.OnClosed.AddListener((reason) => OnWebSocketClosed(reason));
 
             PopulateWebSocketURL();
-            ConnectWebsocket();
+        }
 
-            DontDestroyOnLoad(gameObject);
+        string GetEndpointFromTarget(PlatformServer target)
+        {
+            return target.ToUrlString();
+        }
+
+
+        // TODO: Move to new plugin
+        string GetWebEndpointFromPlatformTarget(PlatformServer target)
+        {
+            int targetValue = (int)target;
+            WebPlatformServer webTarget = (WebPlatformServer)targetValue;
+
+            return webTarget.ToUrlString();
         }
 
         void PopulateWebSocketURL()
@@ -148,6 +213,11 @@ namespace PixoVR.Apex
         void ConnectWebsocket()
         {
             socketConnectTask = Task.Run(() => webSocket.Connect(new Uri(webSocketUrl)));
+        }
+
+        void DisconnectWebsocket()
+        {
+            socketDisconnectTask = Task.Run(() => webSocket.CloseSocket());
         }
 
         void OnWebSocketConnected()
@@ -243,6 +313,11 @@ namespace PixoVR.Apex
             return Instance._RequestAuthorizationCode();
         }
 
+        public static void ChangePlatformServer(PlatformServer newServer)
+        {
+            Instance._ChangePlatformServer(newServer);
+        }
+
         public static void Ping()
         {
             Instance._Ping();
@@ -286,6 +361,23 @@ namespace PixoVR.Apex
         public static bool GetUser(int userId = -1)
         {
             return Instance._GetUser(userId);
+        }
+
+        public static bool GetCurrentUserModules()
+        {
+            return GetUserModules();
+        }
+
+        public static bool GetUserModules(int userId = -1)
+        {
+            return Instance._GetUserModules(userId);
+        }
+
+        protected void _ChangePlatformServer(PlatformServer newServer)
+        {
+            platformTargetServer = newServer;
+
+            SetupAPI();
         }
 
         protected void _Ping()
@@ -575,6 +667,21 @@ namespace PixoVR.Apex
             apexAPIHandler.GetUserData(currentActiveLogin.Token, userId);
             return true;
         }
+
+        protected bool _GetUserModules(int userId = -1)
+        {
+            if (currentActiveLogin == null)
+                return false;
+
+            if (userId < 0)
+            {
+                userId = currentActiveLogin.ID;
+            }
+
+            apexAPIHandler.GetUserModules(currentActiveLogin.Token, userId);
+            return true;
+        }
+
         private float DetermineScaledScore(float scaledScore, float score, float maxScore)
         {
             float determinedScaledScore = scaledScore;
@@ -614,21 +721,24 @@ namespace PixoVR.Apex
 
         protected void OnAPIResponse(ResponseType response, HttpResponseMessage message, object responseData)
         {
-            bool success = message.IsSuccessStatusCode && 
-                !((responseData is IFailure) && (responseData as FailureResponse).Error.Equals("true", StringComparison.OrdinalIgnoreCase));
+            bool success = message.IsSuccessStatusCode;
+            if(responseData is FailureResponse)
+            {
+                success = success && (responseData is IFailure) && (responseData as FailureResponse).Error.Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
 
-            switch(response)
+            switch (response)
             {
                 case ResponseType.RT_PING:
                     {
                         if(success)
                         {
-                            Debug.Log("Yay! Ping success!");
+                            Debug.Log("[ApexSystem] Ping successful.");
                             OnPingSuccess.Invoke(message);
                         }
                         else
                         {
-                            Debug.Log("Boo! No ping succcess!");
+                            Debug.Log("[ApexSystem] Ping failed.");
                             OnPingFailed.Invoke(message);
                         }
                         break;
@@ -643,6 +753,20 @@ namespace PixoVR.Apex
                         if(success)
                         {
                             OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                            OnGetUserFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_GET_USER_MODULES:
+                    {
+                        if (success)
+                        {
+                            OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
                         }
                         else
                         {
@@ -737,6 +861,11 @@ namespace PixoVR.Apex
                         break;
                     }
             }
+
+            if(OnPlatformResponse != null)
+            {
+                OnPlatformResponse.Invoke(response, success, responseData);
+            }
         }
 
         protected void HandleLogin(bool successful, object responseData)
@@ -762,6 +891,40 @@ namespace PixoVR.Apex
                 ConnectWebsocket();
             }
             return webSocket.RequestAuthorizationCode();
+        }
+
+        // TODO: Move to new plugin
+        public static bool GenerateOneTimeLoginForCurrentUser()
+        {
+            if (Instance.currentActiveLogin == null)
+                return false;
+
+            return Instance._GenerateOneTimeLoginForUser(Instance.currentActiveLogin.ID);
+        }
+
+        // TODO: Move to new plugin
+        bool _GenerateOneTimeLoginForCurrentUser()
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No current user logged in.");
+                return false;
+            }
+
+            return _GenerateOneTimeLoginForUser(currentActiveLogin.ID);
+        }
+
+        // TODO: Move to new plugin
+        bool _GenerateOneTimeLoginForUser(int userId)
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to generate code.");
+                return false;
+            }
+
+            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, userId);
+            return true;
         }
     }
 }

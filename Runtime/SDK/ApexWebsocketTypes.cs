@@ -4,7 +4,7 @@ using System;
 namespace PixoVR.Apex
 {
     [Serializable]
-    public class AuthorizationCode : IApexErrorable
+    public class AuthorizationCode : IPlatformErrorable
     {
         [JsonProperty(PropertyName = "auth_code")]
         public string Code;
