@@ -65,6 +65,12 @@ namespace PixoVR.Apex
             set { Instance.runSetupOnAwake = value; }
         }
 
+        public static bool LoginCheckModuleAccess
+        {
+            get { return Instance.loginCheckModuleAccess; }
+            set { }
+        }
+
 
         [SerializeField, EndpointDisplay]
         protected PlatformServer platformTargetServer = PlatformServer.NA_PRODUCTION;
@@ -82,6 +88,8 @@ namespace PixoVR.Apex
         protected string scenarioID = "Generic";
         [SerializeField]
         public bool runSetupOnAwake = true;
+        [SerializeField]
+        public bool loginCheckModuleAccess = true;
 
         protected string webSocketUrl;
         protected string deviceID;
@@ -99,7 +107,10 @@ namespace PixoVR.Apex
 
         public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
         public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
-        
+
+        public OnModuleAccessSuccessEvent OnModuleAccessSuccess = new OnModuleAccessSuccessEvent();
+        public OnApexFailureEvent OnModuleAccessFailed = new OnApexFailureEvent();
+
         public OnLoginSuccessEvent OnLoginSuccess = new OnLoginSuccessEvent();
         public OnApexFailureEvent OnLoginFailed = new OnApexFailureEvent();
         
@@ -333,6 +344,11 @@ namespace PixoVR.Apex
             return Instance._Login(username, password);
         }
 
+        public static bool CheckModuleAccess(int targetModuleID = -1)
+        {
+            return Instance._CheckModuleAccess(targetModuleID);
+        }
+
         public static bool JoinSession(string scenarioID = null, Extension contextExtension = null)
         {
             return Instance._JoinSession(scenarioID, contextExtension);
@@ -404,6 +420,24 @@ namespace PixoVR.Apex
         protected bool _Login(string username, string password)
         {
             return _Login(new LoginData(username, password));
+        }
+
+        public bool _CheckModuleAccess(int targetModuleID = -1)
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] Cannot check user's module access with no active login.");
+                return false;
+            }
+
+            if (targetModuleID <= -1)
+            {
+                targetModuleID = moduleID;
+            }
+
+            apexAPIHandler.GetModuleAccess(targetModuleID, currentActiveLogin.ID);
+
+            return true;
         }
 
         protected bool _JoinSession(string newScenarioID = null, Extension contextExtension = null)
@@ -835,13 +869,14 @@ namespace PixoVR.Apex
                                 {
                                     currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
                                 }
-                                OnLoginSuccess.Invoke(currentActiveLogin);
+                                OnModuleAccessSuccess.Invoke(currentActiveLogin);
                             }
                             else
                             {
                                 currentActiveLogin = null;
-                                HandleLogin(false, new FailureResponse()
+                                OnModuleAccessFailed.Invoke(new FailureResponse()
                                 {
+                                    Error = "True",
                                     HttpCode = "401",
                                     Message = "User does not have access to module",
                                 });
@@ -852,7 +887,7 @@ namespace PixoVR.Apex
                             FailureResponse failureData = responseData as FailureResponse;
                             Debug.Log(string.Format("[ApexSystem] Failed to get users module access data.\nError: {0}", failureData.Message));
 
-                            OnLoginFailed.Invoke(responseData as FailureResponse);
+                            OnModuleAccessFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
                     }
@@ -873,8 +908,13 @@ namespace PixoVR.Apex
             if (successful)
             {
                 currentActiveLogin = responseData as LoginResponseContent;
-                
-                apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID);
+
+                OnLoginSuccess.Invoke();
+
+                if (loginCheckModuleAccess)
+                {
+                    apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID);
+                }
             }
             else
             {
