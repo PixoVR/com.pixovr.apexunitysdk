@@ -25,7 +25,17 @@ namespace PixoVR.Apex
 
         public bool HasErrored()
         {
-            return (Error == null || Message == null || HttpCode == null);
+            bool hasErrored = (Error == null || Message == null || HttpCode == null);
+
+            if(hasErrored == false)
+            {
+                if(Error.Equals("false", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    hasErrored = true;
+                }
+            }
+
+            return hasErrored;
         }
     }
 

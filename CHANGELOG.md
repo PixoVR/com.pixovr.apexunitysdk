@@ -66,3 +66,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Fixed the Sample project for the package.
  - Added the minimum passing score in sample project 'Current User' display.
  - Added example of the Request Authorization Pin functionality to the sample project.
+
+  ### [1.2.0] - 2024-01-11
+ - Added the ability to change what platform server an application points to at runtime, through the **ChangePlatformServer** function.
+ - Separates the Login and User Module Access Verification steps to allow a Login to happen on its own.
+ - Added **CheckModuleAccess** which verifies the users access to a given module.
+ - Added **GetCurrentUserModules** and **GetUserModules** which returns all of the module id's that the user can access.
