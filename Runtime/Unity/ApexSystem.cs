@@ -334,6 +334,11 @@ namespace PixoVR.Apex
             Instance._Ping();
         }
 
+        public static bool LoginWithToken(string token)
+        {
+            return Instance._LoginWithToken(token);
+        }
+
         public static bool Login(LoginData login)
         {
             return Instance._Login(login);
@@ -399,6 +404,18 @@ namespace PixoVR.Apex
         protected void _Ping()
         {
             apexAPIHandler.Ping();
+        }
+
+        public bool _LoginWithToken(string token)
+        {
+            if(token.Length <= 0)
+            {
+                return false;
+            }
+
+            apexAPIHandler.LoginWithToken(token);
+
+            return true;
         }
 
         protected bool _Login(LoginData login)
