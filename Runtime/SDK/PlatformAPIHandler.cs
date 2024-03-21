@@ -134,6 +134,37 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, responseContent);
         }
 
+        public async void LoginWithToken(string token)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpContent loginRequestContent = new StringContent("{}");
+            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await handlingClient.PostAsync("/v2/auth/validate-signature", loginRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
+            if ((responseContent as LoginResponseContent).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
+
+            //// Now we build our fun request here!
+            //UVaRestRequestJSON* Request = VaRestSubsystem->ConstructVaRestRequestExt(EVaRestRequestVerb::POST, EVaRestRequestContentType::json);
+            //FString RequestURL = URL + "/v2/auth/validate-signature";
+            //Request->SetURL(RequestURL);
+            //Request->SetHeader("Authorization: Bearer", LaunchToken);
+            //
+            //Request->OnStaticRequestComplete.AddLambda([&](UVaRestRequestJSON * Request)-> void { OnLoginComplete(Request); });
+            //Request->OnStaticRequestFail.AddLambda([&](UVaRestRequestJSON * Request)-> void { OnLoginFail(Request); });
+            //
+            //Request->ExecuteProcessRequest();
+        }
+
         public async void Login(LoginData login)
         {
             handlingClient.DefaultRequestHeaders.Clear();
