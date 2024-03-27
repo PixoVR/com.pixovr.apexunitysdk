@@ -120,6 +120,17 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
+    public class UserLoginResponseContent : IPlatformErrorable
+    {
+        public LoginResponseContent User;
+
+        public bool HasErrored()
+        {
+            return User == null;
+        }
+    }
+
+    [Serializable]
     public class UserAccessResponseContent: IPlatformErrorable
     {
         public int UserId = -1;

@@ -153,6 +153,7 @@ namespace PixoVR.Apex
             apexAPIHandler = new APIHandler(serverIP);
             // TODO: Move to new plugin
             apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(platformTargetServer));
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
             if(webSocket != null)
@@ -185,6 +186,15 @@ namespace PixoVR.Apex
             WebPlatformServer webTarget = (WebPlatformServer)targetValue;
 
             return webTarget.ToUrlString();
+        }
+
+        // TODO: Move to new plugin
+        string GetPlatformEndpointFromPlatformTarget(PlatformServer target)
+        {
+            int targetValue = (int)target;
+            APIPlatformServer apiTarget = (APIPlatformServer)targetValue;
+
+            return apiTarget.ToUrlString();
         }
 
         void PopulateWebSocketURL()

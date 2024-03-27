@@ -35,6 +35,10 @@ namespace PixoVR.Apex
         protected string webURL = "";
         protected HttpClient webHandlingClient = null;
 
+        // Need to migrate to this in the future
+        protected string apiURL = "";
+        protected HttpClient apiHandlingClient = null;
+
 
         public APIHandler() : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment)
         {
@@ -46,6 +50,7 @@ namespace PixoVR.Apex
             SetEndpoint(endpointUrl);
 
             webHandlingClient = new HttpClient();
+            apiHandlingClient = new HttpClient();
         }
 
         HttpResponseMessage HandleException(Exception exception)
@@ -96,6 +101,26 @@ namespace PixoVR.Apex
             webHandlingClient.BaseAddress = new Uri(webURL);
         }
 
+        public void SetPlatformEndpoint(string endpointUrl)
+        {
+            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
+                    Regex expression = new Regex(Regex.Escape("http"));
+                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
+                }
+                else
+                {
+                    endpointUrl.Insert(0, "https://");
+                }
+            }
+
+            apiURL = endpointUrl;
+            apiHandlingClient.BaseAddress = new Uri(apiURL);
+        }
+
         public async void Ping()
         {
             handlingClient.DefaultRequestHeaders.Clear();
@@ -136,22 +161,21 @@ namespace PixoVR.Apex
 
         public async void LoginWithToken(string token)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpContent loginRequestContent = new StringContent("{}");
-            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
-
-            HttpResponseMessage response = await handlingClient.PostAsync("/v2/auth/validate-signature", loginRequestContent);
+            HttpResponseMessage response = await apiHandlingClient.GetAsync("/v2/auth/validate-signature");
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
-            if ((responseContent as LoginResponseContent).HasErrored())
+            object responseContent = JsonConvert.DeserializeObject<UserLoginResponseContent>(body);
+            if ((responseContent as UserLoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
+            object loginResponseContent = (responseContent as UserLoginResponseContent).User;
+
+            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, loginResponseContent);
 
             //// Now we build our fun request here!
             //UVaRestRequestJSON* Request = VaRestSubsystem->ConstructVaRestRequestExt(EVaRestRequestVerb::POST, EVaRestRequestContentType::json);

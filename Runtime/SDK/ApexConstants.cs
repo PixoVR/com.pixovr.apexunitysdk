@@ -46,4 +46,14 @@ namespace PixoVR.Apex
         public const string Saudi_StagingEnvironment = "https://api.apexsa.stage.pixovr.com";
         public const string Saudi_DevelopmentEnvironment = "https://api.apexsa.dev.pixovr.com";
     }
+
+    public class APIPlatformEndpoints
+    {
+        public const string NorthAmerica_ProductionEnvironment = "https://apex.pixovr.com";
+        public const string NorthAmerica_StagingEnvironment = "https://apex.stage.pixovr.com";
+        public const string NorthAmerica_DevelopmentEnvironment = "https://apex.dev.pixovr.com";
+        public const string Saudi_ProductionEnvironment = "https://saudi.apex.pixovr.com";
+        public const string Saudi_StagingEnvironment = "https://saudi.apex.stage.pixovr.com";
+        public const string Saudi_DevelopmentEnvironment = "https://saudi.apex.dev.pixovr.com";
+    }
 }

@@ -49,6 +49,22 @@ namespace PixoVR.Apex
         SA_DEV
     }
 
+    public enum APIPlatformServer : int
+    {
+        [Endpoint("North America - Production", APIPlatformEndpoints.NorthAmerica_ProductionEnvironment)]
+        NA_PRODUCTION = 0,
+        [Endpoint("North America - Staging", APIPlatformEndpoints.NorthAmerica_StagingEnvironment)]
+        NA_STAGE,
+        [Endpoint("North America - Development", APIPlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
+        NA_DEV,
+        [Endpoint("Saudi - Production", APIPlatformEndpoints.Saudi_ProductionEnvironment)]
+        SA_PRODUCTION,
+        [Endpoint("Saudi - Staging", APIPlatformEndpoints.Saudi_StagingEnvironment)]
+        SA_STAGE,
+        [Endpoint("Saudi - Development", APIPlatformEndpoints.Saudi_DevelopmentEnvironment)]
+        SA_DEV
+    }
+
     public static class PPlatformEnumExtensions
     {
         public static string ToDisplayString(this Enum value)
