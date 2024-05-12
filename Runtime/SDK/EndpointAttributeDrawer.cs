@@ -25,16 +25,28 @@ namespace PixoVR.Apex
     [CustomPropertyDrawer(typeof(EndpointDisplayAttribute))]
     public class EndpointDisplayDrawer : PropertyDrawer
     {
+        [SerializeField]
         int selectedIndex = 0;
-
+        
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EndpointDisplayAttribute displayAttribute = attribute as EndpointDisplayAttribute;
 
             if (displayAttribute.enumDisplayList.Count > 0)
             {
-                selectedIndex = EditorGUI.Popup(position, property.name, selectedIndex, displayAttribute.enumDisplayList.ToArray());
-                property.enumValueIndex = selectedIndex;
+                int newIndex = EditorGUI.Popup(position, property.name, selectedIndex, displayAttribute.enumDisplayList.ToArray());
+                if(newIndex != selectedIndex)
+                {
+                    selectedIndex = newIndex;
+                    property.enumValueIndex = selectedIndex;
+                    UnityEngine.Object dirtyObject = property.serializedObject.targetObject;
+
+                    if (dirtyObject != null)
+                    {
+                        Debug.Log("Selected Index: " + selectedIndex);
+                        EditorUtility.SetDirty(dirtyObject);
+                    }
+                }
             }
             else
             {

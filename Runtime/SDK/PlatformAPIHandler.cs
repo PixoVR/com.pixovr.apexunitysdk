@@ -21,6 +21,7 @@ namespace PixoVR.Apex
         RT_GET_USER_ACCESS,
         RT_GET_USER_MODULES,
         RT_GEN_AUTH_LOGIN,
+        RT_HEARTBEAT
     }
 
     public class APIHandler
@@ -262,10 +263,16 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/event", joinSessionRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            object responseContent = JsonConvert.DeserializeObject<JoinSessionResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
                 responseContent = null;
+            }
+            else
+            {
+                JoinSessionResponse joinSessionResponse = (responseContent as JoinSessionResponse);
+                joinSessionResponse.ParseData();
+                responseContent = joinSessionResponse;
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_SESSION_JOINED, response, responseContent);
@@ -287,6 +294,28 @@ namespace PixoVR.Apex
 
             }
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_ACCESS, response, responseContent);
+        }
+
+        public async void SendHeartbeat(string authToken, int sessionId)
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HeartbeatData heartbeatData = new HeartbeatData(sessionId);
+
+            HttpContent heartbeatRequestContent = new StringContent(heartbeatData.ToJSON());
+            heartbeatRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            HttpResponseMessage response = await apiHandlingClient.PostAsync("/heartbeat/pulse", heartbeatRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            if ((responseContent as FailureResponse).HasErrored())
+            {
+                responseContent = null;
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_HEARTBEAT, response, responseContent);
         }
 
         public async void CompleteSession(string authToken, CompleteSessionData completionData)

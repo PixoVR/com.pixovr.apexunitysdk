@@ -25,17 +25,36 @@ namespace PixoVR.Apex
 
         public bool HasErrored()
         {
-            bool hasErrored = (Error == null || Message == null || HttpCode == null);
+            bool hasErrored = (Error == null && Message == null && HttpCode == null);
 
             if(hasErrored == false)
             {
-                if(Error.Equals("false", StringComparison.CurrentCultureIgnoreCase))
+                if(Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
                 {
                     hasErrored = true;
                 }
             }
 
             return hasErrored;
+        }
+    }
+
+    [Serializable]
+    public class JoinSessionResponse : FailureResponse
+    {
+        public JObject Data;
+        public int SessionId;
+
+        public void ParseData()
+        {
+            IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
+            foreach(JProperty property in dataPropertyEnumerator)
+            {
+                if(property.Name.Equals("SessionId", StringComparison.OrdinalIgnoreCase))
+                {
+                    SessionId = JsonConvert.DeserializeObject<int>(property.Value.ToString());
+                }
+            }
         }
     }
 
