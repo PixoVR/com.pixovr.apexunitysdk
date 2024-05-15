@@ -73,7 +73,7 @@ namespace PixoVR.Apex
 
 
         [SerializeField, EndpointDisplay]
-        protected PlatformServer platformTargetServer = PlatformServer.NA_PRODUCTION;
+        protected PlatformServer platformTargetServer;
 
         [SerializeField]
         protected string serverIP = "";
@@ -90,6 +90,8 @@ namespace PixoVR.Apex
         public bool runSetupOnAwake = true;
         [SerializeField]
         public bool loginCheckModuleAccess = true;
+        [SerializeField]
+        protected float heartbeatTime = 5.0f;
 
         protected string webSocketUrl;
         protected string deviceID;
@@ -97,6 +99,8 @@ namespace PixoVR.Apex
         protected string platform;
         protected string clientIP;
         protected Guid currentSessionID;
+        protected int heartbeatSessionID;
+        protected float heartbeatTimer;
         protected bool sessionInProgress;
 
         protected LoginResponseContent currentActiveLogin = null;
@@ -153,6 +157,7 @@ namespace PixoVR.Apex
             apexAPIHandler = new APIHandler(serverIP);
             // TODO: Move to new plugin
             apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(platformTargetServer));
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
             if(webSocket != null)
@@ -187,6 +192,15 @@ namespace PixoVR.Apex
             return webTarget.ToUrlString();
         }
 
+        // TODO: Move to new plugin
+        string GetPlatformEndpointFromPlatformTarget(PlatformServer target)
+        {
+            int targetValue = (int)target;
+            APIPlatformServer apiTarget = (APIPlatformServer)targetValue;
+
+            return apiTarget.ToUrlString();
+        }
+
         void PopulateWebSocketURL()
         {
             webSocketUrl = serverIP;
@@ -218,7 +232,21 @@ namespace PixoVR.Apex
 
         private void FixedUpdate()
         {
-            webSocket.Update();
+            if(webSocket != null)
+            {
+                webSocket.Update();
+            }
+
+            if (sessionInProgress)
+            {
+                heartbeatTimer -= Time.fixedDeltaTime;
+
+                if(heartbeatTimer <= 0.0f)
+                {
+                    _SendHeartbeat();
+                    heartbeatTimer += heartbeatTime;
+                }
+            }
         }
 
         void ConnectWebsocket()
@@ -705,6 +733,20 @@ namespace PixoVR.Apex
             return true;
         }
 
+        protected bool _SendHeartbeat()
+        {
+            Debug.Log("Sending heartbeat...");
+            if (!sessionInProgress)
+                return false;
+
+            if (currentActiveLogin == null)
+                return false;
+
+            apexAPIHandler.SendHeartbeat(currentActiveLogin.Token, heartbeatSessionID);
+
+            return true;
+        }
+
         protected bool _GetUser(int userId = -1)
         {
             if (currentActiveLogin == null)
@@ -775,7 +817,7 @@ namespace PixoVR.Apex
             bool success = message.IsSuccessStatusCode;
             if(responseData is FailureResponse)
             {
-                success = success && (responseData is IFailure) && (responseData as FailureResponse).Error.Equals("true", StringComparison.OrdinalIgnoreCase);
+                success = success && (responseData is IFailure) && (!(responseData as FailureResponse).HasErrored());
             }
 
             switch (response)
@@ -831,6 +873,9 @@ namespace PixoVR.Apex
                     {
                         if(success)
                         {
+                            JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
+                            Debug.Log(string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
+                            heartbeatSessionID = joinSessionResponse.SessionId;
                             sessionInProgress = true;
                             OnJoinSessionSuccess.Invoke(message);
                         }

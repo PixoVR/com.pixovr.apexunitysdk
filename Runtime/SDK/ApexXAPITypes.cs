@@ -168,6 +168,30 @@ namespace PixoVR.Apex.XAPI
         }
     }
 
+    public class HeartbeatData : JsonModel
+    {
+        public int SessionId;
+
+        public HeartbeatData()
+        {
+            SessionId = 0;
+        }
+
+        public HeartbeatData(int heartbeatSessionId)
+        {
+            SessionId = heartbeatSessionId;
+        }
+
+        public override JObject ToJObject(TCAPIVersion version)
+        {
+            JObject result = new JObject();
+
+            result.Add("sessionId", SessionId);
+
+            return result;
+        }
+    }
+
     public class CompleteSessionData : JsonModel
     {
         public string Uuid;
