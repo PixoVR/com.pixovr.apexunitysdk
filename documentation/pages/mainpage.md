@@ -15,4 +15,4 @@ Some subpages:
  - \subpage getting_started
  - \subpage authentication
  - \subpage platform_sessions
-
+ - \subpage return_to_hub
