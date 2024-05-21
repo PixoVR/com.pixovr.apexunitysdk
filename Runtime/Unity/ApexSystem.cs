@@ -183,7 +183,6 @@ namespace PixoVR.Apex
         }
 
 
-        // TODO: Move to new plugin
         string GetWebEndpointFromPlatformTarget(PlatformServer target)
         {
             int targetValue = (int)target;
@@ -192,7 +191,6 @@ namespace PixoVR.Apex
             return webTarget.ToUrlString();
         }
 
-        // TODO: Move to new plugin
         string GetPlatformEndpointFromPlatformTarget(PlatformServer target)
         {
             int targetValue = (int)target;
@@ -347,6 +345,16 @@ namespace PixoVR.Apex
             return true;
         }
 
+        public static void ReturnToHub()
+        {
+            Instance._ReturnToHub();
+        }
+
+        public static string GetAuthenticationToken()
+        {
+            return Instance._GetAuthenticationToken();
+        }
+
         public static bool RequestAuthorizationCode()
         {
             return Instance._RequestAuthorizationCode();
@@ -465,6 +473,19 @@ namespace PixoVR.Apex
         protected bool _Login(string username, string password)
         {
             return _Login(new LoginData(username, password));
+        }
+
+        public string _GetAuthenticationToken()
+        {
+            AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+
+            AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
+
+            AndroidJavaObject intent = currentActivity.Call<AndroidJavaObject>("getIntent");
+
+            string ExtraString = intent.Call<string>("getStringExtra", "pixotoken");
+
+            return ExtraString;
         }
 
         public bool _CheckModuleAccess(int targetModuleID = -1)
@@ -983,6 +1004,22 @@ namespace PixoVR.Apex
                 FailureResponse failureData = responseData as FailureResponse;
                 Debug.Log(string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
                 OnLoginFailed.Invoke(responseData as FailureResponse);
+            }
+        }
+
+        void _ReturnToHub()
+        {
+            var token = currentActiveLogin.Token;
+
+            if(serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase) || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase))
+            {
+                Debug.Log($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
+                Application.OpenURL($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
+            }
+            else
+            {
+                Debug.Log($"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
+                Application.OpenURL($"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
             }
         }
 

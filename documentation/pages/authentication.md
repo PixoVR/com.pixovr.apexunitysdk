@@ -44,6 +44,25 @@ ApexSystem.Login(username, password);
 \endcode
 
 \anchor example-code1
+
+## Authenticated Launches
+
+When a user launches your application from the PixoVR Hub App, a authentication token is passed. This token must be checked against the PixoVR Platform in place of a traditional Login.
+There are two steps you must do to accomplish this.
+
+First, you must get the authentication token.
+
+The function to get this is [ApexSystem::GetAuthenticationToken()](@ref PixoVR::Apex::ApexSystem::GetAuthenticationToken()).
+It returns an empty string when there is no token available, but returns a valid string when a token is available.
+
+If you receive a valid string from the first step, [ApexSystem::LoginWithToken()](@ref PixoVR::Apex::ApexSystem::LoginWithToken()) allows you to login with this token.
+
+[ApexSystem::LoginWithToken()](@ref PixoVR::Apex::ApexSystem::LoginWithToken()) takes 1 required parameter and returns a bool.
+ - `token:string` - The authentication token that represents a currently logged in user.
+ - Returns `TRUE` on success.
+
+If the login is a success, it will follow the above Login flow.
+
 ## Example Code
 
 ### Calling Login
