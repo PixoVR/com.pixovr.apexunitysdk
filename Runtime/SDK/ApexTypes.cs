@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PixoVR.Apex
 {
@@ -25,9 +26,10 @@ namespace PixoVR.Apex
 
         public bool HasErrored()
         {
-            bool hasErrored = (Error == null && Message == null && HttpCode == null);
+            bool hasErrored = false;
+            bool hasErrorSetup = !(Error == null && Message == null && HttpCode == null);
 
-            if(hasErrored == false)
+            if (hasErrorSetup == false)
             {
                 if(Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
                 {
@@ -225,6 +227,131 @@ namespace PixoVR.Apex
             Duration = duration;
             Complete = completed;
             Success = success;
+        }
+    }
+
+    public class OrgModule
+    {
+        public int ID = -1;
+        public string Name = "";
+        public string Description = "";
+        public string ShortDescription = "";
+        public string LongDescription = "";
+        public string Industry = "";
+        public string Details = "";
+        public string IconURL = "";
+        public List<OrgModuleDownload> Downloads = new List<OrgModuleDownload>();
+        public int? PassingScore = null;
+        public string Categories = "";
+        public string externalId = "";
+        public PlatformPlayer player = null;
+
+        public OrgModule(JToken token)
+        {
+            ID = token.Value<int>("ID");
+            Name = token.Value<string>("Name");
+            Description = token.Value<string>("Description");
+            ShortDescription = token.Value<string>("ShortDescription");
+            LongDescription = token.Value<string>("LongDescription");
+            Industry = token.Value<string>("Industry");
+            Details = token.Value<string>("Details");
+            IconURL = token.Value<string>("IconURL");
+            PassingScore = token.Value<int?>("PassingScore");
+            Categories = token.Value<string>("Categories");
+            externalId = token.Value<string>("externalId");
+            var PlayerToken = token.Value<JObject>("player");
+
+            if(PlayerToken != null)
+            {
+                player = new PlatformPlayer(PlayerToken);
+            }
+            
+            var DownloadTokens = token.Value<JArray>("Downloads");
+
+            if(DownloadTokens != null)
+            {
+                foreach(JToken DownloadToken in DownloadTokens)
+                {
+                    Downloads.Add(new OrgModuleDownload(DownloadToken));
+                }
+            }
+        }
+    }
+
+    [Serializable]
+    public class OrgModuleDownload
+    {
+        public int ID;
+        public int VersionID;
+        public string FileLocation;
+        public string Version;
+        public string Platform;
+        public long DownloadSize;
+        public string ApkName;
+        public string URL;
+        public string Status;
+        public string externalId;
+
+        public OrgModuleDownload(JToken token)
+        {
+            ID = token.Value<int>("ID");
+            VersionID = token.Value<int>("VersionID");
+            DownloadSize = token.Value<long>("DownloadSize");
+            externalId = token.Value<string>("externalId");
+            FileLocation = token.Value<string>("FileLocation");
+            Version = token.Value<string>("Version");
+            Platform = token.Value<string>("Platform");
+            ApkName = token.Value<string>("ApkName");
+            URL = token.Value<string>("URL");
+            Status = token.Value<string>("Status");
+        }
+    }
+
+    [Serializable]
+    public class PlatformPlayer
+    {
+        public int id;
+        public string name;
+        public string description;
+        public int distributorId;
+        public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
+
+        public PlatformPlayer(JObject tokenObject)
+        {
+            id = tokenObject.Value<int>("id");
+            distributorId = tokenObject.Value<int>("distributorId");
+            name = tokenObject.Value<string>("name");
+            description = tokenObject.Value<string>("description");
+
+            var VersionTokens = tokenObject.Value<JArray>("versions");
+
+            foreach (JToken Version in VersionTokens)
+            {
+                versions.Add(new PlatformPlayerDownload(Version));
+            }
+        }
+    }
+
+    [Serializable]
+    public class PlatformPlayerDownload
+    {
+        public int id;
+        public string version;
+        public int modulePlayerId;
+        public string status;
+        public string URL;
+        public string ApkName;
+        public string platform;
+
+        public PlatformPlayerDownload(JToken token)
+        {
+            id = token.Value<int>("id");
+            modulePlayerId = token.Value<int>("modulePlayerId");
+            version = token.Value<string>("version");
+            status = token.Value<string>("status");
+            URL = token.Value<string>("URL");
+            ApkName = token.Value<string>("ApkName");
+            platform = token.Value<string>("platform");
         }
     }
 }

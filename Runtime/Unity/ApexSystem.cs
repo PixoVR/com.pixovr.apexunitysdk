@@ -8,6 +8,7 @@ using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace PixoVR.Apex
 {
@@ -132,6 +133,9 @@ namespace PixoVR.Apex
         
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
+
+        public OnGetOrgModulesSuccessEvent OnGetOrganizationModulesSuccess = new OnGetOrgModulesSuccessEvent();
+        public OnApexFailureEvent OnGetOrganizationModulesFailed = new OnApexFailureEvent();
 
         public PlatformResponse OnPlatformResponse = null;
 
@@ -428,6 +432,11 @@ namespace PixoVR.Apex
         public static bool GetUserModules(int userId = -1)
         {
             return Instance._GetUserModules(userId);
+        }
+
+        public static bool GetModulesList()
+        {
+            return Instance._GetModuleList();
         }
 
         protected void _ChangePlatformServer(PlatformServer newServer)
@@ -796,6 +805,15 @@ namespace PixoVR.Apex
             return true;
         }
 
+        protected bool _GetModuleList()
+        {
+            if (currentActiveLogin == null)
+                return false;
+
+            apexAPIHandler.GetModuleList(currentActiveLogin.Token, "pico3");
+            return true;
+        }
+
         private float DetermineScaledScore(float scaledScore, float score, float maxScore)
         {
             float determinedScaledScore = scaledScore;
@@ -972,6 +990,22 @@ namespace PixoVR.Apex
 
                             OnModuleAccessFailed.Invoke(responseData as FailureResponse);
                         }
+                        break;
+                    }
+                case ResponseType.RT_GET_MODULES_LIST:
+                    {
+                        if(success)
+                        {
+                            OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message));
+
+                            OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
+                        }
+
                         break;
                     }
                 default:

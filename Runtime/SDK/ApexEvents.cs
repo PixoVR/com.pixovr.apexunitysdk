@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine.Events;
 using System.Net.Http;
 
@@ -35,4 +36,7 @@ namespace PixoVR.Apex.Events
 
     [System.Serializable]
     public class OnAuthCodeReceived : UnityEvent<string> { };
+
+    [System.Serializable]
+    public class OnGetOrgModulesSuccessEvent : UnityEvent<List<OrgModule>> { };
 }

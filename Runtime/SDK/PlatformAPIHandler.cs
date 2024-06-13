@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using UnityEngine;
 using PixoVR.Apex.XAPI;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace PixoVR.Apex
 {
@@ -20,6 +22,7 @@ namespace PixoVR.Apex
         RT_SESSION_EVENT,
         RT_GET_USER_ACCESS,
         RT_GET_USER_MODULES,
+        RT_GET_MODULES_LIST,
         RT_GEN_AUTH_LOGIN,
         RT_HEARTBEAT
     }
@@ -288,7 +291,7 @@ namespace PixoVR.Apex
 
 
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-            if ((responseContent as FailureResponse).HasErrored())
+            if (!(responseContent as FailureResponse).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
 
@@ -356,6 +359,41 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_SESSION_EVENT, response, responseContent);
+        }
+
+        public async void GetModuleList(string authToken, string platform)
+        {
+            handlingClient.DefaultRequestHeaders.Clear();
+            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/modules?platform={0}", platform));
+            string body = await response.Content.ReadAsStringAsync();
+            object responseContent = null;
+            List<OrgModule> orgModules = new List<OrgModule>();
+            JArray array = JArray.Parse(body);
+            if(array != null)
+            {
+                var tokens = array.Children();
+                foreach(JToken selectedToken in tokens)
+                {
+                    OrgModule orgModule = new OrgModule(selectedToken);
+                    orgModules.Add(orgModule);
+                }
+            }
+
+            Debug.Log(orgModules.Count.ToString());
+
+            if(orgModules.Count <= 0)
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+            else
+            {
+                responseContent = orgModules;
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
         }
     }
 }
