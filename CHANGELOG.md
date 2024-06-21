@@ -72,3 +72,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Separates the Login and User Module Access Verification steps to allow a Login to happen on its own.
  - Added **CheckModuleAccess** which verifies the users access to a given module.
  - Added **GetCurrentUserModules** and **GetUserModules** which returns all of the module id's that the user can access.
+
+ ### [1.4.0] - 2024-06-21
+ - Fixes a bug with **PlatformTargetServer** when playing in editor, it would reset the value back to the first selectable value.
+ - Adds **GetAuthenticationToken** to get any authentication token that is passed in via **OpenURL** call to open the application.
+ - Adds **LoginWithToken** to allow login with an authentication token.
+ - Adds **ReturnToHub** to return the user to either the Hub Application or Training Academy depending on the endpoint.
+ - Adds **GetModulesList** to get a list of all modules accessible to the users organization.

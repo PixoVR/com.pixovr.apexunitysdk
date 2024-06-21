@@ -74,7 +74,7 @@ namespace PixoVR.Apex
 
 
         [SerializeField, EndpointDisplay]
-        protected PlatformServer platformTargetServer;
+        protected PlatformServer PlatformTargetServer;
 
         [SerializeField]
         protected string serverIP = "";
@@ -155,13 +155,13 @@ namespace PixoVR.Apex
         {
             if (serverIP.Length == 0)
             {
-                serverIP = GetEndpointFromTarget(platformTargetServer);
+                serverIP = GetEndpointFromTarget(PlatformTargetServer);
             }
 
             apexAPIHandler = new APIHandler(serverIP);
             // TODO: Move to new plugin
-            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(platformTargetServer));
-            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
+            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(PlatformTargetServer));
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
             if(webSocket != null)
@@ -441,7 +441,7 @@ namespace PixoVR.Apex
 
         protected void _ChangePlatformServer(PlatformServer newServer)
         {
-            platformTargetServer = newServer;
+            PlatformTargetServer = newServer;
 
             SetupAPI();
         }
