@@ -26,7 +26,7 @@ namespace PixoVR.Apex
     public class EndpointDisplayDrawer : PropertyDrawer
     {
         [SerializeField]
-        int selectedIndex = 0;
+        int selectedIndex = -1;
         
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -35,7 +35,12 @@ namespace PixoVR.Apex
             if (displayAttribute.enumDisplayList.Count > 0)
             {
                 int newIndex = EditorGUI.Popup(position, property.name, selectedIndex, displayAttribute.enumDisplayList.ToArray());
-                if(newIndex != selectedIndex)
+                if (newIndex < 0)
+                {
+                    newIndex = property.enumValueIndex;
+                }
+
+                if (newIndex != selectedIndex)
                 {
                     selectedIndex = newIndex;
                     property.enumValueIndex = selectedIndex;
@@ -50,6 +55,7 @@ namespace PixoVR.Apex
             }
             else
             {
+                Debug.Log("Reset");
                 EditorGUI.PropertyField(position, property, label);
             }
         }

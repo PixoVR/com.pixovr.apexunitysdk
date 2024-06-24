@@ -19,9 +19,11 @@ After installing the Apex Unity SDK, navigate to Runtime > Unity. Add the ApexSy
 Any object that the [ApexSystem](@ref PixoVR::Apex::ApexSystem) script is added to will **NOT** be deleted between level changes.
 
 The following properties will need to be set on the ApexSystem component once it's added to the scene.
+- Platform Target Server
+  + This fills in the server IP address that you want to send the information to.
+  + Defaults to the North America - Production envrionment.
 - Server IP
-  + This is the Apex server IP address that you want to send the information to. By default it will point to our production environment.
-  + Use https://modules.apex.pixovr.com/.
+  + This is the Apex server IP address that you want to send the information to. This is filled in by the Platform Target Server property at run time.
 - Module ID
   + This is the ID of the module that will be distributed to customers. This will be generated when you create a project on the Apex platform. This must be set for the data to be reported to the proper module.
 - Module Name
