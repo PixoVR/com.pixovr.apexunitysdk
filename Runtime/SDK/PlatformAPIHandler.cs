@@ -181,33 +181,27 @@ namespace PixoVR.Apex
 
             OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, loginResponseContent);
 
-            //// Now we build our fun request here!
-            //UVaRestRequestJSON* Request = VaRestSubsystem->ConstructVaRestRequestExt(EVaRestRequestVerb::POST, EVaRestRequestContentType::json);
-            //FString RequestURL = URL + "/v2/auth/validate-signature";
-            //Request->SetURL(RequestURL);
-            //Request->SetHeader("Authorization: Bearer", LaunchToken);
-            //
-            //Request->OnStaticRequestComplete.AddLambda([&](UVaRestRequestJSON * Request)-> void { OnLoginComplete(Request); });
-            //Request->OnStaticRequestFail.AddLambda([&](UVaRestRequestJSON * Request)-> void { OnLoginFail(Request); });
-            //
-            //Request->ExecuteProcessRequest();
         }
 
         public async void Login(LoginData login)
         {
+            Debug.Log("[Platform API] Calling Login.");
             handlingClient.DefaultRequestHeaders.Clear();
 
             HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(login));
             loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
 
+            Debug.Log("[Platform API] Call to post api login.");
             HttpResponseMessage response = await handlingClient.PostAsync("/login", loginRequestContent);
             string body = await response.Content.ReadAsStringAsync();
+            Debug.Log("[Platform API] Got response body.");
             object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
             if ((responseContent as LoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
+            Debug.Log("[Platform API] Response content deserialized.");
             OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
         }
 
