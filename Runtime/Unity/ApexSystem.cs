@@ -467,11 +467,13 @@ namespace PixoVR.Apex
         {
             if (login.Login.Length <= 0)
             {
+                Debug.Log("[Login] No user name.");
                 return false;
             }
 
             if(login.Password.Length <= 0)
             {
+                Debug.Log("[Login] No password.");
                 login.Password = "<empty>";
             }
 
@@ -810,7 +812,7 @@ namespace PixoVR.Apex
             if (currentActiveLogin == null)
                 return false;
 
-            apexAPIHandler.GetModuleList(currentActiveLogin.Token, "pico3");
+            apexAPIHandler.GetModuleList(currentActiveLogin.Token, "htcfocus3");
             return true;
         }
 
@@ -853,6 +855,7 @@ namespace PixoVR.Apex
 
         protected void OnAPIResponse(ResponseType response, HttpResponseMessage message, object responseData)
         {
+            Debug.Log("[ApexSystem] On API Response");
             bool success = message.IsSuccessStatusCode;
             if(responseData is FailureResponse)
             {
@@ -877,6 +880,7 @@ namespace PixoVR.Apex
                     }
                 case ResponseType.RT_LOGIN:
                     {
+                        Debug.Log("[ApexSystem] Calling to handle login.");
                         HandleLogin(success, responseData);
                         break;
                     }
