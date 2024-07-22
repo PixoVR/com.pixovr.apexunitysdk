@@ -32,9 +32,7 @@ namespace PixoVR.Apex
         public const string NorthAmerica_ProductionEnvironment = "https://modules.apex.pixovr.com";
         public const string NorthAmerica_StagingEnvironment = "https://modules.apex.stage.pixovr.com";
         public const string NorthAmerica_DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
-        public const string Saudi_ProductionEnvironment = "https://modules.apexsa.pixovr.com";
-        public const string Saudi_StagingEnvironment = "https://modules.apexsa.stage.pixovr.com";
-        public const string Saudi_DevelopmentEnvironment = "https://modules.apexsa.dev.pixovr.com";
+        public const string Saudi_ProductionEnvironment = "https://saudi.modules.apex.pixovr.com";
     }
 
     public class WebPlatformEndpoints
@@ -43,8 +41,6 @@ namespace PixoVR.Apex
         public const string NorthAmerica_StagingEnvironment = "https://api.apex.stage.pixovr.com";
         public const string NorthAmerica_DevelopmentEnvironment = "https://api.apex.dev.pixovr.com";
         public const string Saudi_ProductionEnvironment = "https://api.apexsa.pixovr.com";
-        public const string Saudi_StagingEnvironment = "https://api.apexsa.stage.pixovr.com";
-        public const string Saudi_DevelopmentEnvironment = "https://api.apexsa.dev.pixovr.com";
     }
 
     public class APIPlatformEndpoints
@@ -53,7 +49,5 @@ namespace PixoVR.Apex
         public const string NorthAmerica_StagingEnvironment = "https://apex.stage.pixovr.com";
         public const string NorthAmerica_DevelopmentEnvironment = "https://apex.dev.pixovr.com";
         public const string Saudi_ProductionEnvironment = "https://saudi.apex.pixovr.com";
-        public const string Saudi_StagingEnvironment = "https://saudi.apex.stage.pixovr.com";
-        public const string Saudi_DevelopmentEnvironment = "https://saudi.apex.dev.pixovr.com";
     }
 }
