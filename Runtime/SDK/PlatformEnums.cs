@@ -25,11 +25,7 @@ namespace PixoVR.Apex
         [Endpoint("North America - Development", PlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
         NA_DEV,
         [Endpoint("Saudi - Production", PlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Saudi - Staging", PlatformEndpoints.Saudi_StagingEnvironment)]
-        SA_STAGE,
-        [Endpoint("Saudi - Development", PlatformEndpoints.Saudi_DevelopmentEnvironment)]
-        SA_DEV
+        SA_PRODUCTION
     }
 
     // TODO: Move to new plugin
@@ -42,11 +38,7 @@ namespace PixoVR.Apex
         [Endpoint("North America - Development", WebPlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
         NA_DEV,
         [Endpoint("Saudi - Production", WebPlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Saudi - Staging", WebPlatformEndpoints.Saudi_StagingEnvironment)]
-        SA_STAGE,
-        [Endpoint("Saudi - Development", WebPlatformEndpoints.Saudi_DevelopmentEnvironment)]
-        SA_DEV
+        SA_PRODUCTION
     }
 
     public enum APIPlatformServer : int
@@ -58,11 +50,7 @@ namespace PixoVR.Apex
         [Endpoint("North America - Development", APIPlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
         NA_DEV,
         [Endpoint("Saudi - Production", APIPlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Saudi - Staging", APIPlatformEndpoints.Saudi_StagingEnvironment)]
-        SA_STAGE,
-        [Endpoint("Saudi - Development", APIPlatformEndpoints.Saudi_DevelopmentEnvironment)]
-        SA_DEV
+        SA_PRODUCTION
     }
 
     public static class PPlatformEnumExtensions
