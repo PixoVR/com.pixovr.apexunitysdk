@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.XR;
 using PixoVR.Apex.Events;
 using PixoVR.Apex.XAPI;
+using PixoVR.Apex.Utils;
 using TinCan;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
@@ -154,6 +155,7 @@ namespace PixoVR.Apex
 
         void SetupAPI()
         {
+            Debug.Log("Mac Address: " + ApexUtils.GetMacAddress());
             if (serverIP.Length == 0)
             {
                 serverIP = GetEndpointFromTarget(PlatformTargetServer);

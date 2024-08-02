@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using PixoVR.Apex.XAPI;
 using System;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using TinCan;
@@ -15,6 +16,13 @@ namespace PixoVR.Apex.Utils
         public static string INVALID_IPV6 = "::/0";
         public static string HOME_IP = "127.0.0.1";
         public static string HOME_IPV6 = "::1/128";
+
+        public static string GetMacAddress()
+        {
+            PhysicalAddress physicalMacAddress = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)?.GetPhysicalAddress();
+            string macAddress = string.Join(":", Array.ConvertAll(physicalMacAddress.GetAddressBytes(), addressBytes => addressBytes.ToString("X2")));
+            return macAddress;
+        }
 
         public static string GetLocalIP()
         {
