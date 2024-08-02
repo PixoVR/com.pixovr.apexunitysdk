@@ -79,3 +79,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Adds **LoginWithToken** to allow login with an authentication token.
  - Adds **ReturnToHub** to return the user to either the Hub Application or Training Academy depending on the endpoint.
  - Adds **GetModulesList** to get a list of all modules accessible to the users organization.
+
+ ### [1.4.1] - 2024-08-02
+ - Fixes a bug that could allow developers to not check for user's ability to access a module before starting a session.
