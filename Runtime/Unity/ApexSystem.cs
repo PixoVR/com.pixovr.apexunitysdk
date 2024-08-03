@@ -103,6 +103,7 @@ namespace PixoVR.Apex
         protected int heartbeatSessionID;
         protected float heartbeatTimer;
         protected bool sessionInProgress;
+        protected bool userAccessVerified = false;
 
         protected LoginResponseContent currentActiveLogin = null;
         protected APIHandler apexAPIHandler;
@@ -525,6 +526,11 @@ namespace PixoVR.Apex
                 return false;
             }
 
+            if(userAccessVerified == false)
+            {
+                return false;
+            }
+
             if (newScenarioID != null)
             {
                 scenarioID = newScenarioID;
@@ -577,11 +583,15 @@ namespace PixoVR.Apex
 
         protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension)
         {
+            if (userAccessVerified == false)
+                return false;
+            
             if (verbName == null)
                 return false;
 
             if (verbName.Length == 0)
                 return false;
+
 
             Statement sessionStatement = new Statement();
             Agent sessionActor = new Agent();
@@ -621,6 +631,11 @@ namespace PixoVR.Apex
 
         protected bool _SendSessionEvent(Statement eventStatement)
         {
+            if (userAccessVerified == false)
+            {
+                return false;
+            }
+
             if (currentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] Cannot send a session event with no active login.");
@@ -690,6 +705,11 @@ namespace PixoVR.Apex
 
         protected bool _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension)
         {
+            if (userAccessVerified == false)
+            {
+                return false;
+            }
+
             if (currentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] Cannot complete session with no active login.");
@@ -974,11 +994,14 @@ namespace PixoVR.Apex
                                 {
                                     currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
                                 }
+                                
+                                userAccessVerified = true;
                                 OnModuleAccessSuccess.Invoke(currentActiveLogin);
                             }
                             else
                             {
                                 currentActiveLogin = null;
+                                userAccessVerified = false;
                                 OnModuleAccessFailed.Invoke(new FailureResponse()
                                 {
                                     Error = "True",
@@ -1026,6 +1049,8 @@ namespace PixoVR.Apex
 
         protected void HandleLogin(bool successful, object responseData)
         {
+            userAccessVerified = false;
+
             if (successful)
             {
                 currentActiveLogin = responseData as LoginResponseContent;
