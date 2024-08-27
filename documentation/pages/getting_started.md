@@ -49,6 +49,24 @@ To get a better understanding of the xAPI Standard, visit the xAPI Spec [here](h
 
 The projects **Api Compatbility Level** needs to be <b>.NET 4.x</b> or newer.
 
+# Integrating with ManageXR
+
+The PixoVR platform provides a way to integrate with the ManageXR platform. Follow the steps below to integrate with ManageXR.
+
+Go to your project manifest json file located at `Packages/manifest.json`.
+Add this line to your dependency list
+* `"com.mxr.unity.sdk":"https://www.github.com/ManageXR/mxr-unity-sdk.git#VERSION"` 
+    * `VERSION` is the SDK version you want to install
+    * For example, if you want to install version `v1.0.15`, the line should be `"com.mxr.unity.sdk":"https://www.github.com/ManageXR/mxr-unity-sdk.git#v1.0.15"`
+
+Next, open your Unity project and go to Edit > Project Settings > Player.
+
+Select the Android platform and go to Other Settings > Script Compliation.
+
+Add `MANAGE_XR` to the Scripting Define Symbols and press Apply. This is case sensitive.
+
+Make sure you do not call `await MXRManager.InitAsync();` in any of your scripts. This is called by the Apex Unity SDK.
+
 ## Quick Function Explanation
 
 All server functions have corresponding Success and Failed events.

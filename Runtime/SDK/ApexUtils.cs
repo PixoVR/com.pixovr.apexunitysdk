@@ -7,10 +7,11 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using TinCan;
 using TinCan.Json;
+using UnityEngine;
 
 namespace PixoVR.Apex.Utils
 {
-    public class ApexUtils
+    public static class ApexUtils
     {
         public static string INVALID_IP = "0.0.0.0";
         public static string INVALID_IPV6 = "::/0";
@@ -19,8 +20,16 @@ namespace PixoVR.Apex.Utils
 
         public static string GetMacAddress()
         {
-            PhysicalAddress physicalMacAddress = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)?.GetPhysicalAddress();
-            string macAddress = string.Join(":", Array.ConvertAll(physicalMacAddress.GetAddressBytes(), addressBytes => addressBytes.ToString("X2")));
+            string macAddress = "";
+            try
+            {
+                PhysicalAddress physicalMacAddress = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)?.GetPhysicalAddress();
+                macAddress = string.Join(":", Array.ConvertAll(physicalMacAddress.GetAddressBytes(), addressBytes => addressBytes.ToString("X2")));
+            }
+            catch(Exception exception)
+            {
+                Debug.LogError("[ApexUtils] " + exception.Message);
+            }
             return macAddress;
         }
 

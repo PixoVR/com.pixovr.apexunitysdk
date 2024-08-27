@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+#if MANAGE_XR
+using MXR.SDK;
+#endif
 
 namespace PixoVR.Apex
 {
@@ -73,6 +76,12 @@ namespace PixoVR.Apex
             set { }
         }
 
+        public static string DeviceSerialNumber
+        {
+            get { return Instance.deviceSerialNumber; }
+            set { }
+        }
+
 
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
@@ -105,6 +114,7 @@ namespace PixoVR.Apex
         protected float heartbeatTimer;
         protected bool sessionInProgress;
         protected bool userAccessVerified = false;
+        protected string deviceSerialNumber = "";
 
         protected LoginResponseContent currentActiveLogin = null;
         protected APIHandler apexAPIHandler;
@@ -147,12 +157,29 @@ namespace PixoVR.Apex
         {
             if(runSetupOnAwake)
             {
+                Debug.Log("[ApexSystem] Running on awake!");
                 SetupAPI();
             }
 
             DontDestroyOnLoad(gameObject);
+#if MANAGE_XR
+            InitMXRSDK();
+#endif
         }
 
+#if MANAGE_XR
+        async void InitMXRSDK()
+        {
+            await MXRManager.InitAsync();
+            MXRManager.System.OnDeviceStatusChange += OnDeviceStatusChanged;
+            deviceSerialNumber = MXRManager.System.DeviceStatus.serial;
+        }
+
+        void OnDeviceStatusChanged(DeviceStatus newDeviceStatus)
+        {
+            deviceSerialNumber = newDeviceStatus.serial;
+        }
+#endif
         void SetupAPI()
         {
             Debug.Log("Mac Address: " + ApexUtils.GetMacAddress());
@@ -162,6 +189,12 @@ namespace PixoVR.Apex
             }
 
             apexAPIHandler = new APIHandler(serverIP);
+
+            if(apexAPIHandler != null)
+            {
+                Debug.Log("[ApexSystem] Apex API Handler is not null!");
+            }
+
             // TODO: Move to new plugin
             apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
@@ -468,6 +501,7 @@ namespace PixoVR.Apex
 
         protected bool _Login(LoginData login)
         {
+            Debug.Log("[ApexSystem] _Login called.");
             if (login.Login.Length <= 0)
             {
                 Debug.Log("[Login] No user name.");
@@ -480,7 +514,15 @@ namespace PixoVR.Apex
                 login.Password = "<empty>";
             }
 
+            if(apexAPIHandler == null)
+            {
+                Debug.Log("[ApexSystem] API Handler is null.");
+            }
+
             apexAPIHandler.Login(login);
+
+            Debug.Log("[ApexSystem] Login called.");
+
             return true;
         }
 
@@ -504,6 +546,8 @@ namespace PixoVR.Apex
 
         public bool _CheckModuleAccess(int targetModuleID = -1)
         {
+            Debug.Log("[ApexSystem] _CheckModuleAccess called.");
+
             if (currentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] Cannot check user's module access with no active login.");
@@ -515,7 +559,7 @@ namespace PixoVR.Apex
                 targetModuleID = moduleID;
             }
 
-            apexAPIHandler.GetModuleAccess(targetModuleID, currentActiveLogin.ID);
+            apexAPIHandler.GetModuleAccess(targetModuleID, currentActiveLogin.ID, deviceSerialNumber);
 
             return true;
         }
@@ -1051,6 +1095,7 @@ namespace PixoVR.Apex
 
         protected void HandleLogin(bool successful, object responseData)
         {
+            Debug.Log("[ApexSystem] Handling Login");
             userAccessVerified = false;
 
             if (successful)
@@ -1061,7 +1106,7 @@ namespace PixoVR.Apex
 
                 if (loginCheckModuleAccess)
                 {
-                    apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID);
+                    apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID, deviceSerialNumber);
                 }
             }
             else

@@ -82,6 +82,7 @@ namespace PixoVR.Apex
             }
 
             URL = endpointUrl;
+            Debug.Log("[APIHandler] Set Endpoint to " + URL);
             handlingClient.BaseAddress = new Uri(URL);
         }
 
@@ -275,14 +276,22 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_SESSION_JOINED, response, responseContent);
         }
 
-        public async void GetModuleAccess(int moduleId, int userId)
+        public async void GetModuleAccess(int moduleId, int userId, string serialNumber)
         {
+            Debug.Log("[Platform API Handler] Get Module Access");
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
-            HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}", userId, moduleId));
-            string body = await response.Content.ReadAsStringAsync();
+            string optionalParameters = "";
+            if(serialNumber.Length > 0)
+            {
+                optionalParameters = "?serial=" + serialNumber;
+            }
 
+            Debug.Log("Checkingm module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+
+            HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+            string body = await response.Content.ReadAsStringAsync();
 
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if (!(responseContent as FailureResponse).HasErrored())

@@ -1,6 +1,6 @@
 {
   "name": "com.pixovr.apexunitysdk",
-  "version": "1.4.1",
+  "version": "1.4.3",
   "displayName": "Apex Unity SDK",
   "description": "Unity Plugin for the implementation of the Apex API.",
   "unity": "2021.1",
@@ -29,5 +29,8 @@
       "description": "A Demo showing the flow of using the Apex Unity SDK.",
       "path": "Samples/DemoApexReporter"
     }
-  ]
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
 }
