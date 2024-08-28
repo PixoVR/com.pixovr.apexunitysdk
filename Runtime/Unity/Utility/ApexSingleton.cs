@@ -71,6 +71,7 @@ namespace PixoVR.Apex
         /// </summary>
         public virtual void OnDestroy()
         {
+            Debug.Log("[ApexSingleton] On Destroy on singleton called.");
             ApplicationIsQuitting = true;
         }
     }

@@ -2,13 +2,14 @@
     "name": "PixoVR.ApexUnitySDK",
     "rootNamespace": "PixoVR.Apex",
     "references": [
+        "GUID:025bdc31ab610724ebbf99d7edf59bb8"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [
-		"TinCan.dll"
+        "TinCan.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],

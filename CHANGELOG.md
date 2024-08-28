@@ -82,3 +82,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
  ### [1.4.1] - 2024-08-02
  - Fixes a bug that could allow developers to not check for user's ability to access a module before starting a session.
+ 
+ ### [1.4.2] - 2024-08-23
+ - Implements functionality from ManageXR to integrate with the device management platform.
+ - Adds a custom AndroidManifest XML that implements the basics permissions for ManageXR.
