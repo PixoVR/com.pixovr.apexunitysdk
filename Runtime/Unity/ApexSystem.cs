@@ -82,6 +82,30 @@ namespace PixoVR.Apex
             set { }
         }
 
+        public static string PassedLoginToken
+        {
+            get { return Instance.loginToken; }
+            set { }
+        }
+
+        public static string OptionalData
+        {
+            get { return Instance.optionalParameter; }
+            set { Instance.optionalParameter = value; }
+        }
+
+        public static string ReturnTarget
+        {
+            get { return Instance.returnTargetParameter; }
+            set { Instance.returnTargetParameter = value; }
+        }
+
+        public static string TargetType
+        {
+            get { return Instance.targetTypeParameter; }
+            set { Instance.targetTypeParameter = value; }
+        }
+
 
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
@@ -115,6 +139,11 @@ namespace PixoVR.Apex
         protected bool sessionInProgress;
         protected bool userAccessVerified = false;
         protected string deviceSerialNumber = "";
+
+        protected string loginToken = "";
+        protected string optionalParameter = "";
+        protected string returnTargetParameter = "";
+        protected string targetTypeParameter = "";
 
         protected LoginResponseContent currentActiveLogin = null;
         protected APIHandler apexAPIHandler;
@@ -215,13 +244,114 @@ namespace PixoVR.Apex
             webSocket.OnClosed.AddListener((reason) => OnWebSocketClosed(reason));
 
             PopulateWebSocketURL();
+
+            _ParsePassedData();
+            loginToken = GetAuthenticationToken();
+        }
+
+        void _ExitApplication(string returnTarget, string returnTargetType)
+        {
+            Debug.Log("[ApexSystem] " + returnTarget + " " + returnTargetType);
+
+            string parameters = "";
+
+            if(CurrentActiveLogin != null)
+            {
+                parameters += "pixotoken=" + CurrentActiveLogin.Token;
+            }
+
+            if (optionalParameter.Length > 0)
+            {
+                if (parameters.Length > 0)
+                    parameters += "&";
+                parameters += "optional=" + optionalParameter;
+            }
+
+            if (returnTarget.Length > 0)
+            {
+                if (parameters.Length > 0)
+                    parameters += "&";
+                parameters += "returntarget=" + returnTarget;
+            }
+
+            if (returnTargetType.Length > 0)
+            {
+                if (parameters.Length > 0)
+                    parameters += "&";
+                parameters += "targettype=" + returnTargetType;
+            }
+
+            if (returnTargetParameter.Length > 0)
+            {
+                if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
+                {
+                    string returnURL = returnTargetParameter;
+                    if (parameters.Length > 0)
+                    {
+                        returnURL += "?" + parameters;
+                    }
+                    Debug.Log("Custom Target: " + returnURL);
+                    Application.OpenURL(returnURL);
+                }
+                else
+                {
+                    List<string> keys = new List<string>(), values = new List<string>();
+
+                    if(CurrentActiveLogin != null)
+                    {
+                        keys.Add("pixotoken");
+                        values.Add(CurrentActiveLogin.Token);
+                    }
+
+                    if (optionalParameter.Length > 0)
+                    {
+                        keys.Add("optional");
+                        values.Add(optionalParameter);
+                    }
+
+                    if (returnTarget.Length > 0)
+                    {
+                        keys.Add("returntarget");
+                        values.Add(returnTarget);
+                    }
+
+                    if (returnTargetType.Length > 0)
+                    {
+                        keys.Add("targettype");
+                        values.Add(returnTargetType);
+                    }
+
+                    PixoAndroidUtils.LaunchApp(returnTargetParameter, keys.ToArray(), values.ToArray());
+                }
+            }
+
+            string url = GetPlatformEndpointFromPlatformTarget(PlatformTargetServer);
+            if (url.Contains("apexsa.") || url.Contains("saudi."))
+            {
+                string returnUrl = "pixovr://com.PixoVR.SA_TrainingAcademy";
+                if(parameters.Length > 0)
+                {
+                    returnUrl += "?" + parameters;
+                }
+                Debug.Log("Training Hub: " + returnUrl);
+                Application.OpenURL(returnUrl);
+            }
+            else
+            {
+                string returnUrl = "pixovr://com.PixoVR.SA_TrainingAcademy?" + parameters;
+                if (parameters.Length > 0)
+                {
+                    returnUrl += "?" + parameters;
+                }
+                Debug.Log("Hub App: " + returnUrl);
+                Application.OpenURL(returnUrl);
+            }
         }
 
         string GetEndpointFromTarget(PlatformServer target)
         {
             return target.ToUrlString();
         }
-
 
         string GetWebEndpointFromPlatformTarget(PlatformServer target)
         {
@@ -385,9 +515,15 @@ namespace PixoVR.Apex
             return true;
         }
 
+        [Obsolete("ReturnToHub has been deprecated, please use ExitApplication.", true)]
         public static void ReturnToHub()
         {
             Instance._ReturnToHub();
+        }
+
+        public static void ExitApplication(string returnTarget, string returnTargetType)
+        {
+            Instance._ExitApplication(returnTarget, returnTargetType);
         }
 
         public static string GetAuthenticationToken()
@@ -408,6 +544,11 @@ namespace PixoVR.Apex
         public static void Ping()
         {
             Instance._Ping();
+        }
+
+        public static bool LoginWithToken()
+        {
+            return LoginWithToken(Instance.loginToken);
         }
 
         public static bool LoginWithToken(string token)
@@ -529,6 +670,68 @@ namespace PixoVR.Apex
         protected bool _Login(string username, string password)
         {
             return _Login(new LoginData(username, password));
+        }
+
+        public void _ParsePassedData()
+        {
+            AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+
+            AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
+
+            AndroidJavaObject intent = currentActivity.Call<AndroidJavaObject>("getIntent");
+
+            string urlData = intent.Call<string>("getDataString");
+
+            Debug.Log("[ApexSystem] Parsed Passed Data.");
+            if(urlData != null && urlData.Length > 0)
+            {
+                Debug.Log("[ApexSystem] Parse from URL.");
+                _ParseUrlData(urlData);
+            }
+            else
+            {
+                Debug.Log("[ApexSystem] Parsing from extras.");
+                optionalParameter = intent.Call<string>("getStringExtra", "optional");
+                returnTargetParameter = intent.Call<string>("getStringExtra", "returntarget");
+                targetTypeParameter = intent.Call<string>("getStringExtra", "targettype");
+            }
+        }
+
+        public void _ParseUrlData(string urlString)
+        {
+            string urlData = urlString.Substring(urlString.IndexOf('?') + 1);
+
+
+            if (urlData.Length <= 0)
+                return;
+
+            string[] dataArray = urlData.Split('&');
+
+            if (dataArray.Length <= 0)
+                return;
+
+            foreach(string dataElement in dataArray)
+            {
+                string[] dataParts = dataElement.Split('=');
+
+                if (dataParts.Length <= 1)
+                    continue;
+
+                if(dataParts[0].Equals("optional", StringComparison.OrdinalIgnoreCase))
+                {
+                    optionalParameter = dataParts[1];
+                }
+
+                if (dataParts[0].Equals("returntarget", StringComparison.OrdinalIgnoreCase))
+                {
+                    returnTargetParameter = dataParts[1];
+                }
+
+                if (dataParts[0].Equals("targettype", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetTypeParameter = dataParts[1];
+                }
+            }
         }
 
         public string _GetAuthenticationToken()

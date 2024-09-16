@@ -52,8 +52,8 @@ There are two steps you must do to accomplish this.
 
 First, you must get the authentication token.
 
-The function to get this is [ApexSystem::GetAuthenticationToken()](@ref PixoVR::Apex::ApexSystem::GetAuthenticationToken()).
-It returns an empty string when there is no token available, but returns a valid string when a token is available.
+The property to get this is [ApexSystem::PassedLoginToken](@ref PixoVR::Apex::ApexSystem::PassedLoginToken).
+It returns an empty string or null value when there is no token available, but returns a valid string when a token is available.
 
 If you receive a valid string from the first step, [ApexSystem::LoginWithToken()](@ref PixoVR::Apex::ApexSystem::LoginWithToken()) allows you to login with this token.
 
