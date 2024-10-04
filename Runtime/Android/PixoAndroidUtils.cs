@@ -125,5 +125,10 @@ namespace PixoVR.Apex
         {
             return NativeUtils.SafeCall<bool>("launchApp", packageName, extraKeys, extraValues);
         }
+
+        public static bool LaunchUrl(string url)
+        {
+            return NativeUtils.SafeCall("openURL", url);
+        }
     }
 }

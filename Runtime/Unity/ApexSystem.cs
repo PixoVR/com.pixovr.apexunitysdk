@@ -255,6 +255,8 @@ namespace PixoVR.Apex
 
             string parameters = "";
 
+            Debug.Log("[ApexSystem] Building parameters for url.");
+
             if(CurrentActiveLogin != null)
             {
                 parameters += "pixotoken=" + CurrentActiveLogin.Token;
@@ -281,27 +283,39 @@ namespace PixoVR.Apex
                 parameters += "targettype=" + returnTargetType;
             }
 
+            Debug.Log("[ApexSystem] Checking the return target parameter.");
+
             if (returnTargetParameter.Length > 0)
             {
                 if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
                 {
+                    Debug.Log("[ApexSystem] Return Target is a URL.");
+
                     string returnURL = returnTargetParameter;
                     if (parameters.Length > 0)
                     {
                         returnURL += "?" + parameters;
                     }
                     Debug.Log("Custom Target: " + returnURL);
-                    Application.OpenURL(returnURL);
+                    //Application.OpenURL(returnURL);
+                    PixoAndroidUtils.LaunchUrl(returnURL);
+                    return;
                 }
                 else
                 {
+                    Debug.Log("[ApexSystem] Return Target is a package name.");
+
                     List<string> keys = new List<string>(), values = new List<string>();
 
-                    if(CurrentActiveLogin != null)
+                    Debug.Log("[ApexSystem] Adding pixo token.");
+
+                    if (CurrentActiveLogin != null)
                     {
                         keys.Add("pixotoken");
                         values.Add(CurrentActiveLogin.Token);
                     }
+
+                    Debug.Log("[ApexSystem] Adding optional.");
 
                     if (optionalParameter.Length > 0)
                     {
@@ -309,11 +323,15 @@ namespace PixoVR.Apex
                         values.Add(optionalParameter);
                     }
 
+                    Debug.Log("[ApexSystem] Adding return target.");
+
                     if (returnTarget.Length > 0)
                     {
                         keys.Add("returntarget");
                         values.Add(returnTarget);
                     }
+
+                    Debug.Log("[ApexSystem] Adding return target type.");
 
                     if (returnTargetType.Length > 0)
                     {
@@ -322,6 +340,7 @@ namespace PixoVR.Apex
                     }
 
                     PixoAndroidUtils.LaunchApp(returnTargetParameter, keys.ToArray(), values.ToArray());
+                    return;
                 }
             }
 
@@ -694,6 +713,21 @@ namespace PixoVR.Apex
                 optionalParameter = intent.Call<string>("getStringExtra", "optional");
                 returnTargetParameter = intent.Call<string>("getStringExtra", "returntarget");
                 targetTypeParameter = intent.Call<string>("getStringExtra", "targettype");
+            }
+
+            if(optionalParameter == null)
+            {
+                optionalParameter = "";
+            }
+
+            if (returnTargetParameter == null)
+            {
+                returnTargetParameter = "";
+            }
+
+            if (targetTypeParameter == null)
+            {
+                targetTypeParameter = "";
             }
         }
 
