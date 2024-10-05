@@ -104,6 +104,45 @@ public class PixoUtils {
         return false;
     }
 
+    public void openURL(String URL)
+    {
+        Log.e("PixoUtils", "openURL: URL = " + URL);
+        if (!URL.contains("://"))
+        {
+            // add http:// if there isn't a scheme before a colon
+            if (!(URL.indexOf(":") >= 1))
+            {
+                URL = "http://" + URL;
+                Log.e("PixoUtils", "openURL: corrected URL = " + URL);
+            }
+        }
+        try
+        {
+            Intent BrowserIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(URL));
+            BrowserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+
+            // open browser on its own task
+            //BrowserIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+            BrowserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        
+            // make sure there is a web browser to handle the URL before trying to start activity (or may crash!)
+            if (BrowserIntent.resolveActivity(mContext.getPackageManager()) != null)
+            {
+                Log.e("PixoUtils", "openURL: Starting activity");
+                mContext.startActivity(BrowserIntent);
+                forceQuit();
+            }
+            else
+            {
+                Log.e("PixoUtils", "openURL: Could not find an application to receive the URL intent");
+            }
+        }
+        catch (Exception e)
+        {
+            Log.e("PixoUtils", "openURL: Failed with exception " + e.getMessage());
+        }
+    }
+
     public void forceQuit()
     {
 
