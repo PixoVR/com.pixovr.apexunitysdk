@@ -750,7 +750,7 @@ namespace PixoVR.Apex
 
         public void _ParsePassedData()
         {
-#ifdef UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
             AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 
             AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
@@ -829,6 +829,7 @@ namespace PixoVR.Apex
 
         public string _GetAuthenticationToken()
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
             AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 
             AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
@@ -838,6 +839,9 @@ namespace PixoVR.Apex
             string ExtraString = intent.Call<string>("getStringExtra", "pixotoken");
 
             return ExtraString;
+#else
+            return "";
+#endif
         }
 
         public bool _CheckModuleAccess(int targetModuleID = -1)
