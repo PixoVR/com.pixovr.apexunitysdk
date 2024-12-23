@@ -1,14 +1,25 @@
 package com.pixovr.pixosdk;
 
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.AppTask;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.util.Log;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.provider.MediaStore;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Build;
-import android.app.ActivityManager;
+import android.os.Environment;
+import android.util.Log;
+import android.util.TimingLogger;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.BitmapDrawable;
@@ -17,10 +28,12 @@ import android.graphics.Canvas;
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 import java.util.*;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import android.util.TimingLogger;
-import android.util.Log;
-import android.net.Uri;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 
 public class PixoUtils {
 
@@ -30,6 +43,135 @@ public class PixoUtils {
     public PixoUtils(Context context) {
         mContext = context;
         mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+    }
+
+    public String getAppFileLocation(String packageName) {
+        try {
+            PackageManager packageManager = mContext.getPackageManager();
+            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
+            return applicationInfo.sourceDir;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.d("PixoUtils", "Failed to get package location.");
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean fileExists(String fileName) {
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri contentUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        String[] projection = {MediaStore.MediaColumns._ID};
+        String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=?";
+        String[] selectionArgs = {fileName};
+
+        try (Cursor cursor = resolver.query(contentUri, projection, selection, selectionArgs, null)) {
+            return (cursor != null && cursor.moveToFirst());
+        }
+    }
+
+    public Uri getFileUri(String fileName) {
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri contentUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        String[] projection = {MediaStore.MediaColumns._ID};
+        String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=?";
+        String[] selectionArgs = {fileName};
+
+        try (Cursor cursor = resolver.query(contentUri, projection, selection, selectionArgs, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID);
+                long id = cursor.getLong(idColumn);
+                return Uri.withAppendedPath(contentUri, String.valueOf(id));
+            }
+        }
+        return null;
+    }
+
+    public String writeFileToSharedStorage(String fileName, String content) {
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri fileUri = getFileUri(fileName);
+
+        if(fileUri == null)
+        {
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
+            } else {
+                contentValues.put(MediaStore.MediaColumns.DATA, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getPath() + "/" + fileName);
+            }
+            fileUri = resolver.insert(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), contentValues);
+        }
+
+        if (fileUri != null) {
+            try (OutputStream os = resolver.openOutputStream(fileUri)) {
+                if (os != null) {
+                    os.write(content.getBytes());
+                    return fileUri.toString();
+                }
+            } catch (IOException e) {
+                Log.d("PixoUtils", "Failed to write to file.");
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public String readFileFromSharedStorage(String fileName) {
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri fileUri = getFileUri(fileName);
+
+        if (fileUri != null) {
+            try (InputStream is = resolver.openInputStream(fileUri);
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+                
+                StringBuilder stringBuilder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    stringBuilder.append(line).append("\n");
+                }
+                
+                // Remove the last newline if it exists
+                if (stringBuilder.length() > 0) {
+                    stringBuilder.setLength(stringBuilder.length() - 1);
+                }
+                
+                return stringBuilder.toString();
+            } catch (IOException e) {
+                Log.e("PixoUtils", "Failed to read file.");
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public boolean deleteFileFromSharedStorage(String fileName) {
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri fileUri = getFileUri(fileName);
+
+        if (fileUri != null) {
+            try {
+                // For Android 10 (API 29) and above
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // Delete the file using the file's content URI
+                    return resolver.delete(fileUri, null, null) > 0;
+                } else {
+                    // For Android 9 (Pie) and below
+                    // Check if we have permission to delete the file
+                    if (mContext.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        return resolver.delete(fileUri, null, null) > 0;
+                    } else {
+                        throw new SecurityException("Permission WRITE_EXTERNAL_STORAGE is required to delete files on Android 9 and below.");
+                    }
+                }
+            } catch (SecurityException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false; // File not found
     }
 
     public boolean launchApp(String packageName, String[] extraKey, String[] extraValue)
@@ -147,6 +289,8 @@ public class PixoUtils {
     {
 
         System.exit(0);
+        Activity activity = (Activity)mContext;
+        activity.finishAndRemoveTask();
         // finish();
     }
 

@@ -130,5 +130,30 @@ namespace PixoVR.Apex
         {
             return NativeUtils.SafeCall("openURL", url);
         }
+
+        public static string GetPackageLocation(string packageName)
+        {
+            return NativeUtils.SafeCall<string>("getAppFileLocation", packageName);
+        }
+
+        public static string WriteFileToSharedLocation(string fileName, string content)
+        {
+            return NativeUtils.SafeCall<string>("writeFileToSharedStorage", fileName, content);
+        }
+
+        public static string ReadFileFromSharedStorage(string fileName)
+        {
+            return NativeUtils.SafeCall<string>("readFileFromSharedStorage", fileName);
+        }
+
+        public static bool DeleteFileFromSharedStorage(string fileName)
+        {
+            return NativeUtils.SafeCall<bool>("deleteFileFromSharedStorage", fileName);
+        }
+
+        public static bool DoesFileExistInSharedLocation(string fileName)
+        {
+            return NativeUtils.SafeCall<bool>("fileExists", fileName);
+        }
     }
 }
