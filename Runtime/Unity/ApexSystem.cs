@@ -184,6 +184,8 @@ namespace PixoVR.Apex
 
         void Awake()
         {
+            SetupPlatformConfiguration();
+
             if(runSetupOnAwake)
             {
                 Debug.Log("[ApexSystem] Running on awake!");
@@ -209,6 +211,61 @@ namespace PixoVR.Apex
             deviceSerialNumber = newDeviceStatus.serial;
         }
 #endif
+        void SetupPlatformConfiguration()
+        {
+            Debug.Log("SetupPlatformConfiguration");
+
+#if UNITY_ANDROID
+            if (PixoAndroidUtils.DoesFileExistInSharedLocation("pixoconfig.cnf"))
+            {
+                Debug.Log("Found pixoconfig.cnf");
+
+                string configContent = PixoAndroidUtils.ReadFileFromSharedStorage("pixoconfig.cnf");
+
+                if(configContent.Length > 0)
+                {
+                    Debug.Log("Configuration is not empty.");
+                    ConfigurationTypes configData = JsonConvert.DeserializeObject<ConfigurationTypes>(configContent);
+                    if(configData == null)
+                    {
+                        Debug.Log("Failed to deserialize the config.");
+                        return;
+                    }
+
+                    // Parse out the platform target to utilize the unity built in config values
+                    if(configData.Platform.Contains("NA", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        if(configData.Platform.Contains("Production", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            Debug.Log("NA Production platform target.");
+                            PlatformTargetServer = PlatformServer.NA_PRODUCTION;
+                        }
+
+                        if (configData.Platform.Contains("Dev", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            Debug.Log("NA Dev platform target.");
+                            PlatformTargetServer = PlatformServer.NA_DEV;
+                        }
+
+                        if (configData.Platform.Contains("Stage", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            Debug.Log("NA Stage platform target.");
+                            PlatformTargetServer = PlatformServer.NA_STAGE;
+                        }
+                    }
+                    else if(configData.Platform.Contains("SA", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        Debug.Log("SA Production platform target.");
+                        PlatformTargetServer = PlatformServer.SA_PRODUCTION;
+                    }
+
+                    // TODO (MGruber): Add a custom value, but this requires multiple configuration values to be saved.
+                    // Need to save the normal headset api endpoint, web api endpoint and platform api endpoint. 3 VALUES! D:
+                }
+            }
+#endif
+        }
+
         void SetupAPI()
         {
             Debug.Log("Mac Address: " + ApexUtils.GetMacAddress());
@@ -287,6 +344,7 @@ namespace PixoVR.Apex
 
             if (returnTargetParameter.Length > 0)
             {
+                Debug.Log("[ApexSystem] Had a valid return target parameter.");
                 if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
                 {
                     Debug.Log("[ApexSystem] Return Target is a URL.");
@@ -297,7 +355,6 @@ namespace PixoVR.Apex
                         returnURL += "?" + parameters;
                     }
                     Debug.Log("Custom Target: " + returnURL);
-                    //Application.OpenURL(returnURL);
                     PixoAndroidUtils.LaunchUrl(returnURL);
                     return;
                 }
@@ -353,17 +410,17 @@ namespace PixoVR.Apex
                     returnUrl += "?" + parameters;
                 }
                 Debug.Log("Training Hub: " + returnUrl);
-                Application.OpenURL(returnUrl);
+                PixoAndroidUtils.LaunchUrl(returnUrl);
             }
             else
             {
-                string returnUrl = "pixovr://com.PixoVR.SA_TrainingAcademy?" + parameters;
+                string returnUrl = "pixovr://com.PixoVR.PixoHub";
                 if (parameters.Length > 0)
                 {
                     returnUrl += "?" + parameters;
                 }
                 Debug.Log("Hub App: " + returnUrl);
-                Application.OpenURL(returnUrl);
+                PixoAndroidUtils.LaunchUrl(returnUrl);
             }
         }
 
@@ -693,6 +750,7 @@ namespace PixoVR.Apex
 
         public void _ParsePassedData()
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
             AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 
             AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
@@ -729,6 +787,7 @@ namespace PixoVR.Apex
             {
                 targetTypeParameter = "";
             }
+#endif
         }
 
         public void _ParseUrlData(string urlString)
@@ -770,6 +829,7 @@ namespace PixoVR.Apex
 
         public string _GetAuthenticationToken()
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
             AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 
             AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
@@ -779,6 +839,9 @@ namespace PixoVR.Apex
             string ExtraString = intent.Call<string>("getStringExtra", "pixotoken");
 
             return ExtraString;
+#else
+            return "";
+#endif
         }
 
         public bool _CheckModuleAccess(int targetModuleID = -1)
