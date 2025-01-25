@@ -86,3 +86,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  ### [1.4.2] - 2024-08-23
  - Implements functionality from ManageXR to integrate with the device management platform.
  - Adds a custom AndroidManifest XML that implements the basics permissions for ManageXR.
+
+ ### [1.5.3] - 2025-01-24
+ - Removes **ReturnToHub** and replaces it with **ExitApplication**.
+ - Adds the **ReturnTarget** property. This value is read in when another application launches the current application. Can also be set to allow **ExitApplication** to launch another application.
+ - **ExitApplication** will also now exit the application back to the headset's dashboard when no return target is provided.
+ - Adds **optionalParameter** to allow entirely custom strings of data to be sent to another application.
+ - Fixes the issue that occurs when launching between Unity and Unreal Engine applications and the application didn't completely quit.
