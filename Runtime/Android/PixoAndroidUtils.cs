@@ -121,6 +121,11 @@ namespace PixoVR.Apex
             return false;
         }
 
+        public static void Quit()
+        {
+            NativeUtils.SafeCall("forceQuit");
+        }
+
         public static bool LaunchApp(string packageName, string[] extraKeys, string[] extraValues)
         {
             return NativeUtils.SafeCall<bool>("launchApp", packageName, extraKeys, extraValues);

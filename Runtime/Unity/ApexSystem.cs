@@ -97,15 +97,33 @@ namespace PixoVR.Apex
         public static string ReturnTarget
         {
             get { return Instance.returnTargetParameter; }
-            set { Instance.returnTargetParameter = value; }
+            set
+            {
+                if(value != null)
+                {
+                    Instance.returnTargetParameter = value;
+                }
+                else
+                {
+                    Instance.returnTargetParameter = "";
+                }
+
+                if(Instance.returnTargetParameter.Contains("://"))
+                {
+                    TargetType = "url";
+                }
+                else
+                {
+                    TargetType = "app";
+                }
+            }
         }
 
         public static string TargetType
         {
             get { return Instance.targetTypeParameter; }
-            set { Instance.targetTypeParameter = value; }
+            private set { Instance.targetTypeParameter = value; }
         }
-
 
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
@@ -306,8 +324,20 @@ namespace PixoVR.Apex
             loginToken = GetAuthenticationToken();
         }
 
-        void _ExitApplication(string returnTarget, string returnTargetType)
+        void _ExitApplication(string returnTarget)
         {
+            if(returnTarget == null)
+            {
+                returnTarget = "";
+            }
+
+            string returnTargetType = "app";
+
+            if(returnTarget.Contains("://"))
+            {
+                returnTargetType = "url";
+            }
+
             Debug.Log("[ApexSystem] " + returnTarget + " " + returnTargetType);
 
             string parameters = "";
@@ -319,11 +349,14 @@ namespace PixoVR.Apex
                 parameters += "pixotoken=" + CurrentActiveLogin.Token;
             }
 
-            if (optionalParameter.Length > 0)
+            if(optionalParameter != null)
             {
-                if (parameters.Length > 0)
-                    parameters += "&";
-                parameters += "optional=" + optionalParameter;
+                if (optionalParameter.Length > 0)
+                {
+                    if (parameters.Length > 0)
+                        parameters += "&";
+                    parameters += "optional=" + optionalParameter;
+                }
             }
 
             if (returnTarget.Length > 0)
@@ -342,86 +375,69 @@ namespace PixoVR.Apex
 
             Debug.Log("[ApexSystem] Checking the return target parameter.");
 
-            if (returnTargetParameter.Length > 0)
+            if (returnTargetParameter != null)
             {
-                Debug.Log("[ApexSystem] Had a valid return target parameter.");
-                if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
+                if (returnTargetParameter.Length > 0)
                 {
-                    Debug.Log("[ApexSystem] Return Target is a URL.");
-
-                    string returnURL = returnTargetParameter;
-                    if (parameters.Length > 0)
+                    Debug.Log("[ApexSystem] Had a valid return target parameter.");
+                    if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
                     {
-                        returnURL += "?" + parameters;
+                        Debug.Log("[ApexSystem] Return Target is a URL.");
+
+                        string returnURL = returnTargetParameter;
+                        if (parameters.Length > 0)
+                        {
+                            returnURL += "?" + parameters;
+                        }
+                        Debug.Log("Custom Target: " + returnURL);
+                        PixoAndroidUtils.LaunchUrl(returnURL);
+                        return;
                     }
-                    Debug.Log("Custom Target: " + returnURL);
-                    PixoAndroidUtils.LaunchUrl(returnURL);
-                    return;
-                }
-                else
-                {
-                    Debug.Log("[ApexSystem] Return Target is a package name.");
-
-                    List<string> keys = new List<string>(), values = new List<string>();
-
-                    Debug.Log("[ApexSystem] Adding pixo token.");
-
-                    if (CurrentActiveLogin != null)
+                    else
                     {
-                        keys.Add("pixotoken");
-                        values.Add(CurrentActiveLogin.Token);
+                        Debug.Log("[ApexSystem] Return Target is a package name.");
+
+                        List<string> keys = new List<string>(), values = new List<string>();
+
+                        Debug.Log("[ApexSystem] Adding pixo token.");
+
+                        if (CurrentActiveLogin != null)
+                        {
+                            keys.Add("pixotoken");
+                            values.Add(CurrentActiveLogin.Token);
+                        }
+
+                        Debug.Log("[ApexSystem] Adding optional.");
+
+                        if (optionalParameter.Length > 0)
+                        {
+                            keys.Add("optional");
+                            values.Add(optionalParameter);
+                        }
+
+                        Debug.Log("[ApexSystem] Adding return target.");
+
+                        if (returnTarget.Length > 0)
+                        {
+                            keys.Add("returntarget");
+                            values.Add(returnTarget);
+                        }
+
+                        Debug.Log("[ApexSystem] Adding return target type.");
+
+                        if (returnTargetType.Length > 0)
+                        {
+                            keys.Add("targettype");
+                            values.Add(returnTargetType);
+                        }
+
+                        PixoAndroidUtils.LaunchApp(returnTargetParameter, keys.ToArray(), values.ToArray());
+                        return;
                     }
-
-                    Debug.Log("[ApexSystem] Adding optional.");
-
-                    if (optionalParameter.Length > 0)
-                    {
-                        keys.Add("optional");
-                        values.Add(optionalParameter);
-                    }
-
-                    Debug.Log("[ApexSystem] Adding return target.");
-
-                    if (returnTarget.Length > 0)
-                    {
-                        keys.Add("returntarget");
-                        values.Add(returnTarget);
-                    }
-
-                    Debug.Log("[ApexSystem] Adding return target type.");
-
-                    if (returnTargetType.Length > 0)
-                    {
-                        keys.Add("targettype");
-                        values.Add(returnTargetType);
-                    }
-
-                    PixoAndroidUtils.LaunchApp(returnTargetParameter, keys.ToArray(), values.ToArray());
-                    return;
                 }
             }
 
-            string url = GetPlatformEndpointFromPlatformTarget(PlatformTargetServer);
-            if (url.Contains("apexsa.") || url.Contains("saudi."))
-            {
-                string returnUrl = "pixovr://com.PixoVR.SA_TrainingAcademy";
-                if(parameters.Length > 0)
-                {
-                    returnUrl += "?" + parameters;
-                }
-                Debug.Log("Training Hub: " + returnUrl);
-                PixoAndroidUtils.LaunchUrl(returnUrl);
-            }
-            else
-            {
-                string returnUrl = "pixovr://com.PixoVR.PixoHub";
-                if (parameters.Length > 0)
-                {
-                    returnUrl += "?" + parameters;
-                }
-                Debug.Log("Hub App: " + returnUrl);
-                PixoAndroidUtils.LaunchUrl(returnUrl);
-            }
+            PixoAndroidUtils.Quit();
         }
 
         string GetEndpointFromTarget(PlatformServer target)
@@ -597,9 +613,9 @@ namespace PixoVR.Apex
             Instance._ReturnToHub();
         }
 
-        public static void ExitApplication(string returnTarget, string returnTargetType)
+        public static void ExitApplication(string returnTarget)
         {
-            Instance._ExitApplication(returnTarget, returnTargetType);
+            Instance._ExitApplication(returnTarget);
         }
 
         public static string GetAuthenticationToken()

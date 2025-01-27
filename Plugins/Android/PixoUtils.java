@@ -51,7 +51,7 @@ public class PixoUtils {
             ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
             return applicationInfo.sourceDir;
         } catch (PackageManager.NameNotFoundException e) {
-            Log.d("PixoUtils", "Failed to get package location.");
+            Log.e("PixoUtils", "Failed to get package location.");
             e.printStackTrace();
             return null;
         }
@@ -111,7 +111,7 @@ public class PixoUtils {
                     return fileUri.toString();
                 }
             } catch (IOException e) {
-                Log.d("PixoUtils", "Failed to write to file.");
+                Log.e("PixoUtils", "Failed to write to file.");
                 e.printStackTrace();
             }
         }
@@ -176,7 +176,7 @@ public class PixoUtils {
 
     public boolean launchApp(String packageName, String[] extraKey, String[] extraValue)
     {
-        Log.d("PixoUtils", " AndroidThunkJava_Launch");
+        Log.e("PixoUtils", " AndroidThunkJava_Launch");
         Intent intent;
         String intentAction = "";
         String intentComponent = "";
@@ -202,7 +202,7 @@ public class PixoUtils {
 
         if (intentAction.equals(""))
         {
-            Log.d("PixoUtils", "Does not have intent!");
+            Log.e("PixoUtils", "Does not have intent!");
         
             intent = mContext.getPackageManager().getLaunchIntentForPackage(packageName);
             if (intent == null)
@@ -212,7 +212,7 @@ public class PixoUtils {
         }
         else
         {
-            Log.d("PixoUtils", "Has intent!");
+            Log.e("PixoUtils", "Has intent!");
             intent = new Intent(intentAction);
             if (intent == null)
             {
@@ -226,7 +226,7 @@ public class PixoUtils {
         {                
             for(int extraIndex = 0; extraKey.length > extraIndex; extraIndex++)
             {
-                Log.d("PixoUtils", extraKey[extraIndex] + " - " + extraValue[extraIndex]);
+                Log.e("PixoUtils", extraKey[extraIndex] + " - " + extraValue[extraIndex]);
                 intent.putExtra(extraKey[extraIndex], extraValue[extraIndex]);
             }
         }
@@ -287,11 +287,10 @@ public class PixoUtils {
 
     public void forceQuit()
     {
-
+        Log.e("PixoUtils", "Calling ForceQuit");
         System.exit(0);
         Activity activity = (Activity)mContext;
         activity.finishAndRemoveTask();
-        // finish();
     }
 
     public boolean isAppInstalled(String packageName) {
