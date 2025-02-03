@@ -322,6 +322,7 @@ namespace PixoVR.Apex
 
             _ParsePassedData();
             loginToken = GetAuthenticationToken();
+            Debug.Log($"[ApexSystem] Login Token: {loginToken}");
         }
 
         void _ExitApplication(string returnTarget)
@@ -803,6 +804,10 @@ namespace PixoVR.Apex
             {
                 targetTypeParameter = "";
             }
+
+            Debug.Log($"[ApexSystem] Found Return Target: {returnTargetParameter}");
+            Debug.Log($"[ApexSystem] Found Return Target Type: {targetTypeParameter}");
+            Debug.Log($"[ApexSystem] Found Optional Params: {optionalParameter}");
 #endif
         }
 
@@ -840,12 +845,20 @@ namespace PixoVR.Apex
                 {
                     targetTypeParameter = dataParts[1];
                 }
+
+                if (dataParts[0].Equals("pixotoken", StringComparison.OrdinalIgnoreCase))
+                {
+                    loginToken = dataParts[1];
+                }
             }
         }
 
         public string _GetAuthenticationToken()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
+            if(loginToken.Length > 0)
+                return loginToken;
+
             AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 
             AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
@@ -856,7 +869,7 @@ namespace PixoVR.Apex
 
             return ExtraString;
 #else
-            return "";
+            return loginToken;
 #endif
         }
 
