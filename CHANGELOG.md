@@ -93,3 +93,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - **ExitApplication** will also now exit the application back to the headset's dashboard when no return target is provided.
  - Adds **optionalParameter** to allow entirely custom strings of data to be sent to another application.
  - Fixes the issue that occurs when launching between Unity and Unreal Engine applications and the application didn't completely quit.
+
+ ### [1.5.4] - 2025-02-03
+ - Ensures all data is captured when deeplinking after changes to deeplink url from HubApp.
+ - Adds a custom AAR to ensure required permissions are added build.
