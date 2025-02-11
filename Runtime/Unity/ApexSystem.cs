@@ -736,9 +736,17 @@ namespace PixoVR.Apex
         protected bool _Login(LoginData login)
         {
             Debug.Log("[ApexSystem] _Login called.");
+            if (apexAPIHandler == null)
+            {
+                Debug.Log("[ApexSystem] API Handler is null.");
+                OnLoginFailed.Invoke(GenerateFailureResponse("There was an error reaching the platform, please contact your administrator."));
+                return false;
+            }
+
             if (login.Login.Length <= 0)
             {
                 Debug.Log("[Login] No user name.");
+                OnLoginFailed.Invoke(GenerateFailureResponse("No username or email entered."));
                 return false;
             }
 
@@ -746,11 +754,6 @@ namespace PixoVR.Apex
             {
                 Debug.Log("[Login] No password.");
                 login.Password = "<empty>";
-            }
-
-            if(apexAPIHandler == null)
-            {
-                Debug.Log("[ApexSystem] API Handler is null.");
             }
 
             apexAPIHandler.Login(login);
@@ -763,6 +766,16 @@ namespace PixoVR.Apex
         protected bool _Login(string username, string password)
         {
             return _Login(new LoginData(username, password));
+        }
+
+        protected FailureResponse GenerateFailureResponse(string message)
+        {
+            FailureResponse failureResponse = new FailureResponse();
+            failureResponse.Error = "true";
+            failureResponse.HttpCode = "400";
+            failureResponse.Message = message;
+
+            return failureResponse;
         }
 
         public void _ParsePassedData()
