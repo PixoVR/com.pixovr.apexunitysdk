@@ -370,7 +370,15 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/modules?platform={0}", platform));
+            string endpoint = "/modules";
+            if (platform != null && platform.Length > 0)
+            {
+                endpoint += $"?platform={platform}";
+            }
+
+            Debug.Log($"GetModuleList built endpoint: {endpoint}");
+
+            HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
             string body = await response.Content.ReadAsStringAsync();
             object responseContent = null;
             List<OrgModule> orgModules = new List<OrgModule>();
@@ -380,7 +388,8 @@ namespace PixoVR.Apex
                 var tokens = array.Children();
                 foreach(JToken selectedToken in tokens)
                 {
-                    OrgModule orgModule = new OrgModule(selectedToken);
+                    OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
+                    orgModule.Parse(selectedToken);
                     orgModules.Add(orgModule);
                 }
             }

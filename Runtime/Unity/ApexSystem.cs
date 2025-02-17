@@ -483,7 +483,7 @@ namespace PixoVR.Apex
         {
             if (!IsModuleVersionValid())
             {
-                Debug.LogAssertion(moduleVersion + " is an invalid module version.");
+                Debug.LogWarning($"{moduleVersion} is an invalid module version.");
             }
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
@@ -704,9 +704,9 @@ namespace PixoVR.Apex
             return Instance._GetUserModules(userId);
         }
 
-        public static bool GetModulesList()
+        public static bool GetModulesList(string platformName)
         {
-            return Instance._GetModuleList();
+            return Instance._GetModuleList(platformName);
         }
 
         protected void _ChangePlatformServer(PlatformServer newServer)
@@ -1215,12 +1215,12 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _GetModuleList()
+        protected bool _GetModuleList(string platformName)
         {
             if (currentActiveLogin == null)
                 return false;
 
-            apexAPIHandler.GetModuleList(currentActiveLogin.Token, "htcfocus3");
+            apexAPIHandler.GetModuleList(currentActiveLogin.Token, platformName);
             return true;
         }
 

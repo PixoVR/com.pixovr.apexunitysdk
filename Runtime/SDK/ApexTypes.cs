@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace PixoVR.Apex
 {
@@ -230,7 +231,7 @@ namespace PixoVR.Apex
         }
     }
 
-    public class OrgModule
+    public class OrgModule : ScriptableObject
     {
         public int ID = -1;
         public string Name = "";
@@ -246,7 +247,18 @@ namespace PixoVR.Apex
         public string externalId = "";
         public PlatformPlayer player = null;
 
+        public OrgModule()
+        {
+            Downloads = new List<OrgModuleDownload>();
+        }
+
         public OrgModule(JToken token)
+        {
+            Downloads = new List<OrgModuleDownload>();
+            Parse(token);
+        }
+
+        public void Parse(JToken token)
         {
             ID = token.Value<int>("ID");
             Name = token.Value<string>("Name");
@@ -261,25 +273,27 @@ namespace PixoVR.Apex
             externalId = token.Value<string>("externalId");
             var PlayerToken = token.Value<JObject>("player");
 
-            if(PlayerToken != null)
+            if (PlayerToken != null)
             {
                 player = new PlatformPlayer(PlayerToken);
             }
-            
+
             var DownloadTokens = token.Value<JArray>("Downloads");
 
-            if(DownloadTokens != null)
+            if (DownloadTokens != null)
             {
-                foreach(JToken DownloadToken in DownloadTokens)
+                foreach (JToken DownloadToken in DownloadTokens)
                 {
-                    Downloads.Add(new OrgModuleDownload(DownloadToken));
+                    var downloadData = ScriptableObject.CreateInstance<OrgModuleDownload>();
+                    downloadData.Parse(DownloadToken);
+                    Downloads.Add(downloadData);
                 }
             }
         }
     }
 
     [Serializable]
-    public class OrgModuleDownload
+    public class OrgModuleDownload : ScriptableObject
     {
         public int ID;
         public int VersionID;
@@ -293,6 +307,11 @@ namespace PixoVR.Apex
         public string externalId;
 
         public OrgModuleDownload(JToken token)
+        {
+            Parse(token);
+        }
+
+        public void Parse(JToken token)
         {
             ID = token.Value<int>("ID");
             VersionID = token.Value<int>("VersionID");
