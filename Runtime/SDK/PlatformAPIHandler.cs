@@ -380,7 +380,19 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = null;
+
+
+
+            try
+            {
+                var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+                return;
+            }
+            catch(Exception ex) {}
+
+
+
             List<OrgModule> orgModules = new List<OrgModule>();
             JArray array = JArray.Parse(body);
             if(array != null)
@@ -395,17 +407,7 @@ namespace PixoVR.Apex
             }
 
             Debug.Log(orgModules.Count.ToString());
-
-            if(orgModules.Count <= 0)
-            {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-            }
-            else
-            {
-                responseContent = orgModules;
-            }
-
-            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
         }
     }
 }
