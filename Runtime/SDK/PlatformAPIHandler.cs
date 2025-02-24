@@ -370,9 +370,29 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/modules?platform={0}", platform));
+            string endpoint = "/modules";
+            if (platform != null && platform.Length > 0)
+            {
+                endpoint += $"?platform={platform}";
+            }
+
+            Debug.Log($"GetModuleList built endpoint: {endpoint}");
+
+            HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = null;
+
+
+
+            try
+            {
+                var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+                return;
+            }
+            catch(Exception ex) {}
+
+
+
             List<OrgModule> orgModules = new List<OrgModule>();
             JArray array = JArray.Parse(body);
             if(array != null)
@@ -380,23 +400,14 @@ namespace PixoVR.Apex
                 var tokens = array.Children();
                 foreach(JToken selectedToken in tokens)
                 {
-                    OrgModule orgModule = new OrgModule(selectedToken);
+                    OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
+                    orgModule.Parse(selectedToken);
                     orgModules.Add(orgModule);
                 }
             }
 
             Debug.Log(orgModules.Count.ToString());
-
-            if(orgModules.Count <= 0)
-            {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-            }
-            else
-            {
-                responseContent = orgModules;
-            }
-
-            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
         }
     }
 }

@@ -483,7 +483,7 @@ namespace PixoVR.Apex
         {
             if (!IsModuleVersionValid())
             {
-                Debug.LogAssertion(moduleVersion + " is an invalid module version.");
+                Debug.LogWarning($"{moduleVersion} is an invalid module version.");
             }
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
@@ -704,9 +704,9 @@ namespace PixoVR.Apex
             return Instance._GetUserModules(userId);
         }
 
-        public static bool GetModulesList()
+        public static bool GetModulesList(string platformName)
         {
-            return Instance._GetModuleList();
+            return Instance._GetModuleList(platformName);
         }
 
         protected void _ChangePlatformServer(PlatformServer newServer)
@@ -736,9 +736,17 @@ namespace PixoVR.Apex
         protected bool _Login(LoginData login)
         {
             Debug.Log("[ApexSystem] _Login called.");
+            if (apexAPIHandler == null)
+            {
+                Debug.Log("[ApexSystem] API Handler is null.");
+                OnLoginFailed.Invoke(GenerateFailureResponse("There was an error reaching the platform, please contact your administrator."));
+                return false;
+            }
+
             if (login.Login.Length <= 0)
             {
                 Debug.Log("[Login] No user name.");
+                OnLoginFailed.Invoke(GenerateFailureResponse("No username or email entered."));
                 return false;
             }
 
@@ -746,11 +754,6 @@ namespace PixoVR.Apex
             {
                 Debug.Log("[Login] No password.");
                 login.Password = "<empty>";
-            }
-
-            if(apexAPIHandler == null)
-            {
-                Debug.Log("[ApexSystem] API Handler is null.");
             }
 
             apexAPIHandler.Login(login);
@@ -763,6 +766,16 @@ namespace PixoVR.Apex
         protected bool _Login(string username, string password)
         {
             return _Login(new LoginData(username, password));
+        }
+
+        protected FailureResponse GenerateFailureResponse(string message)
+        {
+            FailureResponse failureResponse = new FailureResponse();
+            failureResponse.Error = "true";
+            failureResponse.HttpCode = "400";
+            failureResponse.Message = message;
+
+            return failureResponse;
         }
 
         public void _ParsePassedData()
@@ -1202,12 +1215,12 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _GetModuleList()
+        protected bool _GetModuleList(string platformName)
         {
             if (currentActiveLogin == null)
                 return false;
 
-            apexAPIHandler.GetModuleList(currentActiveLogin.Token, "htcfocus3");
+            apexAPIHandler.GetModuleList(currentActiveLogin.Token, platformName);
             return true;
         }
 

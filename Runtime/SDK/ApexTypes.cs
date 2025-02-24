@@ -1,9 +1,17 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Net.Http;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using Unity.Properties;
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UIElements;
+
+
 
 namespace PixoVR.Apex
 {
@@ -31,7 +39,7 @@ namespace PixoVR.Apex
 
             if (hasErrorSetup == false)
             {
-                if(Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                if (Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
                 {
                     hasErrored = true;
                 }
@@ -50,9 +58,9 @@ namespace PixoVR.Apex
         public void ParseData()
         {
             IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
-            foreach(JProperty property in dataPropertyEnumerator)
+            foreach (JProperty property in dataPropertyEnumerator)
             {
-                if(property.Name.Equals("SessionId", StringComparison.OrdinalIgnoreCase))
+                if (property.Name.Equals("SessionId", StringComparison.OrdinalIgnoreCase))
                 {
                     SessionId = JsonConvert.DeserializeObject<int>(property.Value.ToString());
                 }
@@ -78,7 +86,7 @@ namespace PixoVR.Apex
             ParsedData = new List<UserModulesData>();
             IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
             UserModulesData currentUser;
-            foreach(JProperty currentProperty in dataPropertyEnumerator)
+            foreach (JProperty currentProperty in dataPropertyEnumerator)
             {
                 currentUser = new UserModulesData();
 
@@ -152,7 +160,7 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class UserAccessResponseContent: IPlatformErrorable
+    public class UserAccessResponseContent : IPlatformErrorable
     {
         public int UserId = -1;
         public int ModuleId = -1;
@@ -230,7 +238,7 @@ namespace PixoVR.Apex
         }
     }
 
-    public class OrgModule
+    public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
     {
         public int ID = -1;
         public string Name = "";
@@ -240,13 +248,43 @@ namespace PixoVR.Apex
         public string Industry = "";
         public string Details = "";
         public string IconURL = "";
+
+        private Texture2D _thumbnail;
+        [CreateProperty]
+        public Texture2D Thumbnail
+        {
+            get
+            {
+                return _thumbnail;
+            }
+            set
+            {
+                _thumbnail = value;
+                Notify();
+            }
+        }
+
         public List<OrgModuleDownload> Downloads = new List<OrgModuleDownload>();
         public int? PassingScore = null;
         public string Categories = "";
         public string externalId = "";
         public PlatformPlayer player = null;
 
+        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+
+
+        public OrgModule()
+        {
+            Downloads = new List<OrgModuleDownload>();
+        }
+
         public OrgModule(JToken token)
+        {
+            Downloads = new List<OrgModuleDownload>();
+            Parse(token);
+        }
+
+        public void Parse(JToken token)
         {
             ID = token.Value<int>("ID");
             Name = token.Value<string>("Name");
@@ -261,25 +299,33 @@ namespace PixoVR.Apex
             externalId = token.Value<string>("externalId");
             var PlayerToken = token.Value<JObject>("player");
 
-            if(PlayerToken != null)
+            if (PlayerToken != null)
             {
                 player = new PlatformPlayer(PlayerToken);
             }
-            
+
             var DownloadTokens = token.Value<JArray>("Downloads");
 
-            if(DownloadTokens != null)
+            if (DownloadTokens != null)
             {
-                foreach(JToken DownloadToken in DownloadTokens)
+                foreach (JToken DownloadToken in DownloadTokens)
                 {
-                    Downloads.Add(new OrgModuleDownload(DownloadToken));
+                    var downloadData = ScriptableObject.CreateInstance<OrgModuleDownload>();
+                    downloadData.Parse(DownloadToken);
+                    Downloads.Add(downloadData);
                 }
             }
         }
+
+        void Notify([CallerMemberName] string property = "")
+        {
+            propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
+        }
+
     }
 
     [Serializable]
-    public class OrgModuleDownload
+    public class OrgModuleDownload : ScriptableObject
     {
         public int ID;
         public int VersionID;
@@ -293,6 +339,11 @@ namespace PixoVR.Apex
         public string externalId;
 
         public OrgModuleDownload(JToken token)
+        {
+            Parse(token);
+        }
+
+        public void Parse(JToken token)
         {
             ID = token.Value<int>("ID");
             VersionID = token.Value<int>("VersionID");
