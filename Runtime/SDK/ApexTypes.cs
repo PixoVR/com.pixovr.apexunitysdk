@@ -374,9 +374,13 @@ namespace PixoVR.Apex
             name = tokenObject.Value<string>("name");
             description = tokenObject.Value<string>("description");
 
-            var VersionTokens = tokenObject.Value<JArray>("versions");
+            var versionTokens = tokenObject.Value<JArray>("versions");
+            if (versionTokens == null)
+            {
+                versionTokens = new JArray();
+            }
 
-            foreach (JToken Version in VersionTokens)
+            foreach (JToken Version in versionTokens)
             {
                 versions.Add(new PlatformPlayerDownload(Version));
             }
