@@ -248,6 +248,9 @@ namespace PixoVR.Apex
         public string Industry = "";
         public string Details = "";
         public string IconURL = "";
+		  public string AvailableLanguages = "";
+		  public string Distributor = "";
+		  public string UserGuideLink = "";
 
         private Texture2D _thumbnail;
         [CreateProperty]
@@ -291,12 +294,13 @@ namespace PixoVR.Apex
             Description = token.Value<string>("Description");
             ShortDescription = token.Value<string>("ShortDescription");
             LongDescription = token.Value<string>("LongDescription");
-            Industry = token.Value<string>("Industry");
             Details = token.Value<string>("Details");
             IconURL = token.Value<string>("IconURL");
             PassingScore = token.Value<int?>("PassingScore");
             Categories = token.Value<string>("Categories");
             externalId = token.Value<string>("externalId");
+			   UserGuideLink = token.Value<string>("UserGuideLink");
+
             var PlayerToken = token.Value<JObject>("player");
 
             if (PlayerToken != null)
@@ -315,6 +319,32 @@ namespace PixoVR.Apex
                     Downloads.Add(downloadData);
                 }
             }
+
+				var availableLanguages = token.Value<JArray>("availableLanguages");
+
+				if (availableLanguages != null)
+				{
+					var availableLanguagesList = new List<string>();
+
+					foreach (JToken languageToken in availableLanguages)
+					{
+						availableLanguagesList.Add(languageToken.Value<string>("displayName"));
+					}
+
+					AvailableLanguages = string.Join(", ", availableLanguagesList);
+				}
+
+            var industry = token.Value<string>("Industry");
+				if (industry != null)
+				{
+					Industry = industry.Substring(0, 1).ToUpper() + industry.Substring(1);
+				}
+
+				var distributor = token.Value<JObject>("distributor");
+				if (distributor != null)
+				{
+					Distributor = distributor.Value<string>("name");
+				}
         }
 
         void Notify([CallerMemberName] string property = "")
