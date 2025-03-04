@@ -248,9 +248,9 @@ namespace PixoVR.Apex
         public string Industry = "";
         public string Details = "";
         public string IconURL = "";
-		  public string AvailableLanguages = "";
-		  public string Distributor = "";
-		  public string UserGuideLink = "";
+        public string AvailableLanguages = "";
+        public string Distributor = "";
+        public string UserGuideLink = "";
 
         private Texture2D _thumbnail;
         [CreateProperty]
@@ -299,7 +299,7 @@ namespace PixoVR.Apex
             PassingScore = token.Value<int?>("PassingScore");
             Categories = token.Value<string>("Categories");
             externalId = token.Value<string>("externalId");
-			   UserGuideLink = token.Value<string>("UserGuideLink");
+            UserGuideLink = token.Value<string>("UserGuideLink");
 
             var PlayerToken = token.Value<JObject>("player");
 
@@ -320,32 +320,43 @@ namespace PixoVR.Apex
                 }
             }
 
-				var availableLanguages = token.Value<JArray>("availableLanguages");
+            var availableLanguages = GetValue<JArray>(token, "availableLanguages");
 
-				if (availableLanguages != null)
-				{
-					var availableLanguagesList = new List<string>();
+            if (availableLanguages != null)
+            {
+                var availableLanguagesList = new List<string>();
 
-					foreach (JToken languageToken in availableLanguages)
-					{
-						availableLanguagesList.Add(languageToken.Value<string>("displayName"));
-					}
+                foreach (JToken languageToken in availableLanguages)
+                {
+                    string displayName = GetValue<string>(languageToken, "displayName");
+                    if (!string.IsNullOrEmpty(displayName))
+                    {
+                        availableLanguagesList.Add(displayName);
+                    }
+                }
 
-					AvailableLanguages = string.Join(", ", availableLanguagesList);
-				}
+                AvailableLanguages = string.Join(", ", availableLanguagesList);
+            }
 
-            var industry = token.Value<string>("Industry");
-				if (industry != null)
-				{
-					Industry = industry.Substring(0, 1).ToUpper() + industry.Substring(1);
-				}
+            var industry = GetValue<string>(token, "Industry");
+            if (!string.IsNullOrEmpty(industry) && industry.Length > 0)
+            {
+                Industry = char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
+            }
 
-				var distributor = token.Value<JObject>("distributor");
-				if (distributor != null)
-				{
-					Distributor = distributor.Value<string>("name");
-				}
+
+            var distributor = GetValue<JToken>(token, "distributor");
+            if (distributor != null)
+            {
+                Distributor = GetValue<string>(distributor, "name");
+            }
         }
+
+        private T GetValue<T>(JToken token, string propertyName, T defaultValue = default)
+        {
+            return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
+        }
+
 
         void Notify([CallerMemberName] string property = "")
         {
