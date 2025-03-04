@@ -406,6 +406,7 @@ namespace PixoVR.Apex
         public string name;
         public string description;
         public int distributorId;
+        public string launchProtocol;
         public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
 
         public PlatformPlayer(JObject tokenObject)
@@ -414,6 +415,7 @@ namespace PixoVR.Apex
             distributorId = tokenObject.Value<int>("distributorId");
             name = tokenObject.Value<string>("name");
             description = tokenObject.Value<string>("description");
+            launchProtocol = tokenObject.Value<string>("launchProtocol");
 
             var versionTokens = tokenObject.Value<JArray>("versions");
             if (versionTokens == null)
