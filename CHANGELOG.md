@@ -97,3 +97,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  ### [1.5.4] - 2025-02-03
  - Ensures all data is captured when deeplinking after changes to deeplink url from HubApp.
  - Adds a custom AAR to ensure required permissions are added build.
+
+ ### [1.6.0] - 2025-03-07
+ - Adds support for Windows.
+ - Add launguage support when fetching modules for a user.
