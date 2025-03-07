@@ -387,7 +387,12 @@ namespace PixoVR.Apex
                         string returnURL = returnTargetParameter;
                         if (parameters.Length > 0)
                         {
-                            returnURL += "?" + parameters;
+                            if (!returnURL.Contains('?'))
+                                returnURL += "?";
+                            else
+                                returnURL += "&";
+
+                            returnURL += parameters;
                         }
                         Debug.Log("Custom Target: " + returnURL);
                         PixoPlatformUtilities.OpenURL(returnURL);
