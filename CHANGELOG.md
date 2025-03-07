@@ -101,3 +101,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  ### [1.6.0] - 2025-03-07
  - Adds support for Windows.
  - Add launguage support when fetching modules for a user.
+
+ ### [1.6.1] - 2025-03-07
+ - Fixes a dependency issue for versions of unity older than 6000.
+ - Remove the outdated Samples to prevent crashing on launch of the Unity Editor.

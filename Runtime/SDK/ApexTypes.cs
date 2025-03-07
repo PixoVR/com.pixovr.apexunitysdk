@@ -2,13 +2,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Unity.Properties;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UIElements;
 
 
@@ -238,7 +234,11 @@ namespace PixoVR.Apex
         }
     }
 
+#if UNITY_6000_0_OR_NEWER
     public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
+#else
+    public class OrgModule : ScriptableObject
+#endif
     {
         public int ID = -1;
         public string Name = "";
@@ -253,6 +253,7 @@ namespace PixoVR.Apex
         public string UserGuideLink = "";
 
         private Texture2D _thumbnail;
+
         [CreateProperty]
         public Texture2D Thumbnail
         {
@@ -260,10 +261,13 @@ namespace PixoVR.Apex
             {
                 return _thumbnail;
             }
+
             set
             {
                 _thumbnail = value;
+#if UNITY_6000_0_OR_NEWER
                 Notify();
+#endif
             }
         }
 
@@ -273,8 +277,9 @@ namespace PixoVR.Apex
         public string externalId = "";
         public PlatformPlayer player = null;
 
+#if UNITY_6000_0_OR_NEWER
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
-
+#endif
 
         public OrgModule()
         {
@@ -357,12 +362,12 @@ namespace PixoVR.Apex
             return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
         }
 
-
+#if UNITY_6000_0_OR_NEWER
         void Notify([CallerMemberName] string property = "")
         {
             propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
         }
-
+#endif
     }
 
     [Serializable]
