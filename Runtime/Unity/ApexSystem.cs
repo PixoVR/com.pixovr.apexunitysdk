@@ -321,7 +321,6 @@ namespace PixoVR.Apex
             PopulateWebSocketURL();
 
             _ParsePassedData();
-            loginToken = GetAuthenticationToken();
             Debug.Log($"[ApexSystem] Login Token: {loginToken}");
         }
 
@@ -391,7 +390,7 @@ namespace PixoVR.Apex
                             returnURL += "?" + parameters;
                         }
                         Debug.Log("Custom Target: " + returnURL);
-                        PixoAndroidUtils.LaunchUrl(returnURL);
+                        PixoPlatformUtilities.OpenURL(returnURL);
                         return;
                     }
                     else
@@ -432,7 +431,7 @@ namespace PixoVR.Apex
                             values.Add(returnTargetType);
                         }
 
-                        PixoAndroidUtils.LaunchApp(returnTargetParameter, keys.ToArray(), values.ToArray());
+                        PixoPlatformUtilities.OpenApplication(returnTargetParameter, keys.ToArray(), values.ToArray());
                         return;
                     }
                 }
@@ -619,11 +618,6 @@ namespace PixoVR.Apex
             Instance._ExitApplication(returnTarget);
         }
 
-        public static string GetAuthenticationToken()
-        {
-            return Instance._GetAuthenticationToken();
-        }
-
         public static bool RequestAuthorizationCode()
         {
             return Instance._RequestAuthorizationCode();
@@ -780,110 +774,25 @@ namespace PixoVR.Apex
 
         public void _ParsePassedData()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
 
-            AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
-
-            AndroidJavaObject intent = currentActivity.Call<AndroidJavaObject>("getIntent");
-
-            string urlData = intent.Call<string>("getDataString");
-
-            Debug.Log("[ApexSystem] Parsed Passed Data.");
-            if(urlData != null && urlData.Length > 0)
+            if(applicationArugments == null)
             {
-                Debug.Log("[ApexSystem] Parse from URL.");
-                _ParseUrlData(urlData);
-            }
-            else
-            {
-                Debug.Log("[ApexSystem] Parsing from extras.");
-                optionalParameter = intent.Call<string>("getStringExtra", "optional");
-                returnTargetParameter = intent.Call<string>("getStringExtra", "returntarget");
-                targetTypeParameter = intent.Call<string>("getStringExtra", "targettype");
-            }
-
-            if(optionalParameter == null)
-            {
-                optionalParameter = "";
-            }
-
-            if (returnTargetParameter == null)
-            {
-                returnTargetParameter = "";
-            }
-
-            if (targetTypeParameter == null)
-            {
-                targetTypeParameter = "";
-            }
-
-            Debug.Log($"[ApexSystem] Found Return Target: {returnTargetParameter}");
-            Debug.Log($"[ApexSystem] Found Return Target Type: {targetTypeParameter}");
-            Debug.Log($"[ApexSystem] Found Optional Params: {optionalParameter}");
-#endif
-        }
-
-        public void _ParseUrlData(string urlString)
-        {
-            string urlData = urlString.Substring(urlString.IndexOf('?') + 1);
-
-
-            if (urlData.Length <= 0)
+                Debug.Log("No arguments found for the application.");
                 return;
-
-            string[] dataArray = urlData.Split('&');
-
-            if (dataArray.Length <= 0)
-                return;
-
-            foreach(string dataElement in dataArray)
-            {
-                string[] dataParts = dataElement.Split('=');
-
-                if (dataParts.Length <= 1)
-                    continue;
-
-                if(dataParts[0].Equals("optional", StringComparison.OrdinalIgnoreCase))
-                {
-                    optionalParameter = dataParts[1];
-                }
-
-                if (dataParts[0].Equals("returntarget", StringComparison.OrdinalIgnoreCase))
-                {
-                    returnTargetParameter = dataParts[1];
-                }
-
-                if (dataParts[0].Equals("targettype", StringComparison.OrdinalIgnoreCase))
-                {
-                    targetTypeParameter = dataParts[1];
-                }
-
-                if (dataParts[0].Equals("pixotoken", StringComparison.OrdinalIgnoreCase))
-                {
-                    loginToken = dataParts[1];
-                }
             }
-        }
 
-        public string _GetAuthenticationToken()
-        {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if(loginToken.Length > 0)
-                return loginToken;
+            if (applicationArugments.ContainsKey("optional"))
+                optionalParameter = applicationArugments["optional"];
 
-            AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            if (applicationArugments.ContainsKey("returntarget"))
+                returnTargetParameter = applicationArugments["returntarget"];
 
-            AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
+            if (applicationArugments.ContainsKey("targettype"))
+                targetTypeParameter = applicationArugments["targettype"];
 
-            AndroidJavaObject intent = currentActivity.Call<AndroidJavaObject>("getIntent");
-
-            string ExtraString = intent.Call<string>("getStringExtra", "pixotoken");
-
-            return ExtraString;
-#else
-            return loginToken;
-#endif
+            if (applicationArugments.ContainsKey("pixotoken"))
+                loginToken = applicationArugments["pixotoken"];
         }
 
         public bool _CheckModuleAccess(int targetModuleID = -1)

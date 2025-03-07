@@ -1,13 +1,11 @@
 using Newtonsoft.Json;
 using System;
-using System.Text.RegularExpressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using UnityEngine;
 using PixoVR.Apex.XAPI;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
-using static Codice.Client.Common.WebApi.PlasticWebApiUris;
 
 namespace PixoVR.Apex
 {
