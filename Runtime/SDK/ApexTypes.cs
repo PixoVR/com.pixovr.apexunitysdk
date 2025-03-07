@@ -248,6 +248,9 @@ namespace PixoVR.Apex
         public string Industry = "";
         public string Details = "";
         public string IconURL = "";
+        public string AvailableLanguages = "";
+        public string Distributor = "";
+        public string UserGuideLink = "";
 
         private Texture2D _thumbnail;
         [CreateProperty]
@@ -291,12 +294,13 @@ namespace PixoVR.Apex
             Description = token.Value<string>("Description");
             ShortDescription = token.Value<string>("ShortDescription");
             LongDescription = token.Value<string>("LongDescription");
-            Industry = token.Value<string>("Industry");
             Details = token.Value<string>("Details");
             IconURL = token.Value<string>("IconURL");
             PassingScore = token.Value<int?>("PassingScore");
             Categories = token.Value<string>("Categories");
             externalId = token.Value<string>("externalId");
+            UserGuideLink = token.Value<string>("UserGuideLink");
+
             var PlayerToken = token.Value<JObject>("player");
 
             if (PlayerToken != null)
@@ -315,7 +319,44 @@ namespace PixoVR.Apex
                     Downloads.Add(downloadData);
                 }
             }
+
+            var availableLanguages = GetValue<JArray>(token, "availableLanguages");
+
+            if (availableLanguages != null)
+            {
+                var availableLanguagesList = new List<string>();
+
+                foreach (JToken languageToken in availableLanguages)
+                {
+                    string displayName = GetValue<string>(languageToken, "displayName");
+                    if (!string.IsNullOrEmpty(displayName))
+                    {
+                        availableLanguagesList.Add(displayName);
+                    }
+                }
+
+                AvailableLanguages = string.Join(", ", availableLanguagesList);
+            }
+
+            var industry = GetValue<string>(token, "Industry");
+            if (!string.IsNullOrEmpty(industry) && industry.Length > 0)
+            {
+                Industry = char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
+            }
+
+
+            var distributor = GetValue<JToken>(token, "distributor");
+            if (distributor != null)
+            {
+                Distributor = GetValue<string>(distributor, "name");
+            }
         }
+
+        private T GetValue<T>(JToken token, string propertyName, T defaultValue = default)
+        {
+            return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
+        }
+
 
         void Notify([CallerMemberName] string property = "")
         {
@@ -365,6 +406,7 @@ namespace PixoVR.Apex
         public string name;
         public string description;
         public int distributorId;
+        public string launchProtocol;
         public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
 
         public PlatformPlayer(JObject tokenObject)
@@ -373,10 +415,15 @@ namespace PixoVR.Apex
             distributorId = tokenObject.Value<int>("distributorId");
             name = tokenObject.Value<string>("name");
             description = tokenObject.Value<string>("description");
+            launchProtocol = tokenObject.Value<string>("launchProtocol");
 
-            var VersionTokens = tokenObject.Value<JArray>("versions");
+            var versionTokens = tokenObject.Value<JArray>("versions");
+            if (versionTokens == null)
+            {
+                versionTokens = new JArray();
+            }
 
-            foreach (JToken Version in VersionTokens)
+            foreach (JToken Version in versionTokens)
             {
                 versions.Add(new PlatformPlayerDownload(Version));
             }

@@ -1,6 +1,5 @@
 using Newtonsoft.Json;
 using System;
-using System.Text.RegularExpressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using UnityEngine;
@@ -67,19 +66,7 @@ namespace PixoVR.Apex
 
         public void SetEndpoint(string endpointUrl)
         {
-            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
-                    Regex expression = new Regex(Regex.Escape("http"));
-                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
-                }
-                else
-                {
-                    endpointUrl.Insert(0, "https://");
-                }
-            }
+            EnsureURLHasProtocol(ref endpointUrl);
 
             URL = endpointUrl;
             Debug.Log("[APIHandler] Set Endpoint to " + URL);
@@ -88,19 +75,7 @@ namespace PixoVR.Apex
 
         public void SetWebEndpoint(string endpointUrl)
         {
-            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
-                    Regex expression = new Regex(Regex.Escape("http"));
-                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
-                }
-                else
-                {
-                    endpointUrl.Insert(0, "https://");
-                }
-            }
+            EnsureURLHasProtocol(ref endpointUrl);
 
             webURL = endpointUrl;
             webHandlingClient.BaseAddress = new Uri(webURL);
@@ -108,22 +83,29 @@ namespace PixoVR.Apex
 
         public void SetPlatformEndpoint(string endpointUrl)
         {
-            if (!endpointUrl.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (endpointUrl.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Debug.LogWarning("Endpoint must be a secured http endpoint.");
-                    Regex expression = new Regex(Regex.Escape("http"));
-                    endpointUrl = expression.Replace(endpointUrl, "https", 1);
-                }
-                else
-                {
-                    endpointUrl.Insert(0, "https://");
-                }
-            }
+            EnsureURLHasProtocol(ref endpointUrl);
 
             apiURL = endpointUrl;
             apiHandlingClient.BaseAddress = new Uri(apiURL);
+        }
+
+        private void EnsureURLHasProtocol(ref string url)
+        {
+            if (!url.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (url.StartsWith("http:", StringComparison.InvariantCultureIgnoreCase))
+                {
+#if UNITY_EDITOR
+                    Debug.LogWarning("URL must be a secured http endpoint for production.");
+#else
+                    Debug.LogError("URL must be a securated http endpoint.");
+#endif
+                }
+                else
+                {
+                    url.Insert(0, "https://");
+                }
+            }
         }
 
         public async void Ping()
