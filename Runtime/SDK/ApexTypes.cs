@@ -362,6 +362,7 @@ namespace PixoVR.Apex
             return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
         }
 
+
 #if UNITY_6000_0_OR_NEWER
         void Notify([CallerMemberName] string property = "")
         {
