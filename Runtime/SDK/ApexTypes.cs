@@ -35,9 +35,16 @@ namespace PixoVR.Apex
 
             if (hasErrorSetup == false)
             {
-                if (Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                if (Error != null)
                 {
-                    hasErrored = true;
+                    if (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        hasErrored = true;
+                    }
+                    else
+                    {
+                        hasErrored = !string.IsNullOrEmpty(Error);
+                    }
                 }
             }
 

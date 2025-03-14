@@ -727,6 +727,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
+            Debug.Log($"[ApexSystem] Logging in with token: {token}");
             apexAPIHandler.LoginWithToken(token);
 
             return true;

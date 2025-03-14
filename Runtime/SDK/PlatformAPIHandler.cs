@@ -148,22 +148,25 @@ namespace PixoVR.Apex
 
         public async void LoginWithToken(string token)
         {
+            Debug.Log($"[Platform API] Logging in with token: {token}");
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+            Debug.Log($"[Platform API] Sending login with a token.");
             HttpResponseMessage response = await apiHandlingClient.GetAsync("/v2/auth/validate-signature");
             string body = await response.Content.ReadAsStringAsync();
+            Debug.Log($"[Platform API] Body returned as {body}");
             object responseContent = JsonConvert.DeserializeObject<UserLoginResponseContent>(body);
             if ((responseContent as UserLoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
+            Debug.Log($"[Platform API] Got a valid login response!");
             object loginResponseContent = (responseContent as UserLoginResponseContent).User;
 
             OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, loginResponseContent);
-
         }
 
         public async void Login(LoginData login)

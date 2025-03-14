@@ -87,7 +87,8 @@ namespace PixoVR.Apex
             UDebug.Log("[PixoWindowsPlatformUtilities] Parsing arguments from commandline.");
             Dictionary<string, string> parameters = new Dictionary<string, string>();
 
-            for(int argumentIndex = 0; argumentIndex < args.Length; argumentIndex++)
+            // We skip the first argument, as it's the executables name.
+            for(int argumentIndex = 1; argumentIndex < args.Length; argumentIndex++)
             {
                 if (args[argumentIndex].StartsWith('-') && ((argumentIndex + 1) < args.Length))
                 {

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace PixoVR.Apex
 {
@@ -23,25 +24,37 @@ namespace PixoVR.Apex
 
         public virtual Dictionary<string, string> ParseURLArguments(string url)
         {
+            Debug.Log($"Parsing URL Arguments {url}");
             string urlData = url.Substring(url.IndexOf('?') + 1);
 
             if (urlData.Length <= 0)
+            {
+                Debug.Log("No ? found in the url.");
                 return null;
+            }
 
             string[] dataArray = urlData.Split('&');
 
             if (dataArray.Length <= 0)
+            {
+                Debug.Log("No arguments found on the url.");
                 return null;
+            }
 
             Dictionary<string, string> parameters = new Dictionary<string, string>();
 
             foreach (string dataElement in dataArray)
             {
-                string[] dataParts = dataElement.Split('=', 1);
+                Debug.Log($"Parsing: {dataElement}");
+                string[] dataParts = dataElement.Split('=', 2);
 
                 if (dataParts.Length <= 1)
+                {
+                    Debug.Log($"No named argument.");
                     continue;
+                }
 
+                Debug.Log($"Found argument {dataParts[0]} - {dataParts[1]}");
                 parameters.Add(dataParts[0], dataParts[1]);
             }
 
