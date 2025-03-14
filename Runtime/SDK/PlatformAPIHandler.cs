@@ -273,11 +273,12 @@ namespace PixoVR.Apex
                 optionalParameters = "?serial=" + serialNumber;
             }
 
-            Debug.Log("Checkingm module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+            Debug.Log($"[{GetType().Name}] Checking module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
 
             HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
             string body = await response.Content.ReadAsStringAsync();
 
+            Debug.Log($"[{GetType().Name}] GetModuleAccess return body: {body}");
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if (!(responseContent as FailureResponse).HasErrored())
             {
