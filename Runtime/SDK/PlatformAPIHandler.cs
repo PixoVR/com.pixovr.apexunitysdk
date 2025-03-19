@@ -367,17 +367,16 @@ namespace PixoVR.Apex
             HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
             string body = await response.Content.ReadAsStringAsync();
 
-
-
             try
             {
                 var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
                 OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
                 return;
             }
-            catch(Exception ex) {}
-
-
+            catch(Exception ex)
+            {
+                Debug.LogWarning(ex);
+            }
 
             List<OrgModule> orgModules = new List<OrgModule>();
             JArray array = JArray.Parse(body);

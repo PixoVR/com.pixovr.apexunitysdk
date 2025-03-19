@@ -72,7 +72,7 @@ namespace PixoVR.Apex
 #if UNITY_EDITOR
             // We don't want to parse any parameters in the editor as it has its own list of arguments.
             return new Dictionary<string, string>();
-#endif
+#else
             string[] args = System.Environment.GetCommandLineArgs();
 
             UDebug.Log($"First argument: {args[0]}");
@@ -98,6 +98,7 @@ namespace PixoVR.Apex
             }
 
             return parameters;
+#endif
         }
     }
 }
