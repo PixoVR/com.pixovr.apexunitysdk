@@ -77,14 +77,16 @@ namespace PixoVR.Apex
 
             UDebug.Log($"First argument: {args[0]}");
 
-            if(args.Length == 2)
+            if(!string.IsNullOrEmpty(Application.absoluteURL))
             {
-                string urlData = args[1];
+                string urlData = Application.absoluteURL;
                 UDebug.Log($"[PixoOSXPlatformUtilities] Parse from URL {urlData}");
                 return ParseURLArguments(urlData);
             }
 
-            UDebug.Log("[PixoWindowsPlatformUtilities] Parsing arguments from commandline.");
+            UDebug.Log("[PixoOSXPlatformUtilities] Parsing arguments from commandline.");
+
+            
             Dictionary<string, string> parameters = new Dictionary<string, string>();
 
             // We skip the first argument, as it's the executables name.
