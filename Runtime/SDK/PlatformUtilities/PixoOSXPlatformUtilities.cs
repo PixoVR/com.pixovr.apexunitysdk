@@ -80,7 +80,7 @@ namespace PixoVR.Apex
             if(args.Length == 2)
             {
                 string urlData = args[1];
-                UDebug.Log("[PixoWindowsPlatformUtilities] Parse from URL.");
+                UDebug.Log($"[PixoOSXPlatformUtilities] Parse from URL {urlData}");
                 return ParseURLArguments(urlData);
             }
 
