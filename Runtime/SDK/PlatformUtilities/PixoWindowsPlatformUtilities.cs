@@ -69,13 +69,17 @@ namespace PixoVR.Apex
 
         public override Dictionary<string, string> ParseApplicationArguments()
         {
+#if UNITY_EDITOR
+            // We don't want to parse any parameters in the editor as it has its own list of arguments.
+            return new Dictionary<string, string>();
+#else
             string[] args = System.Environment.GetCommandLineArgs();
 
             UDebug.Log($"First argument: {args[0]}");
 
-            if(args.Length == 1)
+            if(args.Length == 2)
             {
-                string urlData = args[0];
+                string urlData = args[1];
                 UDebug.Log("[PixoWindowsPlatformUtilities] Parse from URL.");
                 return ParseURLArguments(urlData);
             }
@@ -83,7 +87,8 @@ namespace PixoVR.Apex
             UDebug.Log("[PixoWindowsPlatformUtilities] Parsing arguments from commandline.");
             Dictionary<string, string> parameters = new Dictionary<string, string>();
 
-            for(int argumentIndex = 0; argumentIndex < args.Length; argumentIndex++)
+            // We skip the first argument, as it's the executables name.
+            for(int argumentIndex = 1; argumentIndex < args.Length; argumentIndex++)
             {
                 if (args[argumentIndex].StartsWith('-') && ((argumentIndex + 1) < args.Length))
                 {
@@ -93,6 +98,7 @@ namespace PixoVR.Apex
             }
 
             return parameters;
+#endif
         }
     }
 }

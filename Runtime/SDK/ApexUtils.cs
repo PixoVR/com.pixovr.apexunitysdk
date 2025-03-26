@@ -100,10 +100,7 @@ namespace PixoVR.Apex.Utils
             return stringOfJson.toJObject();
         }
 
-        public static string GetSDKVersion()
-        {
-            return "1.01.03";
-        }
+        public static string SDKVersion => "1.6.1";
     }
 }
 

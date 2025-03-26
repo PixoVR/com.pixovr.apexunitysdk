@@ -727,6 +727,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
+            Debug.Log($"[ApexSystem] Logging in with token: {token}");
             apexAPIHandler.LoginWithToken(token);
 
             return true;
@@ -1170,7 +1171,7 @@ namespace PixoVR.Apex
             contextExtension.Add(ApexExtensionStrings.MODULE_ID, moduleID.ToString());
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
-            contextExtension.AddSimple("sdk_version", "unity-" + Utils.ApexUtils.GetSDKVersion());
+            contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
 
             return new Extensions(contextExtension.ToJObject());
         }

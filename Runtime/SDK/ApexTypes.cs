@@ -35,9 +35,16 @@ namespace PixoVR.Apex
 
             if (hasErrorSetup == false)
             {
-                if (Error != null && Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                if (Error != null)
                 {
-                    hasErrored = true;
+                    if (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        hasErrored = true;
+                    }
+                    else
+                    {
+                        hasErrored = !string.IsNullOrEmpty(Error);
+                    }
                 }
             }
 
@@ -361,6 +368,7 @@ namespace PixoVR.Apex
         {
             return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
         }
+
 
 #if UNITY_6000_0_OR_NEWER
         void Notify([CallerMemberName] string property = "")

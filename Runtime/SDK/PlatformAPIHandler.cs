@@ -148,22 +148,25 @@ namespace PixoVR.Apex
 
         public async void LoginWithToken(string token)
         {
+            Debug.Log($"[Platform API] Logging in with token: {token}");
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+            Debug.Log($"[Platform API] Sending login with a token.");
             HttpResponseMessage response = await apiHandlingClient.GetAsync("/v2/auth/validate-signature");
             string body = await response.Content.ReadAsStringAsync();
+            Debug.Log($"[Platform API] Body returned as {body}");
             object responseContent = JsonConvert.DeserializeObject<UserLoginResponseContent>(body);
             if ((responseContent as UserLoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             }
 
+            Debug.Log($"[Platform API] Got a valid login response!");
             object loginResponseContent = (responseContent as UserLoginResponseContent).User;
 
             OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, loginResponseContent);
-
         }
 
         public async void Login(LoginData login)
@@ -270,11 +273,12 @@ namespace PixoVR.Apex
                 optionalParameters = "?serial=" + serialNumber;
             }
 
-            Debug.Log("Checkingm module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+            Debug.Log($"[{GetType().Name}] Checking module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
 
             HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
             string body = await response.Content.ReadAsStringAsync();
 
+            Debug.Log($"[{GetType().Name}] GetModuleAccess return body: {body}");
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if (!(responseContent as FailureResponse).HasErrored())
             {
@@ -363,17 +367,16 @@ namespace PixoVR.Apex
             HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
             string body = await response.Content.ReadAsStringAsync();
 
-
-
             try
             {
                 var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
                 OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
                 return;
             }
-            catch(Exception ex) {}
-
-
+            catch(Exception ex)
+            {
+                Debug.LogWarning(ex);
+            }
 
             List<OrgModule> orgModules = new List<OrgModule>();
             JArray array = JArray.Parse(body);

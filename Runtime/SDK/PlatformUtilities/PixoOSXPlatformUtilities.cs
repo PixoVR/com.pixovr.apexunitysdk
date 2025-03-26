@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 using UDebug = UnityEngine.Debug;
@@ -64,6 +65,42 @@ namespace PixoVR.Apex
             }
 
             return true;
+        }
+
+        public override Dictionary<string, string> ParseApplicationArguments()
+        {
+#if UNITY_EDITOR
+            // We don't want to parse any parameters in the editor as it has its own list of arguments.
+            return new Dictionary<string, string>();
+#else
+            string[] args = System.Environment.GetCommandLineArgs();
+
+            UDebug.Log($"First argument: {args[0]}");
+
+            if(!string.IsNullOrEmpty(Application.absoluteURL))
+            {
+                string urlData = Application.absoluteURL;
+                UDebug.Log($"[PixoOSXPlatformUtilities] Parse from URL {urlData}");
+                return ParseURLArguments(urlData);
+            }
+
+            UDebug.Log("[PixoOSXPlatformUtilities] Parsing arguments from commandline.");
+
+            
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+
+            // We skip the first argument, as it's the executables name.
+            for(int argumentIndex = 1; argumentIndex < args.Length; argumentIndex++)
+            {
+                if (args[argumentIndex].StartsWith('-') && ((argumentIndex + 1) < args.Length))
+                {
+                    parameters.Add(args[argumentIndex].Remove(0), args[argumentIndex + 1]);
+                    argumentIndex++;
+                }
+            }
+
+            return parameters;
+#endif
         }
     }
 }
