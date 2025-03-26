@@ -1,0 +1,30 @@
+name: Validate apex sdk version matches package version.
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - created
+
+jobs:
+  check-string-exists:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version From the Package JSON and Search in Utilties C# File
+        run: |
+          # Extract string from JSON file
+          STRING=$(jq -r '.version' package.json)
+
+          echo "Checking for version: $STRING"
+
+          # Check if STRING exists in the pixo utilities
+          if ! grep -q 'SDKVersion => "$STRING"' Runtime/SDK/ApexUtils.cs; then
+            echo "Version does not match!"
+            exit 1
+          fi
+
+          echo "Version matches!"
