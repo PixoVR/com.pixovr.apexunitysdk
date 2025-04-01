@@ -618,7 +618,7 @@ namespace PixoVR.Apex
             Instance._ReturnToHub();
         }
 
-        public static void ExitApplication(string returnTarget)
+        public static void ExitApplication(string returnTarget = "")
         {
             Instance._ExitApplication(returnTarget);
         }
