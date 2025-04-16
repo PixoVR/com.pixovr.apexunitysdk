@@ -1,11 +1,11 @@
-using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using UnityEngine;
-using PixoVR.Apex.XAPI;
-using System.Collections.Generic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PixoVR.Apex.XAPI;
+using UnityEngine;
 
 namespace PixoVR.Apex
 {
@@ -23,7 +23,7 @@ namespace PixoVR.Apex
         RT_GET_USER_MODULES,
         RT_GET_MODULES_LIST,
         RT_GEN_AUTH_LOGIN,
-        RT_HEARTBEAT
+        RT_HEARTBEAT,
     }
 
     public class APIHandler
@@ -42,10 +42,8 @@ namespace PixoVR.Apex
         protected string apiURL = "";
         protected HttpClient apiHandlingClient = null;
 
-
-        public APIHandler() : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment)
-        {
-        }
+        public APIHandler()
+            : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
         public APIHandler(string endpointUrl)
         {
@@ -126,21 +124,68 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_PING, response, null);
         }
 
-        public async void GenerateAssistedLogin(string authToken, int userId)
+        public async void GenerateAssistedLogin(string authToken)
         {
-            webHandlingClient.DefaultRequestHeaders.Clear();
-            webHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            webHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            webHandlingClient.DefaultRequestHeaders.Add("x-access-token", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpResponseMessage response = await webHandlingClient.GetAsync(string.Format("api/user/{0}/assisted-login", userId));
-            string body = await response.Content.ReadAsStringAsync();
-            Debug.Log(body);
-            object responseContent = JsonConvert.DeserializeObject<GeneratedAssistedLogin>(body);
-            GeneratedAssistedLogin assistedLogin = responseContent as GeneratedAssistedLogin;
-            if ((responseContent as GeneratedAssistedLogin).HasErrored())
+            // Create the GraphQL request payload
+            var graphqlRequest = new
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                operationName = "generateAuthCode",
+                variables = new { input = new { } },
+                query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
+            object responseContent;
+            try
+            {
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                Debug.Log(body);
+
+                // Parse the GraphQL response structure
+                JObject jsonResponse = JObject.Parse(body);
+
+                if (jsonResponse["data"] != null && jsonResponse["data"]["generateAuthCode"] != null)
+                {
+                    // Extract the relevant data from the GraphQL response
+                    string code = jsonResponse["data"]["generateAuthCode"]["code"]?.ToString();
+                    string expiresAt = jsonResponse["data"]["generateAuthCode"]["expiresAt"]?.ToString();
+
+                    // Create the GeneratedAssistedLogin object with the extracted data
+                    GeneratedAssistedLogin assistedLogin = new GeneratedAssistedLogin
+                    {
+                        AssistedLogin = new AssistedLoginCode { AuthCode = code, Expires = expiresAt },
+                    };
+
+                    responseContent = assistedLogin;
+                }
+                else if (jsonResponse["errors"] != null)
+                {
+                    // Handle GraphQL errors
+                    string errorMessage = jsonResponse["errors"]?[0]?["message"]?.ToString() ?? "Unknown GraphQL error";
+                    responseContent = new FailureResponse { Error = "true", Message = errorMessage };
+                }
+                else
+                {
+                    // Fallback error handling
+                    responseContent = new FailureResponse
+                    {
+                        Error = "true",
+                        Message = "Invalid response format from server",
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error generating assisted login: {ex.Message}");
+                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, responseContent);
@@ -268,14 +313,19 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
             string optionalParameters = "";
-            if(serialNumber.Length > 0)
+            if (serialNumber.Length > 0)
             {
                 optionalParameters = "?serial=" + serialNumber;
             }
 
-            Debug.Log($"[{GetType().Name}] Checking module access at: " + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+            Debug.Log(
+                $"[{GetType().Name}] Checking module access at: "
+                    + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters)
+            );
 
-            HttpResponseMessage response = await handlingClient.GetAsync(String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters));
+            HttpResponseMessage response = await handlingClient.GetAsync(
+                String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters)
+            );
             string body = await response.Content.ReadAsStringAsync();
 
             Debug.Log($"[{GetType().Name}] GetModuleAccess return body: {body}");
@@ -283,7 +333,6 @@ namespace PixoVR.Apex
             if (!(responseContent as FailureResponse).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
-
             }
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_ACCESS, response, responseContent);
         }
@@ -299,7 +348,10 @@ namespace PixoVR.Apex
             HttpContent heartbeatRequestContent = new StringContent(heartbeatData.ToJSON());
             heartbeatRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
 
-            HttpResponseMessage response = await apiHandlingClient.PostAsync("/heartbeat/pulse", heartbeatRequestContent);
+            HttpResponseMessage response = await apiHandlingClient.PostAsync(
+                "/heartbeat/pulse",
+                heartbeatRequestContent
+            );
             string body = await response.Content.ReadAsStringAsync();
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
@@ -373,17 +425,17 @@ namespace PixoVR.Apex
                 OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
                 return;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Debug.LogWarning(ex);
             }
 
             List<OrgModule> orgModules = new List<OrgModule>();
             JArray array = JArray.Parse(body);
-            if(array != null)
+            if (array != null)
             {
                 var tokens = array.Children();
-                foreach(JToken selectedToken in tokens)
+                foreach (JToken selectedToken in tokens)
                 {
                     OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
                     orgModule.Parse(selectedToken);

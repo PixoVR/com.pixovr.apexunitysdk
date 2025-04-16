@@ -1,13 +1,11 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
-
-
 
 namespace PixoVR.Apex
 {
@@ -79,6 +77,7 @@ namespace PixoVR.Apex
         public string Message;
         public JObject Data;
         public List<UserModulesData> ParsedData;
+
         public bool HasErrored()
         {
             return (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase));
@@ -94,7 +93,9 @@ namespace PixoVR.Apex
                 currentUser = new UserModulesData();
 
                 currentUser.UserId = currentProperty.Name;
-                currentUser.AvailableModules = JsonConvert.DeserializeObject<List<int>>(currentProperty.Value.ToString());
+                currentUser.AvailableModules = JsonConvert.DeserializeObject<List<int>>(
+                    currentProperty.Value.ToString()
+                );
 
                 ParsedData.Add(currentUser);
             }
@@ -229,6 +230,7 @@ namespace PixoVR.Apex
         public bool Success;
 
         public SessionData() { }
+
         public SessionData(float score, float scaled, float min, float max, int duration, bool completed, bool success)
         {
             Score = score;
@@ -258,17 +260,15 @@ namespace PixoVR.Apex
         public string AvailableLanguages = "";
         public string Distributor = "";
         public string UserGuideLink = "";
+        public bool IsAuthenticatedLaunch = false;
+        public bool EnableDebug = false;
 
         private Texture2D _thumbnail;
 
         [CreateProperty]
         public Texture2D Thumbnail
         {
-            get
-            {
-                return _thumbnail;
-            }
-
+            get { return _thumbnail; }
             set
             {
                 _thumbnail = value;
@@ -356,19 +356,20 @@ namespace PixoVR.Apex
                 Industry = char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
             }
 
-
             var distributor = GetValue<JToken>(token, "distributor");
             if (distributor != null)
             {
                 Distributor = GetValue<string>(distributor, "name");
             }
+
+            EnableDebug = token.Value<bool>("enableDebug");
+            IsAuthenticatedLaunch = token.Value<bool>("isAuthenticatedLaunch");
         }
 
         private T GetValue<T>(JToken token, string propertyName, T defaultValue = default)
         {
             return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
         }
-
 
 #if UNITY_6000_0_OR_NEWER
         void Notify([CallerMemberName] string property = "")
