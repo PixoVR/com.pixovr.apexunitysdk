@@ -16,6 +16,7 @@ namespace PixoVR.Apex
 
         public override bool OpenURL(string url)
         {
+            UDebug.Log($"[{GetType().Name}] Opening url {url}");
             if (string.IsNullOrEmpty(url))
             {
                 UDebug.Log("Url is empty or null.");
