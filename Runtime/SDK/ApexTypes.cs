@@ -143,12 +143,20 @@ namespace PixoVR.Apex
         public string Last;
         public string Email;
         public string Token;
+        public string Role;
         public Organization Org;
         public int MinimumPassingScore;
 
         public bool HasErrored()
         {
             return (Email == null || Token == null);
+        }
+
+        public bool IsPlatformSuperadmin()
+        {
+            var isSuperAdmin = !String.IsNullOrEmpty(Role) && Role.Equals("superadmin", StringComparison.CurrentCultureIgnoreCase);
+            var isPlatformOrg = Org != null && !String.IsNullOrEmpty(Org.Type) && Org.Type.Equals("platform", StringComparison.CurrentCultureIgnoreCase);
+            return isPlatformOrg && isSuperAdmin;
         }
     }
 
@@ -184,6 +192,7 @@ namespace PixoVR.Apex
         public string Name;
         public string Status;
         public string DownloadRegion;
+        public string Type;
     }
 
     [Serializable]
