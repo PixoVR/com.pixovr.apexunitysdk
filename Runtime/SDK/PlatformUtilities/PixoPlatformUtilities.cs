@@ -15,6 +15,8 @@ namespace PixoVR.Apex
             PlatformUtilities = new PixoOSXPlatformUtilities();
 #elif UNITY_ANDROID
             PlatformUtilities = new PixoAndroidPlatformUtilities();
+#elif UNITY_IOS
+            PlatformUtilities = new PixoIOSPlatformUtilities();
 #else
             PlatformUtilities = new PixoGenericPlatformUtilities();
 #endif
