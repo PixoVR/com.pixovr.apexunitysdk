@@ -4,7 +4,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace PixoVR.Apex
 {
-    internal sealed class PixoPlatformUtilities : PixoSingleton<PixoPlatformUtilities>
+    public sealed class PixoPlatformUtilities : PixoSingleton<PixoPlatformUtilities>
     {
         private PixoGenericPlatformUtilities PlatformUtilities;
         public PixoPlatformUtilities()
@@ -48,6 +48,27 @@ namespace PixoVR.Apex
         public Dictionary<string, string> _ParseApplicationArguments()
         {
             return PlatformUtilities.ParseApplicationArguments();
+        }
+
+        public static bool ReadFileAsString(string fileName, out string data)
+        {
+            return Instance.PlatformUtilities.ReadFileAsString(fileName, out data);
+        }
+
+        public static bool ReadFile(string fileName, out byte[] data)
+        {
+            return Instance.PlatformUtilities.ReadFile(fileName, out data);
+        }
+
+        public static bool WriteFile(string fileName, byte[] data)
+        {
+            return Instance.PlatformUtilities.WriteFile(fileName, data);
+        }
+
+        public static bool WriteStringToFile(string fileName, string data, System.Text.Encoding encoding = null)
+        {
+            return Instance.PlatformUtilities.WriteStringToFile(fileName, data, encoding);
+
         }
     }
 }

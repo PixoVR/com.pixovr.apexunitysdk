@@ -193,6 +193,9 @@ namespace PixoVR.Apex
         public string Status;
         public string DownloadRegion;
         public string Type;
+        public string HubLogoLink;
+        public string PrimaryColor;
+        public string SecondaryColor;
     }
 
     [Serializable]
