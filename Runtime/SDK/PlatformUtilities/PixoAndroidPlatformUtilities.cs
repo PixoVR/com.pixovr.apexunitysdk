@@ -74,7 +74,7 @@ namespace PixoVR.Apex
 
             if (!string.IsNullOrEmpty(pixotoken))
             {
-                parameters.Add("pixotoken", targetTypeParameter);
+                parameters.Add("pixotoken", pixotoken);
             }
 
             return parameters;

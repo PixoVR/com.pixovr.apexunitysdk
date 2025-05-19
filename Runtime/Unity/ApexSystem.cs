@@ -1,15 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using PixoVR.Apex.Events;
+using PixoVR.Apex.Utils;
+using PixoVR.Apex.XAPI;
+using TinCan;
 using UnityEngine;
 using UnityEngine.XR;
-using PixoVR.Apex.Events;
-using PixoVR.Apex.XAPI;
-using PixoVR.Apex.Utils;
-using TinCan;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using System.Collections.Generic;
 #if MANAGE_XR
 using MXR.SDK;
 #endif
@@ -25,7 +25,7 @@ namespace PixoVR.Apex
         {
             Major = 0,
             Minor,
-            Patch
+            Patch,
         }
 
         public static string ServerIP
@@ -99,7 +99,7 @@ namespace PixoVR.Apex
             get { return Instance.returnTargetParameter; }
             set
             {
-                if(value != null)
+                if (value != null)
                 {
                     Instance.returnTargetParameter = value;
                 }
@@ -108,7 +108,7 @@ namespace PixoVR.Apex
                     Instance.returnTargetParameter = "";
                 }
 
-                if(Instance.returnTargetParameter.Contains("://"))
+                if (Instance.returnTargetParameter.Contains("://"))
                 {
                     TargetType = "url";
                 }
@@ -133,16 +133,22 @@ namespace PixoVR.Apex
 
         [SerializeField]
         protected int moduleID = 0;
+
         [SerializeField]
         protected string moduleName = "Generic";
+
         [SerializeField]
         protected string moduleVersion = "0.00.00";
+
         [SerializeField]
         protected string scenarioID = "Generic";
+
         [SerializeField]
         public bool runSetupOnAwake = true;
+
         [SerializeField]
         public bool loginCheckModuleAccess = true;
+
         [SerializeField]
         protected float heartbeatTime = 5.0f;
 
@@ -177,19 +183,19 @@ namespace PixoVR.Apex
 
         public OnLoginSuccessEvent OnLoginSuccess = new OnLoginSuccessEvent();
         public OnApexFailureEvent OnLoginFailed = new OnApexFailureEvent();
-        
+
         public OnGetUserSuccessEvent OnGetUserSuccess = new OnGetUserSuccessEvent();
         public OnApexFailureEvent OnGetUserFailed = new OnApexFailureEvent();
 
         public OnGetUserModulesSuccessEvent OnGetUserModulesSuccess = new OnGetUserModulesSuccessEvent();
         public OnApexFailureEvent OnGetUserModulesFailed = new OnApexFailureEvent();
-        
+
         public OnHttpResponseEvent OnJoinSessionSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnJoinSessionFailed = new OnApexFailureEvent();
-        
+
         public OnHttpResponseEvent OnCompleteSessionSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnCompleteSessionFailed = new OnApexFailureEvent();
-        
+
         public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
         public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
@@ -200,11 +206,14 @@ namespace PixoVR.Apex
 
         public OnAuthCodeReceived OnAuthorizationCodeReceived = new OnAuthCodeReceived();
 
+        public OnGeneratedAssistedLoginSuccessEvent OnGeneratedAssistedLoginSuccess = new();
+        public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
+
         void Awake()
         {
             SetupPlatformConfiguration();
 
-            if(runSetupOnAwake)
+            if (runSetupOnAwake)
             {
                 Debug.Log("[ApexSystem] Running on awake!");
                 SetupAPI();
@@ -229,6 +238,7 @@ namespace PixoVR.Apex
             deviceSerialNumber = newDeviceStatus.serial;
         }
 #endif
+
         void SetupPlatformConfiguration()
         {
             Debug.Log("SetupPlatformConfiguration");
@@ -240,20 +250,20 @@ namespace PixoVR.Apex
 
                 string configContent = PixoAndroidUtils.ReadFileFromSharedStorage("pixoconfig.cnf");
 
-                if(configContent.Length > 0)
+                if (configContent.Length > 0)
                 {
                     Debug.Log("Configuration is not empty.");
                     ConfigurationTypes configData = JsonConvert.DeserializeObject<ConfigurationTypes>(configContent);
-                    if(configData == null)
+                    if (configData == null)
                     {
                         Debug.Log("Failed to deserialize the config.");
                         return;
                     }
 
                     // Parse out the platform target to utilize the unity built in config values
-                    if(configData.Platform.Contains("NA", StringComparison.CurrentCultureIgnoreCase))
+                    if (configData.Platform.Contains("NA", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        if(configData.Platform.Contains("Production", StringComparison.CurrentCultureIgnoreCase))
+                        if (configData.Platform.Contains("Production", StringComparison.CurrentCultureIgnoreCase))
                         {
                             Debug.Log("NA Production platform target.");
                             PlatformTargetServer = PlatformServer.NA_PRODUCTION;
@@ -271,7 +281,7 @@ namespace PixoVR.Apex
                             PlatformTargetServer = PlatformServer.NA_STAGE;
                         }
                     }
-                    else if(configData.Platform.Contains("SA", StringComparison.CurrentCultureIgnoreCase))
+                    else if (configData.Platform.Contains("SA", StringComparison.CurrentCultureIgnoreCase))
                     {
                         Debug.Log("SA Production platform target.");
                         PlatformTargetServer = PlatformServer.SA_PRODUCTION;
@@ -294,7 +304,7 @@ namespace PixoVR.Apex
 
             apexAPIHandler = new APIHandler(serverIP);
 
-            if(apexAPIHandler != null)
+            if (apexAPIHandler != null)
             {
                 Debug.Log("[ApexSystem] Apex API Handler is not null!");
             }
@@ -304,9 +314,9 @@ namespace PixoVR.Apex
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
-            if(webSocket != null)
+            if (webSocket != null)
             {
-                if(webSocket.IsConnected())
+                if (webSocket.IsConnected())
                 {
                     DisconnectWebsocket();
                 }
@@ -326,14 +336,14 @@ namespace PixoVR.Apex
 
         void _ExitApplication(string returnTarget)
         {
-            if(returnTarget == null)
+            if (returnTarget == null)
             {
                 returnTarget = "";
             }
 
             string returnTargetType = "app";
 
-            if(returnTarget.Contains("://"))
+            if (returnTarget.Contains("://"))
             {
                 returnTargetType = "url";
             }
@@ -344,12 +354,12 @@ namespace PixoVR.Apex
 
             Debug.Log("[ApexSystem] Building parameters for url.");
 
-            if(CurrentActiveLogin != null)
+            if (CurrentActiveLogin != null)
             {
                 parameters += "pixotoken=" + CurrentActiveLogin.Token;
             }
 
-            if(optionalParameter != null)
+            if (optionalParameter != null)
             {
                 if (optionalParameter.Length > 0)
                 {
@@ -402,7 +412,8 @@ namespace PixoVR.Apex
                     {
                         Debug.Log("[ApexSystem] Return Target is a package name.");
 
-                        List<string> keys = new List<string>(), values = new List<string>();
+                        List<string> keys = new List<string>(),
+                            values = new List<string>();
 
                         Debug.Log("[ApexSystem] Adding pixo token.");
 
@@ -491,13 +502,14 @@ namespace PixoVR.Apex
             }
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
-            platform = XRSettings.loadedDeviceName.Length > 0 ? XRSettings.loadedDeviceName : Application.platform.ToString();
+            platform =
+                XRSettings.loadedDeviceName.Length > 0 ? XRSettings.loadedDeviceName : Application.platform.ToString();
             clientIP = Utils.ApexUtils.GetLocalIP();
         }
 
         private void FixedUpdate()
         {
-            if(webSocket != null)
+            if (webSocket != null)
             {
                 webSocket.Update();
             }
@@ -506,7 +518,7 @@ namespace PixoVR.Apex
             {
                 heartbeatTimer -= Time.fixedDeltaTime;
 
-                if(heartbeatTimer <= 0.0f)
+                if (heartbeatTimer <= 0.0f)
                 {
                     _SendHeartbeat();
                     heartbeatTimer += heartbeatTime;
@@ -585,6 +597,7 @@ namespace PixoVR.Apex
         }
 
         static readonly Regex VersionValidator = new Regex(@"^[0123456789.]+$");
+
         bool IsModuleVersionOnlyNumerical()
         {
             return VersionValidator.IsMatch(moduleVersion);
@@ -618,7 +631,7 @@ namespace PixoVR.Apex
             Instance._ReturnToHub();
         }
 
-        public static void ExitApplication(string returnTarget)
+        public static void ExitApplication(string returnTarget = "")
         {
             Instance._ExitApplication(returnTarget);
         }
@@ -668,7 +681,11 @@ namespace PixoVR.Apex
             return Instance._JoinSession(scenarioID, contextExtension);
         }
 
-        public static bool CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null)
+        public static bool CompleteSession(
+            SessionData currentSessionData,
+            Extension contextExtension = null,
+            Extension resultExtension = null
+        )
         {
             return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
         }
@@ -722,7 +739,7 @@ namespace PixoVR.Apex
 
         public bool _LoginWithToken(string token)
         {
-            if(token.Length <= 0)
+            if (token.Length <= 0)
             {
                 return false;
             }
@@ -739,7 +756,11 @@ namespace PixoVR.Apex
             if (apexAPIHandler == null)
             {
                 Debug.Log("[ApexSystem] API Handler is null.");
-                OnLoginFailed.Invoke(GenerateFailureResponse("There was an error reaching the platform, please contact your administrator."));
+                OnLoginFailed.Invoke(
+                    GenerateFailureResponse(
+                        "There was an error reaching the platform, please contact your administrator."
+                    )
+                );
                 return false;
             }
 
@@ -750,7 +771,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if(login.Password.Length <= 0)
+            if (login.Password.Length <= 0)
             {
                 Debug.Log("[Login] No password.");
                 login.Password = "<empty>";
@@ -782,7 +803,7 @@ namespace PixoVR.Apex
         {
             var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
 
-            if(applicationArugments == null)
+            if (applicationArugments == null)
             {
                 Debug.Log("No arguments found for the application.");
                 return;
@@ -829,7 +850,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if(userAccessVerified == false)
+            if (userAccessVerified == false)
             {
                 return false;
             }
@@ -841,8 +862,10 @@ namespace PixoVR.Apex
 
             if (sessionInProgress == true)
             {
-                Debug.LogError("[ApexSystem] Session is already in progress." +
-                    " The previous session didn't complete or a new session was started during an active session.");
+                Debug.LogError(
+                    "[ApexSystem] Session is already in progress."
+                        + " The previous session didn't complete or a new session was started during an active session."
+                );
             }
 
             currentSessionID = Guid.NewGuid();
@@ -888,13 +911,12 @@ namespace PixoVR.Apex
         {
             if (userAccessVerified == false)
                 return false;
-            
+
             if (verbName == null)
                 return false;
 
             if (verbName.Length == 0)
                 return false;
-
 
             Statement sessionStatement = new Statement();
             Agent sessionActor = new Agent();
@@ -906,7 +928,12 @@ namespace PixoVR.Apex
             sessionVerb.display.Add("en", verbName);
 
             Activity sessionActivity = new Activity();
-            sessionActivity.id = string.Format("https://pixovr.com/xapi/objects/{0}/{1}/{2}", moduleID, scenarioID, targetObject.Replace(' ', '_').ToLower());
+            sessionActivity.id = string.Format(
+                "https://pixovr.com/xapi/objects/{0}/{1}/{2}",
+                moduleID,
+                scenarioID,
+                targetObject.Replace(' ', '_').ToLower()
+            );
 
             Context sessionContext = new Context();
             sessionContext.registration = currentSessionID;
@@ -951,30 +978,30 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            if(eventStatement == null)
+            if (eventStatement == null)
             {
                 Debug.LogError("[ApexSystem] No event data to send.");
                 return false;
             }
 
-            if(eventStatement.actor != null)
+            if (eventStatement.actor != null)
             {
                 Debug.LogWarning("[ApexSystem] Actor data should not be filled out.");
             }
 
-            if(eventStatement.verb == null)
+            if (eventStatement.verb == null)
             {
                 Debug.LogError("[ApexSystem] Verb missing from eventStatement.");
                 return false;
             }
 
-            if(eventStatement.verb.id == null)
+            if (eventStatement.verb.id == null)
             {
                 Debug.LogError("[ApexSystem] verb.id missing from eventStatement.");
                 return false;
             }
 
-            if(eventStatement.target == null)
+            if (eventStatement.target == null)
             {
                 Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
                 return false;
@@ -1006,7 +1033,11 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension)
+        protected bool _CompleteSession(
+            SessionData currentSessionData,
+            Extension contextExtension,
+            Extension resultExtension
+        )
         {
             if (userAccessVerified == false)
             {
@@ -1056,9 +1087,13 @@ namespace PixoVR.Apex
             sessionResult.score.min = currentSessionData.MinimumScore;
             sessionResult.score.max = currentSessionData.MaximumScore;
             sessionResult.score.raw = currentSessionData.Score;
-            sessionResult.score.scaled = DetermineScaledScore(currentSessionData.ScaledScore, currentSessionData.Score, currentSessionData.MaximumScore);
+            sessionResult.score.scaled = DetermineScaledScore(
+                currentSessionData.ScaledScore,
+                currentSessionData.Score,
+                currentSessionData.MaximumScore
+            );
             sessionResult.duration = TimeSpan.FromSeconds(currentSessionData.Duration);
-            if(resultExtension != null)
+            if (resultExtension != null)
             {
                 sessionResult.extensions = new Extensions(resultExtension.ToJObject());
             }
@@ -1081,7 +1116,11 @@ namespace PixoVR.Apex
             sessionData.Score = currentSessionData.Score;
             sessionData.ScoreMin = currentSessionData.MinimumScore;
             sessionData.ScoreMax = currentSessionData.MaximumScore;
-            sessionData.ScoreScaled = DetermineScaledScore(currentSessionData.ScaledScore, currentSessionData.Score, currentSessionData.MaximumScore);
+            sessionData.ScoreScaled = DetermineScaledScore(
+                currentSessionData.ScaledScore,
+                currentSessionData.Score,
+                currentSessionData.MaximumScore
+            );
 
             apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData);
 
@@ -1142,8 +1181,8 @@ namespace PixoVR.Apex
         private float DetermineScaledScore(float scaledScore, float score, float maxScore)
         {
             float determinedScaledScore = scaledScore;
-            
-            if(scaledScore < Mathf.Epsilon && score >= Mathf.Epsilon)
+
+            if (scaledScore < Mathf.Epsilon && score >= Mathf.Epsilon)
             {
                 determinedScaledScore = (score / maxScore) * 100f;
             }
@@ -1180,7 +1219,7 @@ namespace PixoVR.Apex
         {
             Debug.Log("[ApexSystem] On API Response");
             bool success = message.IsSuccessStatusCode;
-            if(responseData is FailureResponse)
+            if (responseData is FailureResponse)
             {
                 success = success && (responseData is IFailure) && (!(responseData as FailureResponse).HasErrored());
             }
@@ -1188,163 +1227,192 @@ namespace PixoVR.Apex
             switch (response)
             {
                 case ResponseType.RT_PING:
+                {
+                    if (success)
                     {
-                        if(success)
-                        {
-                            Debug.Log("[ApexSystem] Ping successful.");
-                            OnPingSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            Debug.Log("[ApexSystem] Ping failed.");
-                            OnPingFailed.Invoke(message);
-                        }
-                        break;
+                        Debug.Log("[ApexSystem] Ping successful.");
+                        OnPingSuccess.Invoke(message);
                     }
+                    else
+                    {
+                        Debug.Log("[ApexSystem] Ping failed.");
+                        OnPingFailed.Invoke(message);
+                    }
+                    break;
+                }
                 case ResponseType.RT_LOGIN:
-                    {
-                        Debug.Log("[ApexSystem] Calling to handle login.");
-                        HandleLogin(success, responseData);
-                        break;
-                    }
+                {
+                    Debug.Log("[ApexSystem] Calling to handle login.");
+                    HandleLogin(success, responseData);
+                    break;
+                }
                 case ResponseType.RT_GET_USER:
+                {
+                    if (success)
                     {
-                        if(success)
-                        {
-                            OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
-                            OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
+                        OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                        OnGetUserFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 case ResponseType.RT_GET_USER_MODULES:
+                {
+                    if (success)
                     {
-                        if (success)
-                        {
-                            OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
-                            OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
+                        OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                        OnGetUserFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 case ResponseType.RT_SESSION_JOINED:
+                {
+                    if (success)
                     {
-                        if(success)
-                        {
-                            JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
-                            Debug.Log(string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
-                            heartbeatSessionID = joinSessionResponse.SessionId;
-                            sessionInProgress = true;
-                            OnJoinSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message));
-                            currentSessionID = Guid.Empty;
-                            sessionInProgress = false;
-                            OnJoinSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
+                        JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
+                        Debug.Log(string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
+                        heartbeatSessionID = joinSessionResponse.SessionId;
+                        sessionInProgress = true;
+                        OnJoinSessionSuccess.Invoke(message);
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(
+                            string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message)
+                        );
+                        currentSessionID = Guid.Empty;
+                        sessionInProgress = false;
+                        OnJoinSessionFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 case ResponseType.RT_SESSION_COMPLETE:
+                {
+                    if (success)
                     {
-                        if (success)
-                        {
-                            sessionInProgress = false;
-                            currentSessionID = Guid.Empty;
-                            OnCompleteSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message));
-                            OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
+                        sessionInProgress = false;
+                        currentSessionID = Guid.Empty;
+                        OnCompleteSessionSuccess.Invoke(message);
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(
+                            string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message)
+                        );
+                        OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 case ResponseType.RT_SESSION_EVENT:
+                {
+                    if (success)
                     {
-                        if (success)
+                        Debug.Log("[ApexSystem] Session event sent.");
+                        OnSendEventSuccess.Invoke(message);
+                    }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(
+                            string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message)
+                        );
+                        OnSendEventFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
+                case ResponseType.RT_GET_USER_ACCESS:
+                {
+                    if (success)
+                    {
+                        var userAccessResponseContent = responseData as UserAccessResponseContent;
+                        if (userAccessResponseContent.Access)
                         {
-                            Debug.Log("[ApexSystem] Session event sent.");
-                            OnSendEventSuccess.Invoke(message);
+                            if (userAccessResponseContent.PassingScore.HasValue)
+                            {
+                                currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
+                            }
+
+                            userAccessVerified = true;
+                            OnModuleAccessSuccess.Invoke(currentActiveLogin);
                         }
                         else
                         {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message));
-                            OnSendEventFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_GET_USER_ACCESS:
-                    {
-                        if (success)
-                        {
-                            var userAccessResponseContent = responseData as UserAccessResponseContent;
-                            if (userAccessResponseContent.Access)
-                            {
-                                if (userAccessResponseContent.PassingScore.HasValue)
-                                {
-                                    currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
-                                }
-                                
-                                userAccessVerified = true;
-                                OnModuleAccessSuccess.Invoke(currentActiveLogin);
-                            }
-                            else
-                            {
-                                currentActiveLogin = null;
-                                userAccessVerified = false;
-                                OnModuleAccessFailed.Invoke(new FailureResponse()
+                            currentActiveLogin = null;
+                            userAccessVerified = false;
+                            OnModuleAccessFailed.Invoke(
+                                new FailureResponse()
                                 {
                                     Error = "True",
                                     HttpCode = "401",
                                     Message = "User does not have access to module",
-                                });
-                            }
+                                }
+                            );
                         }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to get users module access data.\nError: {0}", failureData.Message));
-
-                            OnModuleAccessFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(
+                            string.Format(
+                                "[ApexSystem] Failed to get users module access data.\nError: {0}",
+                                failureData.Message
+                            )
+                        );
+
+                        OnModuleAccessFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 case ResponseType.RT_GET_MODULES_LIST:
+                {
+                    if (success)
                     {
-                        if(success)
-                        {
-                            OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message));
-
-                            OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
-                        }
-
-                        break;
+                        OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
                     }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(
+                            string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message)
+                        );
+
+                        OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
+                    }
+
+                    break;
+                }
+                case ResponseType.RT_GEN_AUTH_LOGIN:
+                {
+                    if (success)
+                    {
+                        OnGeneratedAssistedLoginSuccess.Invoke(responseData as GeneratedAssistedLogin);
+                    }
+                    else
+                    {
+                        FailureResponse failureData = responseData as FailureResponse;
+                        Debug.Log(string.Format("[ApexSystem] Failed to get module.\nError: {0}", failureData.Message));
+                        OnGeneratedAssistedLoginFailed.Invoke(responseData as FailureResponse);
+                    }
+                    break;
+                }
                 default:
-                    {
-                        break;
-                    }
+                {
+                    break;
+                }
             }
 
-            if(OnPlatformResponse != null)
+            if (OnPlatformResponse != null)
             {
                 OnPlatformResponse.Invoke(response, success, responseData);
             }
@@ -1378,7 +1446,10 @@ namespace PixoVR.Apex
         {
             var token = currentActiveLogin.Token;
 
-            if(serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase) || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase))
+            if (
+                serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase)
+                || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase)
+            )
             {
                 Debug.Log($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
                 Application.OpenURL($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
@@ -1392,23 +1463,21 @@ namespace PixoVR.Apex
 
         bool _RequestAuthorizationCode()
         {
-            if(!webSocket.IsConnected())
+            if (!webSocket.IsConnected())
             {
                 ConnectWebsocket();
             }
             return webSocket.RequestAuthorizationCode();
         }
 
-        // TODO: Move to new plugin
         public static bool GenerateOneTimeLoginForCurrentUser()
         {
             if (Instance.currentActiveLogin == null)
                 return false;
 
-            return Instance._GenerateOneTimeLoginForUser(Instance.currentActiveLogin.ID);
+            return Instance._GenerateOneTimeLoginForUser();
         }
 
-        // TODO: Move to new plugin
         bool _GenerateOneTimeLoginForCurrentUser()
         {
             if (currentActiveLogin == null)
@@ -1417,11 +1486,10 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            return _GenerateOneTimeLoginForUser(currentActiveLogin.ID);
+            return _GenerateOneTimeLoginForUser();
         }
 
-        // TODO: Move to new plugin
-        bool _GenerateOneTimeLoginForUser(int userId)
+        bool _GenerateOneTimeLoginForUser()
         {
             if (currentActiveLogin == null)
             {
@@ -1429,7 +1497,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, userId);
+            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token);
             return true;
         }
     }
