@@ -105,3 +105,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  ### [1.6.1] - 2025-03-07
  - Fixes a dependency issue for versions of unity older than 6000.
  - Remove the outdated Samples to prevent crashing on launch of the Unity Editor.
+
+ ### [1.6.3] - 2025-05-28
+ - A users Organization info now contains the Logo url, primary and secondary hex colors.
