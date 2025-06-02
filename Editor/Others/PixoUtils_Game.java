@@ -26,7 +26,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.Canvas;
 
 import com.unity3d.player.UnityPlayer;
-import com.unity3d.player.UnityPlayerActivity;
+import com.unity3d.player.UnityPlayerGameActivity;
 import java.util.*;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
