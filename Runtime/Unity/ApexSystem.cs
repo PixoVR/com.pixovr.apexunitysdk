@@ -9,6 +9,7 @@ using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using TinCan;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.XR;
 #if MANAGE_XR
 using MXR.SDK;
@@ -217,6 +218,9 @@ namespace PixoVR.Apex
         {
             SetupPlatformConfiguration();
 
+#if UNITY_IOS || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+            SetupDeepLinking();
+#endif
             if (runSetupOnAwake)
             {
                 Debug.Log("[ApexSystem] Running on awake!");
@@ -242,6 +246,23 @@ namespace PixoVR.Apex
             deviceSerialNumber = newDeviceStatus.serial;
         }
 #endif
+        void SetupDeepLinking()
+        {
+            Application.deepLinkActivated += OnDeepLinkActivated;
+            if (!string.IsNullOrEmpty(Application.absoluteURL))
+            {
+                // Cold start and Application.absoluteURL not null so process Deep Link.
+                OnDeepLinkActivated(Application.absoluteURL);
+            }
+        }
+
+
+        void OnDeepLinkActivated(string url)
+        {
+            // Update DeepLink Manager global variable, so URL can be accessed from anywhere.
+            var urlArguments = PixoPlatformUtilities.ParseURLArguments(url);
+            _ParsePassedData(urlArguments);
+        }
 
         void SetupPlatformConfiguration()
         {
@@ -333,7 +354,8 @@ namespace PixoVR.Apex
 
             PopulateWebSocketURL();
 
-            _ParsePassedData();
+            var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
+            _ParsePassedData(applicationArugments);
             Debug.Log($"[ApexSystem] Login Token: {loginToken}");
         }
 
@@ -802,28 +824,28 @@ namespace PixoVR.Apex
             return failureResponse;
         }
 
-        public void _ParsePassedData()
+        protected void _ParsePassedData(Dictionary<string, string> arguments)
         {
-            var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
-
-            if (applicationArugments == null)
+            if (arguments == null)
             {
                 Debug.Log("No arguments found for the application.");
                 return;
             }
 
-            if (applicationArugments.ContainsKey("optional"))
-                optionalParameter = applicationArugments["optional"];
+            if (arguments.ContainsKey("optional"))
+                optionalParameter = arguments["optional"];
 
-            if (applicationArugments.ContainsKey("returntarget"))
-                returnTargetParameter = applicationArugments["returntarget"];
+            if (arguments.ContainsKey("returntarget"))
+                returnTargetParameter = arguments["returntarget"];
 
-            if (applicationArugments.ContainsKey("targettype"))
-                targetTypeParameter = applicationArugments["targettype"];
+            if (arguments.ContainsKey("targettype"))
+                targetTypeParameter = arguments["targettype"];
 
-            if (applicationArugments.ContainsKey("pixotoken"))
-                loginToken = applicationArugments["pixotoken"];
+            if (arguments.ContainsKey("pixotoken"))
+                loginToken = arguments["pixotoken"];
         }
+
+
 
         public bool _CheckModuleAccess(int targetModuleID = -1)
         {
