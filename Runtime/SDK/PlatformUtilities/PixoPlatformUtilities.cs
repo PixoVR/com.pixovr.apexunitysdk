@@ -70,7 +70,11 @@ namespace PixoVR.Apex
         public static bool WriteStringToFile(string fileName, string data, System.Text.Encoding encoding = null)
         {
             return Instance.PlatformUtilities.WriteStringToFile(fileName, data, encoding);
+        }
 
+        public static Dictionary<string, string> ParseURLArguments(string url)
+        {
+            return Instance.PlatformUtilities.ParseURLArguments(url);
         }
     }
 }
