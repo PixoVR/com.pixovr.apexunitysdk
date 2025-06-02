@@ -19,6 +19,7 @@ namespace PixoVR.Editor
             serializedObject.Update();
             EditorGUIUtility.labelWidth = 220;
 
+            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.CustomURLScheme)));
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.SyncVersionsOnBuildPreProcess)));
             if (Target.SyncVersionsOnBuildPreProcess)
             {
