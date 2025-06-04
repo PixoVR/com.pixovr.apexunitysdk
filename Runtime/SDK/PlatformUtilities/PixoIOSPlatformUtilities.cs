@@ -10,11 +10,13 @@ namespace PixoVR.Apex
     {
         public PixoIOSPlatformUtilities() : base()
         {
+            UDebug.Log($"{GetType().Name}");
 
         }
 
         public override bool OpenURL(string url)
         {
+            UDebug.Log($"{GetType().Name}::OpenURL");
             if (string.IsNullOrEmpty(url))
             {
                 UDebug.Log("Url is empty or null.");
@@ -27,6 +29,7 @@ namespace PixoVR.Apex
 
         public override bool OpenApplication(string applicationPath, string[] argumentKeys, string[] argumentValues)
         {
+            UDebug.Log($"{GetType().Name}::OpenApplication");
             if (!string.IsNullOrEmpty(applicationPath))
             {
                 UDebug.Log("Application is empty.");
