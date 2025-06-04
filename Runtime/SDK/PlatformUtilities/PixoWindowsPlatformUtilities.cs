@@ -11,7 +11,7 @@ namespace PixoVR.Apex
     {
         public PixoWindowsPlatformUtilities() : base()
         {
-
+            UDebug.Log($"Initializing class {GetType().Name}");
         }
 
         public override bool OpenURL(string url)
