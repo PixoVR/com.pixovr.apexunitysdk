@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using UnityEngine;
-using UDebug = UnityEngine.Debug;
 
 namespace PixoVR.Apex
 {
@@ -9,7 +7,7 @@ namespace PixoVR.Apex
     {
         public PixoGenericPlatformUtilities()
         {
-            UDebug.Log($"Initializing class {GetType().Name}");
+            Debug.Log($"Initializing class {GetType().Name}");
         }
 
         public virtual bool OpenURL(string url)
