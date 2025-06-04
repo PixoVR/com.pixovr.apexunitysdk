@@ -1,6 +1,5 @@
-
 using System.Collections.Generic;
-using System.Runtime.InteropServices.WindowsRuntime;
+using UDebug = UnityEngine.Debug;
 
 namespace PixoVR.Apex
 {
@@ -24,22 +23,14 @@ namespace PixoVR.Apex
 
         public static bool OpenURL(string url)
         {
-            return Instance._OpenURL(url);
-        }
-
-        public bool _OpenURL(string url)
-        {
-            return PlatformUtilities.OpenURL(url);
+            UDebug.Log($"PixoPlatformUtilities::OpenURL {url}");
+            return Instance.PlatformUtilities.OpenURL(url);
         }
 
         public static bool OpenApplication(string applicationPath, string[] argumentKeys, string[] argumentValues)
         {
-            return Instance._OpenApplication(applicationPath, argumentKeys, argumentValues);
-        }
-
-        public bool _OpenApplication(string applicationPath, string[] argumentKeys, string[] argumentValues)
-        {
-            return PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
+            UDebug.Log($"PixoPlatformUtilities::OpenApplication {applicationPath}");
+            return Instance.PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
         }
 
         public static Dictionary<string, string> ParseApplicationArguments()

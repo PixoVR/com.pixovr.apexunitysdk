@@ -14,7 +14,7 @@ public class PixoVRPostBuilder
             m_projectSettings == null ? m_projectSettings = EditorUtilities.GetProjectSettings<PixoVRProjectSettings>(false) : m_projectSettings;
     private static PixoVRProjectSettings m_projectSettings;
 
-    [PostProcessBuild(999)]
+    [PostProcessBuild(100)]
     public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
     {
         PostprocessBuildIOS(target, pathToBuiltProject);
@@ -55,7 +55,7 @@ public class PixoVRPostBuilder
 
         // Save changes
         plist.WriteToFile(plistPath);
-        UnityEngine.Debug.Log("Custom URL scheme added to Info.plist: myapp://");
+        UnityEngine.Debug.Log($"Custom URL scheme added to Info.plist: {ProjectSettings.CustomURLScheme}://");
 #endif
     }
 
