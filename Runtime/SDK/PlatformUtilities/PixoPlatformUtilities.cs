@@ -1,10 +1,9 @@
-
 using System.Collections.Generic;
-using System.Runtime.InteropServices.WindowsRuntime;
+using UDebug = UnityEngine.Debug;
 
 namespace PixoVR.Apex
 {
-    internal sealed class PixoPlatformUtilities : PixoSingleton<PixoPlatformUtilities>
+    public sealed class PixoPlatformUtilities : PixoSingleton<PixoPlatformUtilities>
     {
         private PixoGenericPlatformUtilities PlatformUtilities;
         public PixoPlatformUtilities()
@@ -15,6 +14,8 @@ namespace PixoVR.Apex
             PlatformUtilities = new PixoOSXPlatformUtilities();
 #elif UNITY_ANDROID
             PlatformUtilities = new PixoAndroidPlatformUtilities();
+#elif UNITY_IOS
+            PlatformUtilities = new PixoIOSPlatformUtilities();
 #else
             PlatformUtilities = new PixoGenericPlatformUtilities();
 #endif
@@ -22,22 +23,14 @@ namespace PixoVR.Apex
 
         public static bool OpenURL(string url)
         {
-            return Instance._OpenURL(url);
-        }
-
-        public bool _OpenURL(string url)
-        {
-            return PlatformUtilities.OpenURL(url);
+            UDebug.Log($"PixoPlatformUtilities::OpenURL {url}");
+            return Instance.PlatformUtilities.OpenURL(url);
         }
 
         public static bool OpenApplication(string applicationPath, string[] argumentKeys, string[] argumentValues)
         {
-            return Instance._OpenApplication(applicationPath, argumentKeys, argumentValues);
-        }
-
-        public bool _OpenApplication(string applicationPath, string[] argumentKeys, string[] argumentValues)
-        {
-            return PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
+            UDebug.Log($"PixoPlatformUtilities::OpenApplication {applicationPath}");
+            return Instance.PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
         }
 
         public static Dictionary<string, string> ParseApplicationArguments()
@@ -48,6 +41,31 @@ namespace PixoVR.Apex
         public Dictionary<string, string> _ParseApplicationArguments()
         {
             return PlatformUtilities.ParseApplicationArguments();
+        }
+
+        public static bool ReadFileAsString(string fileName, out string data)
+        {
+            return Instance.PlatformUtilities.ReadFileAsString(fileName, out data);
+        }
+
+        public static bool ReadFile(string fileName, out byte[] data)
+        {
+            return Instance.PlatformUtilities.ReadFile(fileName, out data);
+        }
+
+        public static bool WriteFile(string fileName, byte[] data)
+        {
+            return Instance.PlatformUtilities.WriteFile(fileName, data);
+        }
+
+        public static bool WriteStringToFile(string fileName, string data, System.Text.Encoding encoding = null)
+        {
+            return Instance.PlatformUtilities.WriteStringToFile(fileName, data, encoding);
+        }
+
+        public static Dictionary<string, string> ParseURLArguments(string url)
+        {
+            return Instance.PlatformUtilities.ParseURLArguments(url);
         }
     }
 }

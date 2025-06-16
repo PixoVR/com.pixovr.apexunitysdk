@@ -1,11 +1,14 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace PixoVR.Apex
 {
     internal class PixoGenericPlatformUtilities
     {
-        public PixoGenericPlatformUtilities() { }
+        public PixoGenericPlatformUtilities()
+        {
+            Debug.Log($"Initializing class {GetType().Name}");
+        }
 
         public virtual bool OpenURL(string url)
         {
@@ -59,6 +62,28 @@ namespace PixoVR.Apex
             }
 
             return parameters;
+        }
+
+        public virtual bool ReadFileAsString(string fileName, out string data)
+        {
+            data = null;
+            return false;
+        }
+
+        public virtual bool ReadFile(string fileName, out byte[] data)
+        {
+            data = null;
+            return false;
+        }
+
+        public virtual bool WriteFile(string fileName, byte[] data)
+        {
+            return false;
+        }
+
+        public virtual bool WriteStringToFile(string fileName, string data, System.Text.Encoding encoding = null)
+        {
+            return false;
         }
     }
 }

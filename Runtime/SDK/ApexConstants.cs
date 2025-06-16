@@ -4,9 +4,15 @@ namespace PixoVR.Apex
 {
     public class ApexVerbs
     {
-        public static readonly Uri JOINED_SESSION = new Uri("https://pixovr.com/xapi/verbs/joined_session");
-        public static readonly Uri SESSION_EVENT = new Uri("https://pixovr.com/xapi/verbs/session_event");
-        public static readonly Uri COMPLETED_SESSION = new Uri("https://pixovr.com/xapi/verbs/completed_session");
+        public static readonly Uri JOINED_SESSION = new Uri(
+            "https://pixovr.com/xapi/verbs/joined_session"
+        );
+        public static readonly Uri SESSION_EVENT = new Uri(
+            "https://pixovr.com/xapi/verbs/session_event"
+        );
+        public static readonly Uri COMPLETED_SESSION = new Uri(
+            "https://pixovr.com/xapi/verbs/completed_session"
+        );
 
         protected ApexVerbs() { }
     }
@@ -30,8 +36,10 @@ namespace PixoVR.Apex
     public class PlatformEndpoints
     {
         public const string NorthAmerica_ProductionEnvironment = "https://modules.apex.pixovr.com";
-        public const string NorthAmerica_StagingEnvironment = "https://modules.apex.stage.pixovr.com";
-        public const string NorthAmerica_DevelopmentEnvironment = "https://modules.apex.dev.pixovr.com";
+        public const string NorthAmerica_StagingEnvironment =
+            "https://modules.apex.stage.pixovr.com";
+        public const string NorthAmerica_DevelopmentEnvironment =
+            "https://modules.apex.dev.pixovr.com";
         public const string Saudi_ProductionEnvironment = "https://saudi.modules.apex.pixovr.com";
         public const string Local_DevelopmentEnvironment = "http://localhost:8001";
     }

@@ -14,7 +14,7 @@ namespace PixoVR.Apex
         // TODO: Migrate functionality from the old PixoAndroidUtils into this class.
         public PixoAndroidPlatformUtilities() : base()
         {
-
+            UDebug.Log($"Initializing class {GetType().Name}");
         }
 
         public override bool OpenURL(string url)

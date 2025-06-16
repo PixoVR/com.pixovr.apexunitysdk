@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using UnityEngine.Events;
 using System.Net.Http;
+using UnityEngine.Events;
 
 namespace PixoVR.Apex.Events
 {
     [System.Serializable]
     public class OnHttpResponseEvent : UnityEvent<HttpResponseMessage> { };
-    
+
     [System.Serializable]
     public class OnApexFailureEvent : UnityEvent<FailureResponse> { };
-    
+
     [System.Serializable]
     public class OnModuleAccessSuccessEvent : UnityEvent<LoginResponseContent> { };
 
@@ -39,4 +39,7 @@ namespace PixoVR.Apex.Events
 
     [System.Serializable]
     public class OnGetOrgModulesSuccessEvent : UnityEvent<List<OrgModule>> { };
+
+    [System.Serializable]
+    public class OnGeneratedAssistedLoginSuccessEvent : UnityEvent<GeneratedAssistedLogin> { };
 }

@@ -6,9 +6,9 @@ using UDebug = UnityEngine.Debug;
 
 namespace PixoVR.Apex
 {
-    internal class PixoOSXPlatformUtilities : PixoGenericPlatformUtilities
+    internal class PixoIOSPlatformUtilities : PixoGenericPlatformUtilities
     {
-        public PixoOSXPlatformUtilities() : base()
+        public PixoIOSPlatformUtilities() : base()
         {
             UDebug.Log($"Initializing class {GetType().Name}");
         }
@@ -82,11 +82,11 @@ namespace PixoVR.Apex
             if(!string.IsNullOrEmpty(Application.absoluteURL))
             {
                 string urlData = Application.absoluteURL;
-                UDebug.Log($"[PixoOSXPlatformUtilities] Parse from URL {urlData}");
+                UDebug.Log($"[PixoIOSPlatformUtilities] Parse from URL {urlData}");
                 return ParseURLArguments(urlData);
             }
 
-            UDebug.Log("[PixoOSXPlatformUtilities] Parsing arguments from commandline.");
+            UDebug.Log("[PixoIOSPlatformUtilities] Parsing arguments from commandline.");
 
             
             Dictionary<string, string> parameters = new Dictionary<string, string>();
