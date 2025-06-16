@@ -9,8 +9,8 @@ using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using TinCan;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.XR;
+
 #if MANAGE_XR
 using MXR.SDK;
 #endif
@@ -356,7 +356,10 @@ namespace PixoVR.Apex
 
             var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
             _ParsePassedData(applicationArugments);
-            Debug.Log($"[ApexSystem] Login Token: {loginToken}");
+            if(!string.IsNullOrEmpty(loginToken))
+            {
+                Debug.Log($"[ApexSystem] Login Token: {loginToken}");
+            }
         }
 
         void _ExitApplication(string returnTarget)
