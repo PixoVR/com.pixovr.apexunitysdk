@@ -106,6 +106,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Fixes a dependency issue for versions of unity older than 6000.
  - Remove the outdated Samples to prevent crashing on launch of the Unity Editor.
 
- ### [1.6.4] - 2025-05-28
+ ### [1.6.5] - 2025-06-16
  - A users Organization info now contains the Logo url, primary and secondary hex colors.
  - Changes the AndroidManifest.xml's default entry point to use the UnityPlayerGameActivity as UnityPlayerActivity was deprecated in 6000.
+ - Fixes an issue when the user launched the app with another app but does not have proper access to that module.
