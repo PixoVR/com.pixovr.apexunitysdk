@@ -15,7 +15,7 @@ public static class PixoVREditorCommands
         string sourceJavaUtilsPath = "";
 #if UNITY_6000_0_OR_NEWER
         sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Game.xml");
-        sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Game.xml");
+        sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Game.java");
 #else
         sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Main.xml");
         sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Main.java");

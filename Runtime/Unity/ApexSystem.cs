@@ -362,6 +362,7 @@ namespace PixoVR.Apex
             }
         }
 
+        // TODO: Rename the entered 'returnTarget' and the passed returnTargetParameter.
         void _ExitApplication(string returnTarget)
         {
             if (returnTarget == null)
