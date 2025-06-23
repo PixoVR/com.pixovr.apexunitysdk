@@ -135,6 +135,19 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
+    public class QuickIDLoginData
+    {
+        public string Username;
+        public string SerialNumber;
+
+        public QuickIDLoginData( string serialNumber, string username)
+        {
+            Username = username;
+            SerialNumber = serialNumber;
+        }
+    }
+
+    [Serializable]
     public class LoginResponseContent : IPlatformErrorable
     {
         public int ID;
@@ -211,6 +224,35 @@ namespace PixoVR.Apex
         {
             return (Email == null);
         }
+    }
+
+    [Serializable]
+    public class QuickIDAuthGetUsersResponse : IPlatformErrorable
+    {
+        public List<QuickIDUser> QuickIDUser;
+        public OrgProperties OrgProperties;
+
+        public bool HasErrored()
+        {
+            return QuickIDUser == null || OrgProperties == null;
+        }
+
+    }
+
+    public class OrgProperties
+    {
+        public string PrimaryColor;
+        public string SecondaryColor;
+        public string HubLogoURL;
+        public string Name;
+    }
+
+    public class QuickIDUser
+    {
+        public string FirstName;
+        public string LastName;
+        public string Username;
+        public string Email;
     }
 
     [Serializable]
