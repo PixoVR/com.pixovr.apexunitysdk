@@ -213,6 +213,12 @@ namespace PixoVR.Apex
 
         public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
         public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
+        
+        public OnGetQuickIDAuthGetUsersSuccessEvent onGetQuickIDAuthGetUsersSuccess = new();
+        public onApexFailureEvent onGetQuickIDAuthGetUsersFailed = new();
+
+        public OnQuickIDAuthLoginSuccessEvent onQuickIDAuthLoginSuccess = new();
+        public onApexFailureEvent onQuickIDAuthLoginFailed = new();
 
         void Awake()
         {
@@ -761,6 +767,16 @@ namespace PixoVR.Apex
             return Instance._GetModuleList(platformName);
         }
 
+        public static bool GetQuickIDAuthUsers(string serialNumber)
+        {
+            return Instance._GetQuickIDAuthUsers(serialNumber);
+        }
+
+        public static bool QuickIDLogin(string serialNumber, string username)
+        {
+            return Instance._QuickIDLogin(serialNumber, username);
+        }
+
         protected void _ChangePlatformServer(PlatformServer newServer)
         {
             PlatformTargetServer = newServer;
@@ -1214,6 +1230,22 @@ namespace PixoVR.Apex
             return true;
         }
 
+        protected bool _GetQuickIDAuthUsers(string serialNumber)
+        {
+            if (String.IsNullOrEmpty(serialNumber)) return false;
+            apexAPIHandler.GetQuickIDAuthenticationUsers(serialNumber);
+            return true;
+        }
+
+
+        protected static bool _QuickIDLogin(string serialNumber, string username)
+        {
+            if (String.IsNullOrEmpty(serialNumber) || string.IsNullOrEmpty(username)) return false;
+            var loginData = new QuickIDLoginData(serialNumber, username);
+            apexAPIHandler.QuickIDLogin(serialNumber, username);
+            return true;
+        }
+
         private float DetermineScaledScore(float scaledScore, float score, float maxScore)
         {
             float determinedScaledScore = scaledScore;
@@ -1442,6 +1474,35 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
+                case ResponseType.RT_QUICK_ID_AUTH_GET_USERS:
+                    {
+                        if (success)
+                        {
+                            onGetQuickIDAuthGetUsersSuccess.Invoke(responseData as QuickIDAuthGetUsersResponse);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get Quick ID Authentication users.\nError: {0}", failureData.Message));
+                            onGetQuickIDAuthGetUsersFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+
+                case ResponseType.RT_QUICK_ID_AUTH_LOGIN:
+                    {
+                        if (success)
+                        {
+                            onQuickIDAuthLoginSuccess.Invoke(responseData as LoginResponseContent);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to authenticate with Quick ID Authentication.\nError: {0}", failureData.Message));
+                            onQuickIDAuthLoginFailed.Invoke(responseData as FailureResponse);
+                        }
+                    }
+
                 case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
                     {
                         if (success)
