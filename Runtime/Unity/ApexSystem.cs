@@ -210,11 +210,11 @@ namespace PixoVR.Apex
         public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
 
 
-        public OnGetQuickIDAuthGetUsersSuccessEvent onGetQuickIDAuthGetUsersSuccess = new();
-        public onApexFailureEvent onGetQuickIDAuthGetUsersFailed = new();
+        public OnGetQuickIDAuthGetUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
+        public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
 
-        public OnQuickIDAuthLoginSuccessEvent onQuickIDAuthLoginSuccess = new();
-        public onApexFailureEvent onQuickIDAuthLoginFailed = new();
+        public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
+        public OnApexFailureEvent OnQuickIDAuthLoginFailed = new();
 
         void Awake()
         {
@@ -1203,11 +1203,11 @@ namespace PixoVR.Apex
         }
 
 
-        protected static bool _QuickIDLogin(string serialNumber, string username)
+        protected bool _QuickIDLogin(string serialNumber, string username)
         {
             if (String.IsNullOrEmpty(serialNumber) || string.IsNullOrEmpty(username)) return false;
             var loginData = new QuickIDLoginData(serialNumber, username);
-            apexAPIHandler.QuickIDLogin(serialNumber, username);
+            apexAPIHandler.QuickIDLogin(loginData);
             return true;
         }
 
@@ -1443,28 +1443,31 @@ namespace PixoVR.Apex
                     {
                         if (success)
                         {
-                            onGetQuickIDAuthGetUsersSuccess.Invoke(responseData as QuickIDAuthGetUsersResponse);
+                            OnGetQuickIDAuthGetUsersSuccess.Invoke(responseData as QuickIDAuthGetUsersResponse);
                         }
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
                             Debug.Log(string.Format("[ApexSystem] Failed to get Quick ID Authentication users.\nError: {0}", failureData.Message));
-                            onGetQuickIDAuthGetUsersFailed.Invoke(responseData as FailureResponse);
+                            OnGetQuickIDAuthGetUsersFailed.Invoke(responseData as FailureResponse);
                         }
+                        break;
                     }
 
                 case ResponseType.RT_QUICK_ID_AUTH_LOGIN:
                     {
+                        HandleLogin(success, responseData);
                         if (success)
                         {
-                            onQuickIDAuthLoginSuccess.Invoke(responseData as LoginResponseContent);
+                            OnQuickIDAuthLoginSuccess.Invoke(responseData as LoginResponseContent);
                         }
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
                             Debug.Log(string.Format("[ApexSystem] Failed to authenticate with Quick ID Authentication.\nError: {0}", failureData.Message));
-                            onQuickIDAuthLoginFailed.Invoke(responseData as FailureResponse);
+                            OnQuickIDAuthLoginFailed.Invoke(responseData as FailureResponse);
                         }
+                        break;
                     }
 
                 default:
