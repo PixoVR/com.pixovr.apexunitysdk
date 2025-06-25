@@ -8,6 +8,7 @@ using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+
 namespace PixoVR.Apex
 {
     public interface IPlatformErrorable
@@ -136,19 +137,6 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class QuickIDLoginData
-    {
-        public string Username;
-        public string SerialNumber;
-
-        public QuickIDLoginData( string serialNumber, string username)
-        {
-            Username = username;
-            SerialNumber = serialNumber;
-        }
-    }
-
-    [Serializable]
     public class LoginResponseContent : IPlatformErrorable
     {
         public int ID;
@@ -225,35 +213,6 @@ namespace PixoVR.Apex
         {
             return (Email == null);
         }
-    }
-
-    [Serializable]
-    public class QuickIDAuthGetUsersResponse : IPlatformErrorable
-    {
-        public List<QuickIDUser> QuickIDUser;
-        public OrgProperties OrgProperties;
-
-        public bool HasErrored()
-        {
-            return QuickIDUser == null || OrgProperties == null;
-        }
-
-    }
-
-    public class OrgProperties
-    {
-        public string PrimaryColor;
-        public string SecondaryColor;
-        public string HubLogoURL;
-        public string Name;
-    }
-
-    public class QuickIDUser
-    {
-        public string FirstName;
-        public string LastName;
-        public string Username;
-        public string Email;
     }
 
     [Serializable]
@@ -468,6 +427,7 @@ namespace PixoVR.Apex
         }
     }
 
+#region Platform Models
     [Serializable]
     public class PlatformPlayer
     {
@@ -522,6 +482,105 @@ namespace PixoVR.Apex
         }
     }
 
+
+    [Serializable]
+    public class PlatformLoginResponse: IPlatformErrorable
+    {
+ 		public string Token { get; set; }
+        public string Msg { get; set; }
+        public User User { get; set; }
+
+       public bool HasErrored()
+        {
+            return (User == null || string.IsNullOrEmpty(Token));
+        }
+    }
+
+    [Serializable]
+    public class User
+    {
+        public int Id { get; set; }
+        public string CreatedBy { get; set; }
+        public string UpdatedBy { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public string Role { get; set; }
+        public string[] Permissions { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public string Status { get; set; }
+        public string ExternalId { get; set; }
+        public DateTime PasswordExpDate { get; set; }
+        public Organization Org { get; set; }
+        public int OrgId { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public string AuthToken { get; set; }
+    }
+
+
+    [Serializable]
+    public class QuickIDAuthGetUsersResponse : IPlatformErrorable
+    {
+        public OrgProperties OrgProperties;
+        public List<QuickIDUser> QuickIDUsers;
+
+        public bool HasErrored()
+        {
+            return QuickIDUsers == null || OrgProperties == null;
+        }
+    }
+
+    public class OrgProperties
+    {
+        public string PrimaryColor;
+        public string SecondaryColor;
+        public string HubLogoURL;
+        public string OrgName;
+
+        public OrgProperties() { }
+        public OrgProperties(string primaryColor, string secondaryColor, string hubLogoURL, string orgName)
+        {
+            PrimaryColor = primaryColor;
+            SecondaryColor = secondaryColor;
+            HubLogoURL = hubLogoURL;
+            OrgName = orgName;
+        }
+    }
+
+    public class QuickIDUser
+    {
+        public string FirstName;
+        public string LastName;
+        public string Username;
+        public string Email;
+
+        public QuickIDUser() { }
+
+        public QuickIDUser(string firstName, string lastName, string username, string email)
+        {
+            FirstName = firstName;
+            LastName = lastName;
+            Username = username;
+            Email = email;
+        }
+    }
+
+    [Serializable]
+    public class QuickIDLoginData
+    {
+        public string Username;
+        public string SerialNumber;
+
+        public QuickIDLoginData( string serialNumber, string username)
+        {
+            SerialNumber = serialNumber;
+            Username = username;
+        }
+    }
+    
     [Serializable]
     public class UserMetricsResponse : IFailure, IPlatformErrorable
     {
@@ -568,4 +627,8 @@ namespace PixoVR.Apex
         public string abbreviation;
         public string description;
     }
+
+
+#endregion
+
 }
