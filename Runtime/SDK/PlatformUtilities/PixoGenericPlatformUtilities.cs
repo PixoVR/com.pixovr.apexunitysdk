@@ -36,6 +36,33 @@ namespace PixoVR.Apex
                 return null;
             }
 
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+
+            // We need to parse out the optional parameter, since it can contain &.
+            string[] optionalDataSplit = urlData.Split("optional=");
+            if (optionalDataSplit.Length > 1)
+            {
+                Debug.Log($"Optional data parts {optionalDataSplit[0]}  --  {optionalDataSplit[1]}");
+                string optionalData = optionalDataSplit[1];
+                int jsonEndPosition = optionalData.LastIndexOf('}');
+                string isolatedOptionalData = optionalData.Substring(0, jsonEndPosition + 1);
+                Debug.Log($"Isolated data: {isolatedOptionalData}");
+                parameters.Add("optional", isolatedOptionalData);
+
+                if(jsonEndPosition < optionalData.Length - 1)
+                {
+                    string otherData = optionalData.Substring(jsonEndPosition + 1);
+                    Debug.Log($"Other data: {otherData}");
+                    string baseData = optionalDataSplit[0];
+                    if (baseData.Length > 0 && baseData.EndsWith('&'))
+                    {
+                        baseData = baseData.Remove(baseData.Length - 1, 1);
+                    }
+                    urlData = baseData + otherData;
+                    Debug.Log($"Combined url: {urlData}");
+                }
+            }
+
             string[] dataArray = urlData.Split('&');
 
             if (dataArray.Length <= 0)
@@ -43,8 +70,6 @@ namespace PixoVR.Apex
                 Debug.Log("No arguments found on the url.");
                 return null;
             }
-
-            Dictionary<string, string> parameters = new Dictionary<string, string>();
 
             foreach (string dataElement in dataArray)
             {

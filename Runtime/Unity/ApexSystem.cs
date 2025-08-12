@@ -365,6 +365,7 @@ namespace PixoVR.Apex
         // TODO: Rename the entered 'returnTarget' and the passed returnTargetParameter.
         void _ExitApplication(string returnTarget)
         {
+            Debug.Log("ApexSystem::_ExitApplication");
             if (returnTarget == null)
             {
                 returnTarget = "";
@@ -386,6 +387,10 @@ namespace PixoVR.Apex
             if (CurrentActiveLogin != null)
             {
                 parameters += "pixotoken=" + CurrentActiveLogin.Token;
+            }
+            else if (!string.IsNullOrEmpty(loginToken))
+            {
+                parameters += "pixotoken=" + loginToken;
             }
 
             if (optionalParameter != null)
@@ -414,71 +419,73 @@ namespace PixoVR.Apex
 
             Debug.Log("[ApexSystem] Checking the return target parameter.");
 
-            if (returnTargetParameter != null)
+            if (!string.IsNullOrEmpty(returnTargetParameter))
             {
-                if (returnTargetParameter.Length > 0)
+                Debug.Log("[ApexSystem] Had a valid return target parameter.");
+                if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.Log("[ApexSystem] Had a valid return target parameter.");
-                    if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
+                    Debug.Log("[ApexSystem] Return Target is a URL.");
+
+                    string returnURL = returnTargetParameter;
+                    if (!string.IsNullOrEmpty(parameters))
                     {
-                        Debug.Log("[ApexSystem] Return Target is a URL.");
+                        if (!returnURL.Contains('?'))
+                            returnURL += "?";
+                        else
+                            returnURL += "&";
 
-                        string returnURL = returnTargetParameter;
-                        if (parameters.Length > 0)
-                        {
-                            if (!returnURL.Contains('?'))
-                                returnURL += "?";
-                            else
-                                returnURL += "&";
-
-                            returnURL += parameters;
-                        }
-                        Debug.Log("Custom Target: " + returnURL);
-                        PixoPlatformUtilities.OpenURL(returnURL);
-                        return;
+                        returnURL += parameters;
                     }
-                    else
+                    Debug.Log("Custom Target: " + returnURL);
+                    PixoPlatformUtilities.OpenURL(returnURL);
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"[ApexSystem] Return Target is a package name. {returnTargetParameter}");
+
+                    List<string> keys = new List<string>(),
+                        values = new List<string>();
+
+                    Debug.Log("[ApexSystem] Adding pixo token.");
+
+                    if (CurrentActiveLogin != null)
                     {
-                        Debug.Log("[ApexSystem] Return Target is a package name.");
-
-                        List<string> keys = new List<string>(),
-                            values = new List<string>();
-
-                        Debug.Log("[ApexSystem] Adding pixo token.");
-
-                        if (CurrentActiveLogin != null)
-                        {
-                            keys.Add("pixotoken");
-                            values.Add(CurrentActiveLogin.Token);
-                        }
-
-                        Debug.Log("[ApexSystem] Adding optional.");
-
-                        if (optionalParameter.Length > 0)
-                        {
-                            keys.Add("optional");
-                            values.Add(optionalParameter);
-                        }
-
-                        Debug.Log("[ApexSystem] Adding return target.");
-
-                        if (returnTarget.Length > 0)
-                        {
-                            keys.Add("returntarget");
-                            values.Add(returnTarget);
-                        }
-
-                        Debug.Log("[ApexSystem] Adding return target type.");
-
-                        if (returnTargetType.Length > 0)
-                        {
-                            keys.Add("targettype");
-                            values.Add(returnTargetType);
-                        }
-
-                        PixoPlatformUtilities.OpenApplication(returnTargetParameter, keys.ToArray(), values.ToArray());
-                        return;
+                        keys.Add("pixotoken");
+                        values.Add(CurrentActiveLogin.Token);
                     }
+                    else if (!string.IsNullOrEmpty(loginToken))
+                    {
+                        keys.Add("pixotoken");
+                        values.Add(loginToken);
+                    }
+
+                    Debug.Log("[ApexSystem] Adding optional.");
+
+                    if (!string.IsNullOrEmpty(optionalParameter))
+                    {
+                        keys.Add("optional");
+                        values.Add(optionalParameter);
+                    }
+
+                    Debug.Log("[ApexSystem] Adding return target.");
+
+                    if (!string.IsNullOrEmpty(returnTarget))
+                    {
+                        keys.Add("returntarget");
+                        values.Add(returnTarget);
+                    }
+
+                    Debug.Log("[ApexSystem] Adding return target type.");
+
+                    if (!string.IsNullOrEmpty(returnTargetType))
+                    {
+                        keys.Add("targettype");
+                        values.Add(returnTargetType);
+                    }
+
+                    PixoPlatformUtilities.OpenApplication(returnTargetParameter, keys.ToArray(), values.ToArray());
+                    return;
                 }
             }
 
