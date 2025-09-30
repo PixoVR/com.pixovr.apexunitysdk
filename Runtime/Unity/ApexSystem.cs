@@ -210,8 +210,7 @@ namespace PixoVR.Apex
         public OnGeneratedAssistedLoginSuccessEvent OnGeneratedAssistedLoginSuccess = new();
         public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
 
-
-        public OnGetQuickIDAuthGetUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
+        public OnGetQuickIDAuthUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
         public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
 
         public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
@@ -1277,6 +1276,11 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
             contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
+
+            if(deviceSerialNumber != null)
+            {
+                contextExtension.AddSimple("device_serial", deviceSerialNumber.ToString());
+            }
 
             return new Extensions(contextExtension.ToJObject());
         }
