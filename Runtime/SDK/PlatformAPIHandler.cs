@@ -379,7 +379,7 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
             string optionalParameters = "";
-            if (serialNumber.Length > 0)
+            if (!string.IsNullOrEmpty(serialNumber))
             {
                 optionalParameters = "?serial=" + serialNumber;
             }

@@ -24,6 +24,7 @@ namespace PixoVR.Apex
             }
 
             Application.OpenURL(url);
+            Application.Quit();
             return true;
         }
 

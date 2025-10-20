@@ -238,16 +238,20 @@ namespace PixoVR.Apex
 #if MANAGE_XR
         async void InitMXRSDK()
         {
+            Debug.Log("Initializing the ManageXR SDK");
             await MXRManager.InitAsync();
             MXRManager.System.OnDeviceStatusChange += OnDeviceStatusChanged;
             deviceSerialNumber = MXRManager.System.DeviceStatus.serial;
+            Debug.Log($"Device serial set to {deviceSerialNumber}");
         }
 
         void OnDeviceStatusChanged(DeviceStatus newDeviceStatus)
         {
             deviceSerialNumber = newDeviceStatus.serial;
+            Debug.Log($"Device serial number changed to {deviceSerialNumber}");
         }
 #endif
+
         void SetupDeepLinking()
         {
             Application.deepLinkActivated += OnDeepLinkActivated;
@@ -257,7 +261,6 @@ namespace PixoVR.Apex
                 OnDeepLinkActivated(Application.absoluteURL);
             }
         }
-
 
         void OnDeepLinkActivated(string url)
         {
@@ -1277,7 +1280,7 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("device_model", deviceModel);
             contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
 
-            if(deviceSerialNumber != null)
+            if(string.IsNullOrEmpty(deviceSerialNumber))
             {
                 contextExtension.AddSimple("device_serial", deviceSerialNumber.ToString());
             }
