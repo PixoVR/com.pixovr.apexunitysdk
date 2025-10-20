@@ -1,6 +1,6 @@
 {
   "name": "com.pixovr.apexunitysdk",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "displayName": "Apex Unity SDK",
   "description": "Unity Plugin for the implementation of the Apex API.",
   "unity": "2021.1",

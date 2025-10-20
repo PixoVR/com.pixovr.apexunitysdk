@@ -429,7 +429,6 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
             string optionalParameters = "";
-            Debug.Log($"Checking for a serial number: {serialNumber}");
             if (!string.IsNullOrEmpty(serialNumber))
             {
                 optionalParameters = "?serial=" + serialNumber;

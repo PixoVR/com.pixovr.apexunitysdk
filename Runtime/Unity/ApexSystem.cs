@@ -225,11 +225,13 @@ namespace PixoVR.Apex
         public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
 
 
-    	public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
-        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
         
     	public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
         public OnApexFailureEvent OnQuickIDAuthLoginFailed = new();
+        
+        
+    	public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
+        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
         void Awake()
         {
