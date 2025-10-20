@@ -889,6 +889,7 @@ namespace PixoVR.Apex
                 targetModuleID = moduleID;
             }
 
+            Debug.Log($"[ApexSystem] Checking module access of module {targetModuleID} from user {currentActiveLogin.ID} and device serial number {(string.IsNullOrEmpty(deviceSerialNumber) == true ? "---" : deviceSerialNumber)}");
             apexAPIHandler.GetModuleAccess(targetModuleID, currentActiveLogin.ID, deviceSerialNumber);
 
             return true;
@@ -1535,7 +1536,7 @@ namespace PixoVR.Apex
 
                 if (loginCheckModuleAccess)
                 {
-                    apexAPIHandler.GetModuleAccess(moduleID, currentActiveLogin.ID, deviceSerialNumber);
+                    CheckModuleAccess(moduleID);
                 }
             }
             else
