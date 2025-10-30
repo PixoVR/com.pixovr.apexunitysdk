@@ -1,11 +1,8 @@
-using Knot.RCPatcher.Editor;
-using System.Collections.Generic;
-using System.Text;
-using UnityEditor.Build.Reporting;
-using UnityEditor.Build;
-using UnityEngine;
 using PixoVR.Apex;
 using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace PixoVR.Editor
 {

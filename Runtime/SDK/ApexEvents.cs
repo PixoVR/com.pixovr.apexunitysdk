@@ -42,4 +42,7 @@ namespace PixoVR.Apex.Events
 
     [System.Serializable]
     public class OnGeneratedAssistedLoginSuccessEvent : UnityEvent<GeneratedAssistedLogin> { };
+
+    [System.Serializable]
+    public class OnGetUserMetricsForOrgSuccessEvent : UnityEvent<UserMetricsResponse> { };
 }

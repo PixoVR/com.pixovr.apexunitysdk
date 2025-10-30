@@ -209,6 +209,10 @@ namespace PixoVR.Apex
         public OnGeneratedAssistedLoginSuccessEvent OnGeneratedAssistedLoginSuccess = new();
         public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
 
+
+        public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
+        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
+
         void Awake()
         {
             SetupPlatformConfiguration();
@@ -310,7 +314,6 @@ namespace PixoVR.Apex
             }
 
             // TODO: Move to new plugin
-            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
@@ -1227,189 +1230,205 @@ namespace PixoVR.Apex
             switch (response)
             {
                 case ResponseType.RT_PING:
-                {
-                    if (success)
                     {
-                        Debug.Log("[ApexSystem] Ping successful.");
-                        OnPingSuccess.Invoke(message);
-                    }
-                    else
-                    {
-                        Debug.Log("[ApexSystem] Ping failed.");
-                        OnPingFailed.Invoke(message);
-                    }
-                    break;
-                }
-                case ResponseType.RT_LOGIN:
-                {
-                    Debug.Log("[ApexSystem] Calling to handle login.");
-                    HandleLogin(success, responseData);
-                    break;
-                }
-                case ResponseType.RT_GET_USER:
-                {
-                    if (success)
-                    {
-                        OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
-                        OnGetUserFailed.Invoke(responseData as FailureResponse);
-                    }
-                    break;
-                }
-                case ResponseType.RT_GET_USER_MODULES:
-                {
-                    if (success)
-                    {
-                        OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
-                        OnGetUserFailed.Invoke(responseData as FailureResponse);
-                    }
-                    break;
-                }
-                case ResponseType.RT_SESSION_JOINED:
-                {
-                    if (success)
-                    {
-                        JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
-                        Debug.Log(string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
-                        heartbeatSessionID = joinSessionResponse.SessionId;
-                        sessionInProgress = true;
-                        OnJoinSessionSuccess.Invoke(message);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(
-                            string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message)
-                        );
-                        currentSessionID = Guid.Empty;
-                        sessionInProgress = false;
-                        OnJoinSessionFailed.Invoke(responseData as FailureResponse);
-                    }
-                    break;
-                }
-                case ResponseType.RT_SESSION_COMPLETE:
-                {
-                    if (success)
-                    {
-                        sessionInProgress = false;
-                        currentSessionID = Guid.Empty;
-                        OnCompleteSessionSuccess.Invoke(message);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(
-                            string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message)
-                        );
-                        OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
-                    }
-                    break;
-                }
-                case ResponseType.RT_SESSION_EVENT:
-                {
-                    if (success)
-                    {
-                        Debug.Log("[ApexSystem] Session event sent.");
-                        OnSendEventSuccess.Invoke(message);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(
-                            string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message)
-                        );
-                        OnSendEventFailed.Invoke(responseData as FailureResponse);
-                    }
-                    break;
-                }
-                case ResponseType.RT_GET_USER_ACCESS:
-                {
-                    if (success)
-                    {
-                        var userAccessResponseContent = responseData as UserAccessResponseContent;
-                        if (userAccessResponseContent.Access)
+                        if (success)
                         {
-                            if (userAccessResponseContent.PassingScore.HasValue)
-                            {
-                                currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
-                            }
-
-                            userAccessVerified = true;
-                            OnModuleAccessSuccess.Invoke(currentActiveLogin);
+                            Debug.Log("[ApexSystem] Ping successful.");
+                            OnPingSuccess.Invoke(message);
                         }
                         else
                         {
-                            currentActiveLogin = null;
-                            userAccessVerified = false;
-                            OnModuleAccessFailed.Invoke(
-                                new FailureResponse()
-                                {
-                                    Error = "True",
-                                    HttpCode = "401",
-                                    Message = "User does not have access to module",
-                                }
-                            );
+                            Debug.Log("[ApexSystem] Ping failed.");
+                            OnPingFailed.Invoke(message);
                         }
+                        break;
                     }
-                    else
+                case ResponseType.RT_LOGIN:
                     {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(
-                            string.Format(
-                                "[ApexSystem] Failed to get users module access data.\nError: {0}",
-                                failureData.Message
-                            )
-                        );
-
-                        OnModuleAccessFailed.Invoke(responseData as FailureResponse);
+                        Debug.Log("[ApexSystem] Calling to handle login.");
+                        HandleLogin(success, responseData);
+                        break;
                     }
-                    break;
-                }
+                case ResponseType.RT_GET_USER:
+                    {
+                        if (success)
+                        {
+                            OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                            OnGetUserFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_GET_USER_MODULES:
+                    {
+                        if (success)
+                        {
+                            OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                            OnGetUserFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_SESSION_JOINED:
+                    {
+                        if (success)
+                        {
+                            JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
+                            Debug.Log(string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
+                            heartbeatSessionID = joinSessionResponse.SessionId;
+                            sessionInProgress = true;
+                            OnJoinSessionSuccess.Invoke(message);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message)
+                            );
+                            currentSessionID = Guid.Empty;
+                            sessionInProgress = false;
+                            OnJoinSessionFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_SESSION_COMPLETE:
+                    {
+                        if (success)
+                        {
+                            sessionInProgress = false;
+                            currentSessionID = Guid.Empty;
+                            OnCompleteSessionSuccess.Invoke(message);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message)
+                            );
+                            OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_SESSION_EVENT:
+                    {
+                        if (success)
+                        {
+                            Debug.Log("[ApexSystem] Session event sent.");
+                            OnSendEventSuccess.Invoke(message);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message)
+                            );
+                            OnSendEventFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
+                case ResponseType.RT_GET_USER_ACCESS:
+                    {
+                        if (success)
+                        {
+                            var userAccessResponseContent = responseData as UserAccessResponseContent;
+                            if (userAccessResponseContent.Access)
+                            {
+                                if (userAccessResponseContent.PassingScore.HasValue)
+                                {
+                                    currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
+                                }
+
+                                userAccessVerified = true;
+                                OnModuleAccessSuccess.Invoke(currentActiveLogin);
+                            }
+                            else
+                            {
+                                currentActiveLogin = null;
+                                userAccessVerified = false;
+                                OnModuleAccessFailed.Invoke(
+                                    new FailureResponse()
+                                    {
+                                        Error = "True",
+                                        HttpCode = "401",
+                                        Message = "User does not have access to module",
+                                    }
+                                );
+                            }
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format(
+                                    "[ApexSystem] Failed to get users module access data.\nError: {0}",
+                                    failureData.Message
+                                )
+                            );
+
+                            OnModuleAccessFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
                 case ResponseType.RT_GET_MODULES_LIST:
-                {
-                    if (success)
                     {
-                        OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
-                    }
-                    else
-                    {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(
-                            string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message)
-                        );
+                        if (success)
+                        {
+                            OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message)
+                            );
 
-                        OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
-                    }
+                            OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case ResponseType.RT_GEN_AUTH_LOGIN:
-                {
-                    if (success)
                     {
-                        OnGeneratedAssistedLoginSuccess.Invoke(responseData as GeneratedAssistedLogin);
+                        if (success)
+                        {
+                            OnGeneratedAssistedLoginSuccess.Invoke(responseData as GeneratedAssistedLogin);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(string.Format("[ApexSystem] Failed to get module.\nError: {0}", failureData.Message));
+                            OnGeneratedAssistedLoginFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
                     }
-                    else
+                case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
                     {
-                        FailureResponse failureData = responseData as FailureResponse;
-                        Debug.Log(string.Format("[ApexSystem] Failed to get module.\nError: {0}", failureData.Message));
-                        OnGeneratedAssistedLoginFailed.Invoke(responseData as FailureResponse);
+                        if (success)
+                        {
+                            OnGetUserMetricsForOrgSuccess.Invoke(responseData as UserMetricsResponse);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to get user metrics for org.\nError: {0}", failureData.Message)
+                            );
+                            OnGetUserMetricsForOrgFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
                     }
-                    break;
-                }
                 default:
-                {
-                    break;
-                }
+                    {
+                        break;
+                    }
             }
 
             if (OnPlatformResponse != null)
@@ -1478,6 +1497,13 @@ namespace PixoVR.Apex
             return Instance._GenerateOneTimeLoginForUser();
         }
 
+        public static bool GetUserMetricsForCurrentUsersOrg()
+        {
+            if ( Instance.currentActiveLogin == null )
+                return false;
+            return Instance._GetUserMetricsForCurrentUsersOrg();
+        }
+
         bool _GenerateOneTimeLoginForCurrentUser()
         {
             if (currentActiveLogin == null)
@@ -1498,6 +1524,18 @@ namespace PixoVR.Apex
             }
 
             apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token);
+            return true;
+        }
+
+        bool _GetUserMetricsForCurrentUsersOrg()
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to retrieve users.");
+                return false;
+            }
+
+            apexAPIHandler.GetUserMetricsForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId);
             return true;
         }
     }
