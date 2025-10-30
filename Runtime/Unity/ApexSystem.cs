@@ -233,6 +233,9 @@ namespace PixoVR.Apex
     	public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
         public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
+        public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
+        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
+
         void Awake()
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"Version {ApexUtils.SDKVersion}");
@@ -1552,8 +1555,7 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
-
-                case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
+				case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
                     {
                         if (success)
                         {
