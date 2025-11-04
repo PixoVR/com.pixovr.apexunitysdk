@@ -24,6 +24,8 @@ namespace PixoVR.Apex
         RT_GET_MODULES_LIST,
         RT_GEN_AUTH_LOGIN,
         RT_HEARTBEAT,
+        RT_QUICK_ID_AUTH_GET_USERS,
+        RT_QUICK_ID_AUTH_LOGIN,
     }
 
     public class APIHandler
@@ -225,7 +227,7 @@ namespace PixoVR.Apex
             Debug.Log("[Platform API] Call to post api login.");
             HttpResponseMessage response = await handlingClient.PostAsync("/login", loginRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            Debug.Log("[Platform API] Got response body.");
+            Debug.Log("[Platform API] Got response body: " + body);
             object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
             if ((responseContent as LoginResponseContent).HasErrored())
             {
@@ -280,6 +282,70 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
         }
 
+        public async void GetQuickIDAuthenticationUsers(string serialNumber)
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await apiHandlingClient.GetAsync(string.Format("/v2/auth/quick-id/get-users?serialNumber={0}", serialNumber));
+            string body = await response.Content.ReadAsStringAsync();
+
+            Debug.Log($"[Platform API] Body returned as {body}");
+
+            object responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
+            if ((responseContent as QuickIDAuthGetUsersResponse).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_GET_USERS, response, responseContent);
+        }
+
+        public async void QuickIDLogin(QuickIDLoginData login)
+        {
+            Debug.Log("[Platform API] Calling Quick ID login.");
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+
+            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(login));
+            Debug.Log("[Platform API] Quick ID login request content: " + JsonUtility.ToJson(login));
+            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+            Debug.Log("[Platform API] Call to post api Quick ID login.");
+            HttpResponseMessage response = await apiHandlingClient.PostAsync("/v2/auth/quick-id/login", loginRequestContent);
+            string body = await response.Content.ReadAsStringAsync();
+            Debug.Log("[Platform API] Got response body: " + body);
+            object responseContent = JsonConvert.DeserializeObject<PlatformLoginResponse>(body);
+
+            var loginResponseContent = new LoginResponseContent();
+            if ((responseContent as PlatformLoginResponse).HasErrored())
+            {
+                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+            }
+            else
+            {
+                var platformLoginResponse = responseContent as PlatformLoginResponse;
+
+                loginResponseContent.Token = platformLoginResponse.Token;
+                if (platformLoginResponse.User != null)
+                {
+                    loginResponseContent.ID = platformLoginResponse.User.Id;
+                    loginResponseContent.OrgId = platformLoginResponse.User.OrgId;
+                    loginResponseContent.First = platformLoginResponse.User.FirstName;
+                    loginResponseContent.Last = platformLoginResponse.User.LastName;
+                    loginResponseContent.Email = platformLoginResponse.User.Email;
+                    loginResponseContent.Role = platformLoginResponse.User.Role;
+                    loginResponseContent.Org = platformLoginResponse.User.Org;
+                }
+                else
+                {
+                    Debug.Log("[Platform API] Quick ID login response did not contain user data.");
+                }
+            }
+
+            Debug.Log("[Platform API] Response content deserialized and mapped.");
+            OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_LOGIN, response, loginResponseContent);
+        }
+
         public async void JoinSession(string authToken, JoinSessionData joinData)
         {
             handlingClient.DefaultRequestHeaders.Clear();
@@ -313,7 +379,8 @@ namespace PixoVR.Apex
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
             string optionalParameters = "";
-            if (serialNumber.Length > 0)
+            Debug.Log($"Checking for a serial number: {serialNumber}");
+            if (!string.IsNullOrEmpty(serialNumber))
             {
                 optionalParameters = "?serial=" + serialNumber;
             }
