@@ -113,7 +113,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
  ### [1.6.6] - 2025-06-17
  - Fix to the file names used for the Setup script.
-
- ### [1.7.0] - 2025-10-19
- - Deeper runtime logging.
- - Smoother integration with ManageXR.
+ 
+ ### [1.6.7] - 2025-11-03
+ - Added more logging.
+ - Aligned variable usage to prevent errors.
+ - Removes use of old API url.

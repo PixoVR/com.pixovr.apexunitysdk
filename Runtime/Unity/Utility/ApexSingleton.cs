@@ -6,9 +6,30 @@ namespace PixoVR.Apex
 {
     public class ApexSingleton<T> : MonoBehaviour where T : MonoBehaviour
     {
+        private static readonly string MASTER_TAG = "ApexSingleton";
         private static T instance;
 
         private static readonly object lockObject = new object();
+
+        public bool InitializeInstance(T targetInstance)
+        {
+            lock (lockObject)
+            {
+                if (instance == null)
+                {
+                    instance = targetInstance;
+                    DontDestroyOnLoad(instance);
+                    return true;
+                }
+                else if(instance != targetInstance)
+                {
+                    Debug.unityLogger.Log(LogType.Warning, MASTER_TAG, "Destroying an instance that was created after.");
+                    Destroy(targetInstance.gameObject);
+                }
+            }
+
+            return false;
+        }
 
         public static T Instance
         {
@@ -16,7 +37,7 @@ namespace PixoVR.Apex
             {
                 if (ApplicationIsQuitting)
                 {
-                    Debug.LogWarning("[ApexSingleton] Singleton Instance '{0}' won't be created while application is quitting.");
+                    Debug.unityLogger.Log(LogType.Warning, MASTER_TAG, "Singleton Instance '{0}' won't be created while application is quitting.");
                     return null;
                 }
 
@@ -44,13 +65,13 @@ namespace PixoVR.Apex
 
                         if (existingInstances.Length > 1)
                         {
-                            Debug.LogError("[ApexSingleton] Multiple instances of '{0}' found. There should only be 1 instances. Reopening the scene might fix the problem.");
+                            Debug.unityLogger.Log(LogType.Error, MASTER_TAG, "Multiple instances of '{0}' found. There should only be 1 instances. Reopening the scene might fix the problem.");
                             return instance;
                         }
 
                         if (instance == null)
                         {
-                            Debug.LogAssertion("[ApexSingleton] An instance was found and is still null.");
+                            Debug.unityLogger.Log(LogType.Assert, MASTER_TAG, "An instance was found and is still null.");
                             return null;
                         }
                     }
@@ -71,7 +92,7 @@ namespace PixoVR.Apex
         /// </summary>
         public virtual void OnDestroy()
         {
-            Debug.Log("[ApexSingleton] On Destroy on singleton called.");
+            Debug.unityLogger.Log(LogType.Log, MASTER_TAG, "On Destroy on singleton called.");
             ApplicationIsQuitting = true;
         }
     }
