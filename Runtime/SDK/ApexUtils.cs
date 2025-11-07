@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace PixoVR.Apex.Utils
 {
-    public static class ApexUtils
+    public static partial class ApexUtils
     {
         public static string INVALID_IP = "0.0.0.0";
         public static string INVALID_IPV6 = "::/0";
@@ -99,8 +99,6 @@ namespace PixoVR.Apex.Utils
             StringOfJSON stringOfJson = new StringOfJSON(json);
             return stringOfJson.toJObject();
         }
-
-        public static string SDKVersion => "1.6.6";
     }
 }
 

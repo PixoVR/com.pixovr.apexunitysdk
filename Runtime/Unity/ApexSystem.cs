@@ -229,6 +229,7 @@ namespace PixoVR.Apex
 
         void Awake()
         {
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Version {ApexUtils.SDKVersion}");
             Debug.unityLogger.Log(LogType.Log, TAG, $"ApexSystem found on {gameObject.name}");
             if(!InitializeInstance(this))
             {
@@ -391,9 +392,16 @@ namespace PixoVR.Apex
         void _ExitApplication(string returnTarget)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, "ApexSystem::_ExitApplication");
-            if (returnTarget == null)
+            if (string.IsNullOrEmpty(returnTarget))
             {
-                returnTarget = "";
+                if (string.IsNullOrEmpty(returnTargetParameter))
+                {
+                    returnTarget = returnTargetParameter;
+                }
+                else
+                {
+                    returnTarget = "";
+                }
             }
 
             string returnTargetType = "app";
@@ -684,12 +692,6 @@ namespace PixoVR.Apex
                 return false;
 
             return true;
-        }
-
-        [Obsolete("ReturnToHub has been deprecated, please use ExitApplication.", true)]
-        public static void ReturnToHub()
-        {
-            Instance._ReturnToHub();
         }
 
         public static void ExitApplication(string returnTarget = "")
@@ -1579,25 +1581,6 @@ namespace PixoVR.Apex
                 FailureResponse failureData = responseData as FailureResponse;
                 Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
                 OnLoginFailed.Invoke(responseData as FailureResponse);
-            }
-        }
-
-        void _ReturnToHub()
-        {
-            var token = currentActiveLogin.Token;
-
-            if (
-                serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase)
-                || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase)
-            )
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-            }
-            else
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
             }
         }
 
