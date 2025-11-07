@@ -2,6 +2,10 @@
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
+using UnityEngine.UIElements;
+using System.Threading.Tasks;
 
 public static class PixoVREditorCommands
 {
@@ -23,6 +27,76 @@ public static class PixoVREditorCommands
         File.Copy(sourceManifestPath, destinationManifestPath, true);
         File.Copy(sourceJavaUtilsPath, destinationJavaUtilsPath, true);
         AssetDatabase.Refresh();
+    }
+
+    [MenuItem("PixoVR/Update Plugin Version")]
+    public static async Task PixoVRVersionUpdate()
+    {
+        await VersionUpdate();
+
+    }
+
+    public static async Task VersionUpdate()
+    {
+        var packageList = Client.List(true);
+
+        while (!packageList.IsCompleted)
+        {
+            await Task.Delay(500);
+        }
+
+        if (packageList.Status != StatusCode.Success)
+        {
+            Debug.Log("Failed to get a list of packages.");
+            return;
+        }
+        else
+        {
+            Debug.Log("Was successful in finding all of the packages.");
+        }
+
+        string packageVersion = "", packageAssetPath = "";
+        foreach (var package in packageList.Result)
+        {
+            if (package.name.Equals("com.pixovr.apexunitysdk"))
+            {
+                Debug.Log($"Package info: {package.name} v{package.version} - {package.assetPath}");
+                packageVersion = package.version;
+                packageAssetPath = package.assetPath;
+            }
+        }
+
+        if(string.IsNullOrEmpty(packageVersion))
+        {
+            Debug.LogError($"Failed to find the PixoVR SDK package or it did not contain a valid version.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(packageAssetPath))
+        {
+            Debug.LogError($"Failed to find the PixoVR SDK package location.");
+            return;
+        }
+
+        string projectAssetsPath = Application.dataPath;
+
+        // Navigate up one level to get the project root path
+        string projectRootPath = Directory.GetParent(projectAssetsPath).FullName;
+        string generatedPixoUtils = $"namespace PixoVR.Apex.Utils {{ public static partial class ApexUtils {{ public static string SDKVersion => \"{packageVersion}\"; }} }}";
+        string generatedUtilsFile = Path.Combine(projectRootPath, packageAssetPath, "Runtime/SDK/ApexUtilsGenerated.cs");
+
+        Debug.Log($"Generated file {generatedUtilsFile}");
+
+        if(File.Exists(generatedPixoUtils))
+        {
+            File.Delete(generatedPixoUtils);
+        }
+
+        File.WriteAllText(generatedUtilsFile, generatedPixoUtils);
+
+        AssetDatabase.Refresh();
+
+        return;
     }
 
     private static string FindPluginPath()
