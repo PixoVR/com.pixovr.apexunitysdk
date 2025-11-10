@@ -224,8 +224,12 @@ namespace PixoVR.Apex
         public OnGetQuickIDAuthUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
         public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
 
-        public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
+      	public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
         public OnApexFailureEvent OnQuickIDAuthLoginFailed = new();
+        
+        
+    	  public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
+        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
         void Awake()
         {
@@ -358,7 +362,6 @@ namespace PixoVR.Apex
             }
 
             // TODO: Move to new plugin
-            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
             apexAPIHandler.OnAPIResponse += OnAPIResponse;
 
@@ -1538,7 +1541,22 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
-
+				case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
+                    {
+                        if (success)
+                        {
+                            OnGetUserMetricsForOrgSuccess.Invoke(responseData as UserMetricsResponse);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to get user metrics for org.\nError: {0}", failureData.Message)
+                            );
+                            OnGetUserMetricsForOrgFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
                 default:
                     {
                         break;
@@ -1611,6 +1629,13 @@ namespace PixoVR.Apex
             return Instance._GenerateOneTimeLoginForUser();
         }
 
+        public static bool GetUserMetricsForCurrentUsersOrg()
+        {
+            if ( Instance.currentActiveLogin == null )
+                return false;
+            return Instance._GetUserMetricsForCurrentUsersOrg();
+        }
+
         bool _GenerateOneTimeLoginForCurrentUser()
         {
             if (currentActiveLogin == null)
@@ -1631,6 +1656,18 @@ namespace PixoVR.Apex
             }
 
             apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token);
+            return true;
+        }
+
+        bool _GetUserMetricsForCurrentUsersOrg()
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to retrieve users.");
+                return false;
+            }
+
+            apexAPIHandler.GetUserMetricsForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId);
             return true;
         }
     }

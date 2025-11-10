@@ -26,6 +26,7 @@ namespace PixoVR.Apex
         RT_HEARTBEAT,
         RT_QUICK_ID_AUTH_GET_USERS,
         RT_QUICK_ID_AUTH_LOGIN,
+        RT_GET_USER_METRICS_FOR_ORG,
     }
 
     public class APIHandler
@@ -36,9 +37,6 @@ namespace PixoVR.Apex
         protected string URL = "";
         protected HttpClient handlingClient = null;
 
-        // Move to a separate plugin
-        protected string webURL = "";
-        protected HttpClient webHandlingClient = null;
 
         // Need to migrate to this in the future
         protected string apiURL = "";
@@ -52,7 +50,6 @@ namespace PixoVR.Apex
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);
 
-            webHandlingClient = new HttpClient();
             apiHandlingClient = new HttpClient();
         }
 
@@ -71,14 +68,6 @@ namespace PixoVR.Apex
             URL = endpointUrl;
             Debug.Log("[APIHandler] Set Endpoint to " + URL);
             handlingClient.BaseAddress = new Uri(URL);
-        }
-
-        public void SetWebEndpoint(string endpointUrl)
-        {
-            EnsureURLHasProtocol(ref endpointUrl);
-
-            webURL = endpointUrl;
-            webHandlingClient.BaseAddress = new Uri(webURL);
         }
 
         public void SetPlatformEndpoint(string endpointUrl)
@@ -152,36 +141,24 @@ namespace PixoVR.Apex
 
                 // Parse the GraphQL response structure
                 JObject jsonResponse = JObject.Parse(body);
-
-                if (jsonResponse["data"] != null && jsonResponse["data"]["generateAuthCode"] != null)
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "generateAuthCode");
+                if (failureResponse != null)
                 {
-                    // Extract the relevant data from the GraphQL response
-                    string code = jsonResponse["data"]["generateAuthCode"]["code"]?.ToString();
-                    string expiresAt = jsonResponse["data"]["generateAuthCode"]["expiresAt"]?.ToString();
+                    OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, failureResponse);
+                    return;
+                }
 
-                    // Create the GeneratedAssistedLogin object with the extracted data
-                    GeneratedAssistedLogin assistedLogin = new GeneratedAssistedLogin
-                    {
-                        AssistedLogin = new AssistedLoginCode { AuthCode = code, Expires = expiresAt },
-                    };
+                // Extract the relevant data from the GraphQL response
+                string code = jsonResponse["data"]["generateAuthCode"]["code"]?.ToString();
+                string expiresAt = jsonResponse["data"]["generateAuthCode"]["expiresAt"]?.ToString();
 
-                    responseContent = assistedLogin;
-                }
-                else if (jsonResponse["errors"] != null)
+                // Create the GeneratedAssistedLogin object with the extracted data
+                GeneratedAssistedLogin assistedLogin = new GeneratedAssistedLogin
                 {
-                    // Handle GraphQL errors
-                    string errorMessage = jsonResponse["errors"]?[0]?["message"]?.ToString() ?? "Unknown GraphQL error";
-                    responseContent = new FailureResponse { Error = "true", Message = errorMessage };
-                }
-                else
-                {
-                    // Fallback error handling
-                    responseContent = new FailureResponse
-                    {
-                        Error = "true",
-                        Message = "Invalid response format from server",
-                    };
-                }
+                    AssistedLogin = new AssistedLoginCode { AuthCode = code, Expires = expiresAt },
+                };
+
+                responseContent = assistedLogin;
             }
             catch (Exception ex)
             {
@@ -191,6 +168,57 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, responseContent);
+        }
+
+        public async void GetUserMetricsForOrg(string authToken, int orgID)
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var graphqlRequest = new
+            {
+                operationName = "userMetrics",
+                variables = new { orgId = orgID },
+                query = "query userMetrics($orgId: ID!) { userMetrics(orgId: $orgId) { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt } }",
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
+            object responseContent;
+            try
+            {
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                Debug.Log(body);
+
+
+                // TODO REEDER NEED TO WRITE CODE TO HANDLE 422 GQL ERRORS
+                JObject jsonResponse = JObject.Parse(body);
+
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
+                if (failureResponse != null)
+                {
+                    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
+                    return;
+                }
+
+                var userMetricsJSON = jsonResponse["data"]["userMetrics"];
+                var userMetrics = JsonConvert.DeserializeObject<List<UserMetric>>(userMetricsJSON.ToString());
+                responseContent = new UserMetricsResponse()
+                {
+                    Data = userMetrics,
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error retrieving users: {ex.Message}");
+                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
         }
 
         public async void LoginWithToken(string token)
@@ -512,6 +540,27 @@ namespace PixoVR.Apex
 
             Debug.Log(orgModules.Count.ToString());
             OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
+        }
+
+        private FailureResponse GetGQLFailureResponse(JObject jsonResponse, string jsonDataObjectKey)
+        {
+
+            if (!String.IsNullOrEmpty(jsonResponse["errors"]?.ToString()))
+            {
+                string errorMessage = jsonResponse["errors"]?[0]?["message"]?.ToString() ?? "Unknown GraphQL error";
+                return new FailureResponse { Error = "true", Message = errorMessage };
+            }
+
+            if (String.IsNullOrEmpty(jsonResponse["data"]?.ToString()) || String.IsNullOrEmpty(jsonResponse["data"][jsonDataObjectKey]?.ToString()))
+            {
+                return new FailureResponse
+                {
+                    Error = "true",
+                    Message = "Invalid response format from server",
+                };
+            }
+
+            return null;
         }
     }
 }

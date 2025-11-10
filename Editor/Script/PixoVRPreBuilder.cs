@@ -1,9 +1,10 @@
-﻿using UnityEditor.Build.Reporting;
-using UnityEditor.Build;
-using UnityEngine;
 using PixoVR.Apex;
 using UnityEditor;
-using System.IO;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+using System.Collections.Generic;
+using System.Text;
 
 namespace PixoVR.Editor
 {
