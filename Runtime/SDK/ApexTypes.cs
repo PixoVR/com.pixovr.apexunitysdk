@@ -627,55 +627,6 @@ namespace PixoVR.Apex
         public string abbreviation;
         public string description;
     }
-
-
-
-    [Serializable]
-    public class UserMetricsResponse : IFailure, IPlatformErrorable
-    {
-        public List<UserMetric> Data;
-
-        public bool HasErrored()
-        {
-            return (Data == null || Data.Count <= 0); 
-        }
-
-    }
-
-
-    [Serializable]
-    public class UserMetric
-    {
-        public int id;
-        public string firstName;
-        public string lastName;
-        public string username;
-        public string email;
-        public string role;
-        public string createdAt;
-        public int? orgUnitId;
-        public OrgUnit orgUnit;
-        public int? lastModuleId;
-        public Module lastModule;
-        public int sessionCount;
-        public string lastActiveAt;
-    }
-
-    [Serializable]
-    public class OrgUnit
-    {
-        public int id;
-        public string name;
-        public string externalId;
-    }
-
-    [Serializable]
-    public class Module
-    {
-        public int id;
-        public string abbreviation;
-        public string description;
-    }
     
     #endregion
 
