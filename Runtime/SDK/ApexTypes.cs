@@ -603,13 +603,60 @@ namespace PixoVR.Apex
         public string username;
         public string email;
         public string role;
-        public string createdAt;
+        public DateTime createdAt;
         public int? orgUnitId;
         public OrgUnit orgUnit;
         public int? lastModuleId;
         public Module lastModule;
         public int sessionCount;
-        public string lastActiveAt;
+        public DateTime? lastActiveAt;
+        public bool isInModule;
+
+        [SerializeField]
+        public string DisplayName
+        {
+            get { return $"{firstName} {lastName}"; }
+        }
+
+        [SerializeField]
+        public string UsernameEmail
+        {
+            get
+            {
+                var display = username;
+                if (!String.IsNullOrWhiteSpace(email))
+                {
+                    display = $"{username} ({email})";
+                }
+                return display ;
+            }
+        }
+
+        [SerializeField]
+        public string LastActiveDisplay
+        {
+            get
+            {
+                var dateFormat = "MM/dd/yyyy hh:mm tt";
+                if (lastActiveAt?.Date == DateTime.Now.Date)
+                {
+                    dateFormat = "hh:mm tt";
+                }
+
+                if ( isInModule )
+                {
+                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";                }
+
+                if (lastActiveAt != null)
+                {
+                    return $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
+                }
+
+                
+                return "No session";
+            }
+        }
+
     }
 
     [Serializable]

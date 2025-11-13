@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
@@ -180,7 +181,7 @@ namespace PixoVR.Apex
             {
                 operationName = "userMetrics",
                 variables = new { orgId = orgID },
-                query = "query userMetrics($orgId: ID!) { userMetrics(orgId: $orgId) { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt } }",
+                query = "query userMetrics($orgId: ID!) { userMetrics(orgId: $orgId) { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } }",
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
@@ -191,12 +192,8 @@ namespace PixoVR.Apex
             {
                 response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
                 string body = await response.Content.ReadAsStringAsync();
-                Debug.Log(body);
 
-
-                // TODO REEDER NEED TO WRITE CODE TO HANDLE 422 GQL ERRORS
                 JObject jsonResponse = JObject.Parse(body);
-
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                 if (failureResponse != null)
                 {
