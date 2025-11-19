@@ -643,9 +643,17 @@ namespace PixoVR.Apex
                     dateFormat = "hh:mm tt";
                 }
 
-                if ( isInModule )
+                if (isInModule)
                 {
-                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";                }
+                    // TODO: Determine how we want to handle when no module exists but it says they are in a module.
+                    if(lastModule == null)
+                    {
+                        Debug.Log("No module found for this user.");
+                        return "In module...";
+                    }
+
+                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                }
 
                 if (lastActiveAt != null)
                 {
