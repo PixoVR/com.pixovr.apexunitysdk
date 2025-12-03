@@ -61,4 +61,9 @@ namespace PixoVR.Apex
         public const string Saudi_ProductionEnvironment = "https://saudi.apex.pixovr.com";
         public const string Local_DevelopmentEnvironment = "http://localhost:8000";
     }
+
+    public class PixoPlatformModuleIDs
+    {
+        public const int HUBAPP_MODULE_ID = 13;
+    }
 }
