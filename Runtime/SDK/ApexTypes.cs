@@ -584,14 +584,37 @@ namespace PixoVR.Apex
     [Serializable]
     public class UserMetricsResponse : IFailure, IPlatformErrorable
     {
-        public List<UserMetric> Data;
+        public List<UserMetric> result;
+        public PageInfo pageInfo;
 
         public bool HasErrored()
         {
-            return (Data == null || Data.Count <= 0); 
+            return (result == null || result.Count <= 0); 
         }
-
     }
+
+
+    [Serializable]
+    public class PageInfo
+    {
+        public int totalCount;
+        public int page;
+        public int offset;
+        public int pageSize;
+        public int? previousPage;
+        public int? nextPage;
+
+        public int? GetLastPageNumber()
+        {
+            var lastPage = 1;
+            if (pageSize > 0)
+            {
+                lastPage = (int)Math.Ceiling((double)totalCount / pageSize);
+            }
+            return lastPage;
+        }
+    }
+
 
 
     [Serializable]

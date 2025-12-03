@@ -197,7 +197,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void GetUserMetricsForOrg(string authToken, int orgID)
+        public async void GetUserMetricsForOrg(string authToken, int orgID, int page)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -206,8 +206,8 @@ namespace PixoVR.Apex
             var graphqlRequest = new
             {
                 operationName = "userMetrics",
-                variables = new { orgId = orgID },
-                query = "query userMetrics($orgId: ID!) { userMetrics(orgId: $orgId) { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } }",
+                variables = new { orgId = orgID, limit = 10, page = page },
+                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $search: String) { userMetrics(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
@@ -228,11 +228,7 @@ namespace PixoVR.Apex
                 }
 
                 var userMetricsJSON = jsonResponse["data"]["userMetrics"];
-                var userMetrics = JsonConvert.DeserializeObject<List<UserMetric>>(userMetricsJSON.ToString());
-                responseContent = new UserMetricsResponse()
-                {
-                    Data = userMetrics,
-                };
+                responseContent = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
             }
             catch (Exception ex)
             {
