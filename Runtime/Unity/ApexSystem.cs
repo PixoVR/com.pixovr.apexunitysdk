@@ -804,7 +804,7 @@ namespace PixoVR.Apex
             apexAPIHandler.Ping();
         }
 
-        public bool _LoginWithToken(string token)
+        protected bool _LoginWithToken(string token)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"Calling LoginWithToken ({token})");
             if (token.Length <= 0)
@@ -902,9 +902,7 @@ namespace PixoVR.Apex
             }
         }
 
-
-
-        public bool _CheckModuleAccess(int targetModuleID = -1)
+        protected bool _CheckModuleAccess(int targetModuleID = -1)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, "_CheckModuleAccess called.");
 
@@ -1496,20 +1494,6 @@ namespace PixoVR.Apex
 
                         break;
                     }
-                case ResponseType.RT_GEN_AUTH_LOGIN:
-                    {
-                        if (success)
-                        {
-                            OnGeneratedAssistedLoginSuccess.Invoke(responseData as GeneratedAssistedLogin);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get module.\nError: {0}", failureData.Message));
-                            OnGeneratedAssistedLoginFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
                 case ResponseType.RT_QUICK_ID_AUTH_GET_USERS:
                     {
                         if (success)
@@ -1592,25 +1576,6 @@ namespace PixoVR.Apex
             }
         }
 
-        void _ReturnToHub()
-        {
-            var token = currentActiveLogin.Token;
-
-            if (
-                serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase)
-                || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase)
-            )
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-            }
-            else
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
-            }
-        }
-
         bool _RequestAuthorizationCode()
         {
             if (!webSocket.IsConnected())
@@ -1620,12 +1585,14 @@ namespace PixoVR.Apex
             return webSocket.RequestAuthorizationCode();
         }
 
-        public static bool GenerateOneTimeLoginForCurrentUser()
+        public static bool GenerateOneTimeLoginForCurrentUser(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (Instance.currentActiveLogin == null)
-                return false;
+            return Instance._GenerateOneTimeLoginForCurrentUser(success, failure);
+        }
 
-            return Instance._GenerateOneTimeLoginForUser();
+        public static bool GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            return Instance._GenerateOneTimeLoginForUser(userId, success, failure);
         }
 
         public static bool GetUserMetricsForCurrentUsersOrg()
@@ -1635,7 +1602,7 @@ namespace PixoVR.Apex
             return Instance._GetUserMetricsForCurrentUsersOrg();
         }
 
-        bool _GenerateOneTimeLoginForCurrentUser()
+        bool _GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
@@ -1643,10 +1610,17 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            return _GenerateOneTimeLoginForUser();
+            if(userId < 0)
+            {
+                Debug.unityLogger.Log(LogType.Error, TAG, "User id is invalid.");
+                return false;
+            }
+
+            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, userId, success, failure);
+            return true;
         }
 
-        bool _GenerateOneTimeLoginForUser()
+        bool _GenerateOneTimeLoginForCurrentUser(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
@@ -1654,7 +1628,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token);
+            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, -1, success, failure);
             return true;
         }
 
