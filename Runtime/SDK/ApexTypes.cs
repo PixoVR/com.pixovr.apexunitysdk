@@ -634,6 +634,7 @@ namespace PixoVR.Apex
         public int sessionCount;
         public DateTime? lastActiveAt;
         public bool isInModule;
+        public string passcode;
 
         [SerializeField]
         public string DisplayName
@@ -660,6 +661,16 @@ namespace PixoVR.Apex
         {
             get
             {
+                var dateFormat = "hh:mm tt";
+                return $"{lastActiveAt?.ToString(dateFormat)}";
+            }
+        }
+
+        [SerializeField]
+        public string LastSessionDisplay
+        {
+            get
+            {
                 var dateFormat = "MM/dd/yyyy hh:mm tt";
                 if (lastActiveAt?.Date == DateTime.Now.Date)
                 {
@@ -669,9 +680,9 @@ namespace PixoVR.Apex
                 if (isInModule)
                 {
                     // TODO: Determine how we want to handle when no module exists but it says they are in a module.
-                    if(lastModule == null)
+                    if (lastModule == null)
                     {
-                        Debug.Log("No module found for this user.");
+                        //Debug.Log("No module found for this user.");
                         return "In module...";
                     }
 
@@ -683,11 +694,10 @@ namespace PixoVR.Apex
                     return $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
                 }
 
-                
+
                 return "No session";
             }
         }
-
     }
 
     [Serializable]

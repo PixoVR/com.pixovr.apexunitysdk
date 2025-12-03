@@ -116,21 +116,46 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_PING, response, null);
         }
 
-        public async void GenerateAssistedLogin(string authToken)
+        class GenerateAuthCodeInput
+        {
+            public int[] userIds;
+        }
+
+        public async void GenerateAssistedLogin(string authToken, int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             // Create the GraphQL request payload
-            var graphqlRequest = new
-            {
-                operationName = "generateAuthCode",
-                variables = new { input = new { } },
-                query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
-            };
+            string jsonContent = "";
 
-            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            if (userId >= 0)
+            {
+                var userIdArray = new int[1] { userId };
+                var input = new { input = new GenerateAuthCodeInput { userIds = userIdArray } };
+                // Create the GraphQL request payload
+                var graphqlRequest = new
+                {
+                    operationName = "generateAuthCode",
+                    variables = input,
+                    query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
+                };
+
+                jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            }
+            else
+            {
+                var graphqlRequest = new
+                {
+                    operationName = "generateAuthCode",
+                    variables = new { input = new { } },
+                    query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
+                };
+
+                jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            }
+
             HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
             HttpResponseMessage response;
             object responseContent;
@@ -145,7 +170,7 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "generateAuthCode");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, failureResponse);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
 
@@ -165,10 +190,11 @@ namespace PixoVR.Apex
             {
                 Debug.LogError($"Error generating assisted login: {ex.Message}");
                 response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
-                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GEN_AUTH_LOGIN, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
         public async void GetUserMetricsForOrg(string authToken, int orgID, int page)
