@@ -686,6 +686,11 @@ namespace PixoVR.Apex
                         return "In module...";
                     }
 
+                    if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                    {
+                        return "In Hub App";
+                    }
+
                     return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
                 }
 
