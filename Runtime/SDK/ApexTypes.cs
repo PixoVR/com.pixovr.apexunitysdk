@@ -428,7 +428,7 @@ namespace PixoVR.Apex
         }
     }
 
-#region Platform Models
+    #region Platform Models
     [Serializable]
     public class PlatformPlayer
     {
@@ -485,13 +485,13 @@ namespace PixoVR.Apex
 
 
     [Serializable]
-    public class PlatformLoginResponse: IPlatformErrorable
+    public class PlatformLoginResponse : IPlatformErrorable
     {
- 		public string Token { get; set; }
+        public string Token { get; set; }
         public string Msg { get; set; }
         public User User { get; set; }
 
-       public bool HasErrored()
+        public bool HasErrored()
         {
             return (User == null || string.IsNullOrEmpty(Token));
         }
@@ -575,13 +575,13 @@ namespace PixoVR.Apex
         public string Username;
         public string SerialNumber;
 
-        public QuickIDLoginData( string serialNumber, string username)
+        public QuickIDLoginData(string serialNumber, string username)
         {
             SerialNumber = serialNumber;
             Username = username;
         }
     }
-    
+
     [Serializable]
     public class UserMetricsResponse : IFailure, IPlatformErrorable
     {
@@ -590,7 +590,7 @@ namespace PixoVR.Apex
 
         public bool HasErrored()
         {
-            return (result == null || result.Count <= 0); 
+            return (result == null || result.Count <= 0);
         }
     }
 
@@ -669,7 +669,7 @@ namespace PixoVR.Apex
                 {
                     display = $"{username} ({email})";
                 }
-                return display ;
+                return display;
             }
         }
 
@@ -688,18 +688,24 @@ namespace PixoVR.Apex
         {
             get
             {
-                var dateFormat = "MM/dd/yyyy hh:mm tt";
-                if (lastActiveAt?.Date == DateTime.Now.Date)
+                if (lastActiveAt == null)
                 {
-                    dateFormat = "hh:mm tt";
+                    return "No session";
                 }
 
+                // Convert from UTC to local time
+                var localTime = lastActiveAt.Value.ToLocalTime();
+
+                // Date format based on whether the time is today locally
+                var dateFormat = localTime.Date == DateTime.Now.Date
+                    ? "hh:mm tt"
+                    : "MM/dd/yyyy hh:mm tt";
+
+                // Handle "in module" states
                 if (isInModule)
                 {
-                    // TODO: Determine how we want to handle when no module exists but it says they are in a module.
                     if (lastModule == null)
                     {
-                        //Debug.Log("No module found for this user.");
                         return "In module...";
                     }
 
@@ -708,16 +714,11 @@ namespace PixoVR.Apex
                         return "In Hub App";
                     }
 
-                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {localTime.ToString(dateFormat)}";
                 }
 
-                if (lastActiveAt != null)
-                {
-                    return $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
-                }
-
-
-                return "No session";
+                // Not in module → session completed
+                return $"Session Completed - {localTime.ToString(dateFormat)}";
             }
         }
     }
@@ -737,7 +738,7 @@ namespace PixoVR.Apex
         public string abbreviation;
         public string description;
     }
-    
+
     #endregion
 
 
