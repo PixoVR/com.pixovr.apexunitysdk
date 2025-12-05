@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Unity.Properties;
@@ -615,7 +616,23 @@ namespace PixoVR.Apex
         }
     }
 
-
+    public enum UserRoles
+    {
+        [Description("superadmin")]
+        Superadmin = 0,
+        [Description("admin")]
+        Admin = 1,
+        [Description("manager")]
+        Manager = 2,
+        [Description("developer")]
+        Developer = 3,
+        [Description("user")]
+        User = 4,
+        [Description("student")]
+        Student = 5,
+        [Description("trial")]
+        Trial = 6
+    }
 
     [Serializable]
     public class UserMetric
