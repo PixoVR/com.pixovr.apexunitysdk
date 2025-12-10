@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Unity.Properties;
@@ -702,9 +703,15 @@ namespace PixoVR.Apex
                     : "MM/dd/yyyy hh:mm tt";
 
                 // Handle "in module" states
+                var moduleText = String.Empty;
+                if (lastModule != null)
+                {
+                    moduleText = $"{lastModule.description} ({lastModule.abbreviation})";
+                }
+
                 if (isInModule)
                 {
-                    if (lastModule == null)
+                    if (String.IsNullOrEmpty(moduleText))
                     {
                         return "In module...";
                     }
@@ -714,11 +721,11 @@ namespace PixoVR.Apex
                         return "In Hub App";
                     }
 
-                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {localTime.ToString(dateFormat)}";
+                    return $"In module {moduleText} - {localTime.ToString(dateFormat, CultureInfo.InvariantCulture)}";
                 }
 
                 // Not in module → session completed
-                return $"Session Completed - {localTime.ToString(dateFormat)}";
+                return $"Session Completed for {moduleText} - {localTime.ToString(dateFormat, CultureInfo.InvariantCulture)}";
             }
         }
     }
