@@ -737,7 +737,42 @@ namespace PixoVR.Apex
         public string abbreviation;
         public string description;
     }
-    
+
+
+    [Serializable]
+    public class Location
+    {
+        public string city;
+        public string region;
+        public string country;
+    }
+
+    [Serializable]
+    public class Device
+    {
+        public int id;
+        public string name;
+        public string serial;
+        public Location location;
+        public int? batteryLevel;
+        public bool online;
+        public string model;
+        public Module currentModule;
+        public User currentUser;
+    }
+
+    [Serializable]
+    public class OrgDevicesResponse : IFailure, IPlatformErrorable
+    {
+        public List<Device> result;
+        public PageInfo pageInfo;
+
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
     #endregion
 
 

@@ -230,6 +230,9 @@ namespace PixoVR.Apex
     	public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
         public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
+        public OnGetDevicesForOrgSuccessEvent OnGetDevicesForOrgSuccess = new();
+        public OnApexFailureEvent OnGetDevicesForOrgFailed = new OnApexFailureEvent();
+
         void Awake()
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"ApexSystem found on {gameObject.name}");
@@ -1540,6 +1543,22 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
+                case ResponseType.RT_GET_DEVICES_FOR_ORG:
+                    {
+                        if (success)
+                        {
+                            OnGetDevicesForOrgSuccess.Invoke(responseData as OrgDevicesResponse);
+                        }
+                        else
+                        {
+                            FailureResponse failureData = responseData as FailureResponse;
+                            Debug.Log(
+                                string.Format("[ApexSystem] Failed to get devices for org.\nError: {0}", failureData.Message)
+                            );
+                            OnGetDevicesForOrgFailed.Invoke(responseData as FailureResponse);
+                        }
+                        break;
+                    }
                 default:
                     {
                         break;
@@ -1602,6 +1621,13 @@ namespace PixoVR.Apex
             return Instance._GetUserMetricsForCurrentUsersOrg(page);
         }
 
+        public static bool GetDevicesForOrg(int page)
+        {
+            if (Instance.currentActiveLogin == null)
+                return false;
+            return Instance._GetDevicesForOrg(page);
+        }
+
         bool _GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
@@ -1641,6 +1667,18 @@ namespace PixoVR.Apex
             }
 
             apexAPIHandler.GetUserMetricsForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page);
+            return true;
+        }
+
+        bool _GetDevicesForOrg(int page)
+        {
+            if (currentActiveLogin == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to retrieve org devices.");
+                return false;
+            }
+
+            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page);
             return true;
         }
     }
