@@ -1,11 +1,12 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using PixoVR.Apex.XAPI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using PixoVR.Apex.XAPI;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace PixoVR.Apex
@@ -28,6 +29,7 @@ namespace PixoVR.Apex
         RT_QUICK_ID_AUTH_GET_USERS,
         RT_QUICK_ID_AUTH_LOGIN,
         RT_GET_USER_METRICS_FOR_ORG,
+        RT_GET_DEVICES_FOR_ORG,
     }
 
     public class APIHandler
@@ -238,6 +240,230 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
+        }
+
+        public async void GetDevicesForOrg(string authToken, int orgID, int page) // TODO REEDER
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var graphqlRequest = new
+            {
+                operationName = "TODO",
+                variables = new { orgId = orgID, limit = 10, page = page },
+                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $search: String) { userMetrics(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
+            object responseContent;
+            try
+            {
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+
+                //JObject jsonResponse = JObject.Parse(body);
+                //var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
+                //if (failureResponse != null)
+                //{
+                //    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
+                //    return;
+                //}
+
+                //var userMetricsJSON = jsonResponse["data"]["userMetrics"];
+                //responseContent = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+            }
+            catch (Exception ex)
+            {
+                //Debug.LogError($"Error retrieving users: {ex.Message}");
+                //response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                //responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+            }
+
+
+            response = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            responseContent = new OrgDevicesResponse()
+            { // TODO REEDER
+                result = new List<Device>()
+               {
+                   new Device()
+                   {
+                       id = 1,
+                       name = "Device One",
+                       serial = "TEST1234",
+                       model = "VIVE Focus 3",
+                       location = new Location()
+                       {
+                           city = "San Francisco",
+                           region = "CA",
+                           country = "USA",
+                       },
+                       batteryLevel = 100,
+                       online = true,
+                       currentModule = new Module()
+                       {
+                           id = 101,
+                           abbreviation = "TMA",
+                           description = "A training module for beginners.",
+                       },
+                       currentUser = new User()
+                       {
+                           Id = 201,
+                           FirstName = "John",
+                           LastName = "Doe",
+                            Email = "john.doe@example.com",
+                           Username = "johndoe",
+                       },
+                   },
+                   new Device()
+                   {
+                       id = 2,
+                       name = "Device Two",
+                       serial = "TEST5678",
+                       model = "VRX",
+                       location = new Location()
+                          {
+                            city = "New York",
+                            region = "NY",
+                            country = "USA",
+                          },
+                       batteryLevel = 75,
+                       online = false,
+                       currentModule = new Module()
+                          {
+                            id = 102,
+                            abbreviation = "ADV",
+                            description = "An advanced training module.",
+                          },
+                          currentUser = new User()
+                              {
+                             Id = 202,
+                             FirstName = "Jane",
+                             LastName = "Smith",
+                             Email = "jane.smith@example.com",
+                             Username = "janesmith",
+                             },
+
+                   },
+                   new Device()
+                   {
+                       id = 3,
+                       name = "Device Three",
+                       serial = "TEST91011",
+                       model = "Pico Neo 3",
+                       location = new Location()
+                          {
+                            city = "Los Angeles",
+                            region = "CA",
+                            country = "USA",
+                          },
+                       batteryLevel = 65,
+                       online = true,
+                       currentModule = null,
+                       currentUser = null,
+                   },
+                   new Device()
+                   {
+                       id = 4,
+                       name = "Device Four",
+                       serial = "TEST11111",
+                       model = "Pico 4",
+                       location = new Location()
+                            {
+                                city = "Chicago",
+                                region = "IL",
+                                country = "USA",
+                            },
+                       batteryLevel = 50,
+                       online = false,
+                       currentModule = null,
+                          currentUser = null,
+                   },
+                   new Device()
+                   {
+                       id = 5,
+                       name = "Device Five",
+                       serial = "TEST2222",
+                       model = "Quest",
+                       location = new Location()
+                            {
+                                city = "Austin",
+                                region = "TX",
+                                country = "USA",
+                            },
+                       batteryLevel = 25,
+                       online = true,
+                       currentModule = null,
+                          currentUser = null,
+                   },
+                   new Device()
+                   {
+                       id = 6,
+                          name = "Device Six",
+                       serial = "TEST3333",
+                       model = "Quest 2",
+                       location = new Location()
+                            {
+                                city = "Seattle",
+                                region = "WA",
+                                country = "USA",
+                            },
+                       batteryLevel = 15,
+                          online = false,
+                       currentModule = null,
+                          currentUser = null,
+                   },
+                   new Device()
+                   {
+                       id = 7,
+                          name = "Device Seven",
+                       serial = "TEST4444",
+                       model = "Quest 3",
+                       location = new Location()
+                            {
+                                city = "Miami",
+                                region = "FL",
+                                country = "USA",
+                            },
+                       batteryLevel = 5,
+                          online = true,
+                       currentModule = null,
+                          currentUser = null,
+                   },
+                   new Device()
+                   {
+                       id = 8,
+                          name = "Device Eight",
+                       serial = "TEST5555",
+                       model = "Apex VR Headset",
+                       location = new Location()
+                       {
+                                city = "Denver",
+                                region = "CO",
+                                country = "USA",
+                       },
+                       batteryLevel = 0,
+                            online = false,
+                       currentModule = null,
+                          currentUser = null,
+                   },
+
+               },
+                pageInfo = new PageInfo()
+                                {
+                    totalCount = 8,
+                    page = 1,
+                    offset = 0,
+                    pageSize = 10,
+                    previousPage = null,
+                    nextPage = null,
+                }
+            };
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
+
         }
 
         public async void LoginWithToken(string token)
