@@ -653,13 +653,11 @@ namespace PixoVR.Apex
         public bool isInModule;
         public string passcode;
 
-        [SerializeField]
         public string DisplayName
         {
             get { return $"{firstName} {lastName}"; }
         }
 
-        [SerializeField]
         public string UsernameEmail
         {
             get
@@ -673,7 +671,6 @@ namespace PixoVR.Apex
             }
         }
 
-        [SerializeField]
         public string LastActiveDisplay
         {
             get
@@ -683,7 +680,6 @@ namespace PixoVR.Apex
             }
         }
 
-        [SerializeField]
         public string LastSessionDisplay
         {
             get
