@@ -230,7 +230,9 @@ namespace PixoVR.Apex
                 }
 
                 var userMetricsJSON = jsonResponse["data"]["userMetrics"];
-                responseContent = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+                var userMetricsResponse= JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+                userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
+                responseContent = userMetricsResponse;
             }
             catch (Exception ex)
             {

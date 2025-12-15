@@ -653,67 +653,70 @@ namespace PixoVR.Apex
         public bool isInModule;
         public string passcode;
 
-        public string DisplayName
-        {
-            get { return $"{firstName} {lastName}"; }
-        }
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
 
-        public string UsernameEmail
+        [SerializeField] private string displayName;
+        [SerializeField] private string usernameEmail;
+        [SerializeField] private string lastActiveDisplay;
+        [SerializeField] private string lastSessionDisplay;
+
+        // =============================
+        // Read-only public accessors
+        // =============================
+
+        public string DisplayName => displayName;
+        public string UsernameEmail => usernameEmail;
+        public string LastActiveDisplay => lastActiveDisplay;
+        public string LastSessionDisplay => lastSessionDisplay;
+
+        // =============================
+        // Call when data changes
+        // =============================
+
+        public void RefreshDisplayFields()
         {
-            get
+            // Display name
+            displayName = $"{firstName} {lastName}";
+
+            // Username / email
+            usernameEmail = string.IsNullOrWhiteSpace(email)
+                ? username
+                : $"{username} ({email})";
+
+            // Last active
+            lastActiveDisplay = lastActiveAt?.ToString("hh:mm tt");
+
+            // Last session
+            var dateFormat = lastActiveAt?.Date == DateTime.Now.Date
+                ? "hh:mm tt"
+                : "MM/dd/yyyy hh:mm tt";
+
+            if (isInModule)
             {
-                var display = username;
-                if (!String.IsNullOrWhiteSpace(email))
+                if (lastModule == null)
                 {
-                    display = $"{username} ({email})";
+                    lastSessionDisplay = "In module...";
                 }
-                return display ;
+                else if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    lastSessionDisplay = "In Hub App";
+                }
+                else
+                {
+                    lastSessionDisplay =
+                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                }
             }
-        }
-
-        public string LastActiveDisplay
-        {
-            get
+            else if (lastActiveAt != null)
             {
-                var dateFormat = "hh:mm tt";
-                return $"{lastActiveAt?.ToString(dateFormat)}";
+                lastSessionDisplay =
+                    $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
             }
-        }
-
-        public string LastSessionDisplay
-        {
-            get
+            else
             {
-                var dateFormat = "MM/dd/yyyy hh:mm tt";
-                if (lastActiveAt?.Date == DateTime.Now.Date)
-                {
-                    dateFormat = "hh:mm tt";
-                }
-
-                if (isInModule)
-                {
-                    // TODO: Determine how we want to handle when no module exists but it says they are in a module.
-                    if (lastModule == null)
-                    {
-                        //Debug.Log("No module found for this user.");
-                        return "In module...";
-                    }
-
-                    if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
-                    {
-                        return "In Hub App";
-                    }
-
-                    return $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
-                }
-
-                if (lastActiveAt != null)
-                {
-                    return $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
-                }
-
-
-                return "No session";
+                lastSessionDisplay = "No session";
             }
         }
     }
