@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static UnityEngine.ParticleSystem;
 
 
 namespace PixoVR.Apex
@@ -758,6 +759,50 @@ namespace PixoVR.Apex
         public string model;
         public Module currentModule;
         public User currentUser;
+
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string currentUserDisplay;
+        [SerializeField] private string batteryLevelDisplay;
+        [SerializeField] private string currentModuleDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            // Display name
+            if (currentUser != null)
+            {
+                currentUserDisplay = $"{currentUser.FirstName} {currentUser.LastName}";
+            }
+            else
+            {
+                if (!online)
+                    currentUserDisplay = "Offline";
+                else
+                    currentUserDisplay = "Available";
+            }
+
+
+            if (online && currentModule != null) { 
+                
+                if (currentModule.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    currentModuleDisplay = "In Hub App";
+                }
+                else
+                {
+                    currentModuleDisplay =
+                        $"In module - {currentModule.description} ({currentModule.abbreviation})";
+                }
+            }
+
+            batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
+        }
+
     }
 
     [Serializable]
@@ -774,5 +819,19 @@ namespace PixoVR.Apex
 
     #endregion
 
+
+    public class FilterParams
+    {
+        public string searchText = "";
+        public string sortBy;
+        public SortOrder sortOrder = SortOrder.Ascending;
+        public enum SortOrder
+        {
+            Ascending,
+            Descending
+        }
+    }
+
+    
 
 }

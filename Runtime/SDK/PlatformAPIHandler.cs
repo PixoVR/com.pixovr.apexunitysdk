@@ -230,7 +230,7 @@ namespace PixoVR.Apex
                 }
 
                 var userMetricsJSON = jsonResponse["data"]["userMetrics"];
-                var userMetricsResponse= JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+                var userMetricsResponse = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = userMetricsResponse;
             }
@@ -244,7 +244,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
         }
 
-        public async void GetDevicesForOrg(string authToken, int orgID, int page) // TODO REEDER
+        public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams) // TODO REEDER
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -286,7 +286,7 @@ namespace PixoVR.Apex
 
 
             response = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-            responseContent = new OrgDevicesResponse()
+            var orgDevicesResponse = new OrgDevicesResponse()
             { // TODO REEDER
                 result = new List<Device>()
                {
@@ -332,7 +332,7 @@ namespace PixoVR.Apex
                             country = "USA",
                           },
                        batteryLevel = 75,
-                       online = false,
+                       online = true,
                        currentModule = new Module()
                           {
                             id = 102,
@@ -363,7 +363,10 @@ namespace PixoVR.Apex
                           },
                        batteryLevel = 65,
                        online = true,
-                       currentModule = null,
+                       currentModule = new Module()
+                       {
+                           id = PixoPlatformModuleIDs.HUBAPP_MODULE_ID
+                       },
                        currentUser = null,
                    },
                    new Device()
@@ -437,7 +440,7 @@ namespace PixoVR.Apex
                    new Device()
                    {
                        id = 8,
-                          name = "Device Eight",
+                       name = "Device Eight",
                        serial = "TEST5555",
                        model = "Apex VR Headset",
                        location = new Location()
@@ -446,7 +449,7 @@ namespace PixoVR.Apex
                                 region = "CO",
                                 country = "USA",
                        },
-                       batteryLevel = 0,
+                       batteryLevel = null,
                             online = false,
                        currentModule = null,
                           currentUser = null,
@@ -454,7 +457,7 @@ namespace PixoVR.Apex
 
                },
                 pageInfo = new PageInfo()
-                                {
+                {
                     totalCount = 8,
                     page = 1,
                     offset = 0,
@@ -464,8 +467,10 @@ namespace PixoVR.Apex
                 }
             };
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
+            orgDevicesResponse.result.ForEach(u => u.RefreshDisplayFields());
+            responseContent = orgDevicesResponse;
 
+            OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
         }
 
         public async void LoginWithToken(string token)

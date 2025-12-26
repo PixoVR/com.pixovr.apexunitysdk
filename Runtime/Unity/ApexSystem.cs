@@ -1621,11 +1621,11 @@ namespace PixoVR.Apex
             return Instance._GetUserMetricsForCurrentUsersOrg(page);
         }
 
-        public static bool GetDevicesForOrg(int page)
+        public static bool GetDevicesForOrg(int page, FilterParams filterParams)
         {
             if (Instance.currentActiveLogin == null)
                 return false;
-            return Instance._GetDevicesForOrg(page);
+            return Instance._GetDevicesForOrg(page, filterParams);
         }
 
         bool _GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
@@ -1670,7 +1670,7 @@ namespace PixoVR.Apex
             return true;
         }
 
-        bool _GetDevicesForOrg(int page)
+        bool _GetDevicesForOrg(int page, FilterParams filterParams)
         {
             if (currentActiveLogin == null)
             {
@@ -1678,7 +1678,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page);
+            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page, filterParams);
             return true;
         }
     }
