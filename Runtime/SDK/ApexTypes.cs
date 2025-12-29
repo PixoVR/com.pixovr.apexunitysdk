@@ -757,8 +757,8 @@ namespace PixoVR.Apex
         public int? batteryLevel;
         public bool online;
         public string model;
-        public Module currentModule;
-        public User currentUser;
+        public Module currentApp;
+        public DeviceUser user;
 
 
 
@@ -774,9 +774,9 @@ namespace PixoVR.Apex
         public void RefreshDisplayFields()
         {
             // Display name
-            if (currentUser != null)
+            if (user != null)
             {
-                currentUserDisplay = $"{currentUser.FirstName} {currentUser.LastName}";
+                currentUserDisplay = user.fullName;
             }
             else
             {
@@ -787,22 +787,31 @@ namespace PixoVR.Apex
             }
 
 
-            if (online && currentModule != null) { 
+            if (online && currentApp != null) { 
                 
-                if (currentModule.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
                 {
                     currentModuleDisplay = "In Hub App";
                 }
                 else
                 {
                     currentModuleDisplay =
-                        $"In module - {currentModule.description} ({currentModule.abbreviation})";
+                        $"In module - ({currentApp.abbreviation}) {currentApp.description}";
                 }
             }
 
             batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
         }
 
+    }
+
+
+    [Serializable]
+    public class DeviceUser
+    {
+        public string fullName;
+        public string email;
+        public string username;
     }
 
     [Serializable]
@@ -823,7 +832,7 @@ namespace PixoVR.Apex
     public class FilterParams
     {
         public string searchText = "";
-        public string sortBy;
+        public string sortField;
         public SortOrder sortOrder = SortOrder.Ascending;
         public enum SortOrder
         {
