@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -756,8 +755,61 @@ namespace PixoVR.Apex
         public int? batteryLevel;
         public bool online;
         public string model;
-        public Module currentModule;
-        public User currentUser;
+        public Module currentApp;
+        public DeviceUser user;
+
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string currentUserDisplay;
+        [SerializeField] private string batteryLevelDisplay;
+        [SerializeField] private string currentModuleDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            // Display name
+            if (user != null)
+            {
+                currentUserDisplay = user.fullName;
+            }
+            else
+            {
+                if (!online)
+                    currentUserDisplay = "Offline";
+                else
+                    currentUserDisplay = "Available";
+            }
+
+
+            if (online && currentApp != null) { 
+                
+                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    currentModuleDisplay = "In Hub App";
+                }
+                else
+                {
+                    currentModuleDisplay =
+                        $"In module - ({currentApp.abbreviation}) {currentApp.description}";
+                }
+            }
+
+            batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
+        }
+
+    }
+
+
+    [Serializable]
+    public class DeviceUser
+    {
+        public string fullName;
+        public string email;
+        public string username;
     }
 
     [Serializable]
@@ -774,5 +826,19 @@ namespace PixoVR.Apex
 
     #endregion
 
+
+    public class FilterParams
+    {
+        public string searchText = "";
+        public string sortField;
+        public SortOrder sortOrder = SortOrder.Ascending;
+        public enum SortOrder
+        {
+            Ascending,
+            Descending
+        }
+    }
+
+    
 
 }
