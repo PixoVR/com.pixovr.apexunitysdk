@@ -4,11 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static UnityEngine.ParticleSystem;
 
 
 namespace PixoVR.Apex
