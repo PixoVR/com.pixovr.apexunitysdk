@@ -1,13 +1,10 @@
-using Codice.CM.Common.Update.Partial;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PixoVR.Apex.XAPI;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace PixoVR.Apex
