@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Unity.Properties;
 using UnityEngine;
@@ -427,7 +428,7 @@ namespace PixoVR.Apex
         }
     }
 
-#region Platform Models
+    #region Platform Models
     [Serializable]
     public class PlatformPlayer
     {
@@ -484,13 +485,13 @@ namespace PixoVR.Apex
 
 
     [Serializable]
-    public class PlatformLoginResponse: IPlatformErrorable
+    public class PlatformLoginResponse : IPlatformErrorable
     {
- 		public string Token { get; set; }
+        public string Token { get; set; }
         public string Msg { get; set; }
         public User User { get; set; }
 
-       public bool HasErrored()
+        public bool HasErrored()
         {
             return (User == null || string.IsNullOrEmpty(Token));
         }
@@ -574,13 +575,13 @@ namespace PixoVR.Apex
         public string Username;
         public string SerialNumber;
 
-        public QuickIDLoginData( string serialNumber, string username)
+        public QuickIDLoginData(string serialNumber, string username)
         {
             SerialNumber = serialNumber;
             Username = username;
         }
     }
-    
+
     [Serializable]
     public class UserMetricsResponse : IFailure, IPlatformErrorable
     {
@@ -589,7 +590,7 @@ namespace PixoVR.Apex
 
         public bool HasErrored()
         {
-            return (result == null || result.Count <= 0); 
+            return (result == null || result.Count <= 0);
         }
     }
 
