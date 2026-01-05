@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -654,78 +653,70 @@ namespace PixoVR.Apex
         public bool isInModule;
         public string passcode;
 
-        [SerializeField]
-        public string DisplayName
-        {
-            get { return $"{firstName} {lastName}"; }
-        }
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
 
-        [SerializeField]
-        public string UsernameEmail
+        [SerializeField] private string displayName;
+        [SerializeField] private string usernameEmail;
+        [SerializeField] private string lastActiveDisplay;
+        [SerializeField] private string lastSessionDisplay;
+
+        // =============================
+        // Read-only public accessors
+        // =============================
+
+        public string DisplayName => displayName;
+        public string UsernameEmail => usernameEmail;
+        public string LastActiveDisplay => lastActiveDisplay;
+        public string LastSessionDisplay => lastSessionDisplay;
+
+        // =============================
+        // Call when data changes
+        // =============================
+
+        public void RefreshDisplayFields()
         {
-            get
+            // Display name
+            displayName = $"{firstName} {lastName}";
+
+            // Username / email
+            usernameEmail = string.IsNullOrWhiteSpace(email)
+                ? username
+                : $"{username} ({email})";
+
+            // Last active
+            lastActiveDisplay = lastActiveAt?.ToString("hh:mm tt");
+
+            // Last session
+            var dateFormat = lastActiveAt?.Date == DateTime.Now.Date
+                ? "hh:mm tt"
+                : "MM/dd/yyyy hh:mm tt";
+
+            if (isInModule)
             {
-                var display = username;
-                if (!String.IsNullOrWhiteSpace(email))
+                if (lastModule == null)
                 {
-                    display = $"{username} ({email})";
+                    lastSessionDisplay = "In module...";
                 }
-                return display;
+                else if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    lastSessionDisplay = "In Hub App";
+                }
+                else
+                {
+                    lastSessionDisplay =
+                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                }
             }
-        }
-
-        [SerializeField]
-        public string LastActiveDisplay
-        {
-            get
+            else if (lastActiveAt != null)
             {
-                var dateFormat = "hh:mm tt";
-                return $"{lastActiveAt?.ToString(dateFormat)}";
+                lastSessionDisplay =
+                    $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
             }
-        }
-
-        [SerializeField]
-        public string LastSessionDisplay
-        {
-            get
+            else
             {
-                if (lastActiveAt == null)
-                {
-                    return "No session";
-                }
-
-                // Convert from UTC to local time
-                var localTime = lastActiveAt.Value.ToLocalTime();
-
-                // Date format based on whether the time is today locally
-                var dateFormat = localTime.Date == DateTime.Now.Date
-                    ? "hh:mm tt"
-                    : "MM/dd/yyyy hh:mm tt";
-
-                // Handle "in module" states
-                var moduleText = String.Empty;
-                if (lastModule != null)
-                {
-                    moduleText = $"{lastModule.description} ({lastModule.abbreviation})";
-                }
-
-                if (isInModule)
-                {
-                    if (String.IsNullOrEmpty(moduleText))
-                    {
-                        return "In module...";
-                    }
-
-                    if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
-                    {
-                        return "In Hub App";
-                    }
-
-                    return $"In module {moduleText} - {localTime.ToString(dateFormat, CultureInfo.InvariantCulture)}";
-                }
-
-                // Not in module → session completed
-                return $"Session Completed for {moduleText} - {localTime.ToString(dateFormat, CultureInfo.InvariantCulture)}";
+                lastSessionDisplay = "No session";
             }
         }
     }
@@ -746,7 +737,109 @@ namespace PixoVR.Apex
         public string description;
     }
 
+
+    [Serializable]
+    public class Location
+    {
+        public string city;
+        public string region;
+        public string country;
+    }
+
+    [Serializable]
+    public class Device
+    {
+        public int id;
+        public string name;
+        public string serial;
+        public Location location;
+        public int? batteryLevel;
+        public bool online;
+        public string model;
+        public Module currentApp;
+        public DeviceUser user;
+
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string currentUserDisplay;
+        [SerializeField] private string batteryLevelDisplay;
+        [SerializeField] private string currentModuleDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            // Display name
+            if (user != null)
+            {
+                currentUserDisplay = user.fullName;
+            }
+            else
+            {
+                if (!online)
+                    currentUserDisplay = "Offline";
+                else
+                    currentUserDisplay = "Available";
+            }
+
+
+            if (online && currentApp != null) { 
+                
+                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    currentModuleDisplay = "In Hub App";
+                }
+                else
+                {
+                    currentModuleDisplay =
+                        $"In module - ({currentApp.abbreviation}) {currentApp.description}";
+                }
+            }
+
+            batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
+        }
+
+    }
+
+
+    [Serializable]
+    public class DeviceUser
+    {
+        public string fullName;
+        public string email;
+        public string username;
+    }
+
+    [Serializable]
+    public class OrgDevicesResponse : IFailure, IPlatformErrorable
+    {
+        public List<Device> result;
+        public PageInfo pageInfo;
+
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
     #endregion
 
+
+    public class FilterParams
+    {
+        public string searchText = "";
+        public string sortField;
+        public SortOrder sortOrder = SortOrder.Ascending;
+        public enum SortOrder
+        {
+            Ascending,
+            Descending
+        }
+    }
+
+    
 
 }

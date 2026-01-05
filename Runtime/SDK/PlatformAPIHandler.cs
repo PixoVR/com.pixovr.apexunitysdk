@@ -1,11 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PixoVR.Apex.XAPI;
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using UnityEngine;
 
 namespace PixoVR.Apex
@@ -28,6 +27,7 @@ namespace PixoVR.Apex
         RT_QUICK_ID_AUTH_GET_USERS,
         RT_QUICK_ID_AUTH_LOGIN,
         RT_GET_USER_METRICS_FOR_ORG,
+        RT_GET_DEVICES_FOR_ORG,
     }
 
     public class APIHandler
@@ -197,7 +197,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void GetUserMetricsForOrg(string authToken, int orgID, int page)
+        public async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -206,7 +206,7 @@ namespace PixoVR.Apex
             var graphqlRequest = new
             {
                 operationName = "userMetrics",
-                variables = new { orgId = orgID, limit = 10, page = page },
+                variables = new { orgId = orgID, limit = 10, page = page, search = filterParams.searchText },
                 query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $search: String) { userMetrics(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
             };
 
@@ -228,7 +228,9 @@ namespace PixoVR.Apex
                 }
 
                 var userMetricsJSON = jsonResponse["data"]["userMetrics"];
-                responseContent = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+                var userMetricsResponse = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
+                userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
+                responseContent = userMetricsResponse;
             }
             catch (Exception ex)
             {
@@ -238,6 +240,58 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
+        }
+
+        public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams)
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var graphqlRequest = new
+            {
+                operationName = "OrgDeviceLicenses",
+                variables = new {
+                    orgId = orgID,
+                    limit = 10,
+                    page = page,
+                    search = filterParams.searchText,
+                    sortField = filterParams.sortField,
+                    sortOrder = filterParams.sortOrder == FilterParams.SortOrder.Ascending ? "ASC" : "DESC",
+                },
+                query = "query OrgDeviceLicenses($orgId: ID!, $limit: Int!, $page: Int!, $search: String, $sortField: String, $sortOrder: SortOrder) { orgDeviceLicenses(orgId: $orgId, limit: $limit, page: $page, search: $search, deviceLicenseParams: { sortField: $sortField, sortOrder: $sortOrder }) { result { id name serial manufacturer macAddress model notes online batteryLevel lastSeen location { city region country continent timezone latitude longitude formatter } expiresAt org { id name } deviceType currentApp { id abbreviation description } user { fullname email username } } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
+            object responseContent;
+            try
+            {
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+
+                JObject jsonResponse = JObject.Parse(body);
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "orgDeviceLicenses");
+                if (failureResponse != null)
+                {
+                    OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, failureResponse);
+                    return;
+                }
+
+                var orgDevicesJSON = jsonResponse["data"]["orgDeviceLicenses"];
+                var deviceResponse = JsonConvert.DeserializeObject<OrgDevicesResponse>(orgDevicesJSON.ToString());
+                deviceResponse.result.ForEach(u => u.RefreshDisplayFields());
+                responseContent = deviceResponse;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error retrieving devices: {ex.Message}");
+                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+            }
+
+            OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
         }
 
         public async void LoginWithToken(string token)
