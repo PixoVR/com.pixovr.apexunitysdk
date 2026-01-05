@@ -136,6 +136,11 @@ namespace PixoVR.Apex
             private set { Instance.targetTypeParameter = value; }
         }
 
+        public static string APIEndpoint
+        {
+            get { return ((APIPlatformServer)Instance.PlatformTargetServer).ToUrlString(); }
+        }
+
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
 
