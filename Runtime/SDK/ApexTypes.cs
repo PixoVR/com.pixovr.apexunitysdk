@@ -773,21 +773,22 @@ namespace PixoVR.Apex
         public void RefreshDisplayFields()
         {
             // Display name
-            if (user != null)
+            if (!online)
             {
-                currentUserDisplay = user.fullName;
+                currentUserDisplay = "Offline";
             }
             else
             {
-                if (!online)
-                    currentUserDisplay = "Offline";
-                else
-                    currentUserDisplay = "Available";
+                currentUserDisplay = "Available";
+                if (user != null)
+                {
+                    currentUserDisplay = user.fullName;
+                }
             }
 
+            if (online && currentApp != null)
+            {
 
-            if (online && currentApp != null) { 
-                
                 if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
                 {
                     currentModuleDisplay = "In Hub App";
@@ -840,6 +841,6 @@ namespace PixoVR.Apex
         }
     }
 
-    
+
 
 }
