@@ -253,7 +253,7 @@ namespace PixoVR.Apex
                 operationName = "OrgDeviceLicenses",
                 variables = new {
                     orgId = orgID,
-                    limit = 10,
+                    limit = 25,
                     page = page,
                     search = filterParams.searchText,
                     sortField = filterParams.sortField,
