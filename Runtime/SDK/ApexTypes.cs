@@ -768,6 +768,8 @@ namespace PixoVR.Apex
         [SerializeField] private string currentUserDisplay;
         [SerializeField] private string batteryLevelDisplay;
         [SerializeField] private string currentModuleDisplay;
+        [SerializeField] private string locationDisplay;
+        [SerializeField] private string currentUsernameEmailDisplay;
 
 
         public void RefreshDisplayFields()
@@ -783,6 +785,9 @@ namespace PixoVR.Apex
                 if (user != null)
                 {
                     currentUserDisplay = user.fullName;
+                    currentUsernameEmailDisplay = String.IsNullOrWhiteSpace(user.email)
+                        ? user.username
+                        : $"{user.username} ({user.email})";
                 }
             }
 
@@ -801,6 +806,12 @@ namespace PixoVR.Apex
             }
 
             batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
+
+            locationDisplay = "Location Unknown";
+            if (location != null)
+            {
+                locationDisplay = $"{location.city}, {location.region}, {location.country}";
+            }
         }
 
     }
