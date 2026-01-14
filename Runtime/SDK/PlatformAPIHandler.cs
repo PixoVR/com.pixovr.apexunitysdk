@@ -262,7 +262,7 @@ namespace PixoVR.Apex
                 variables = new
                 {
                     orgId = orgID,
-                    limit = 10,
+                    limit = 25,
                     page = page,
                     search = filterParams.searchText,
                     sortField = filterParams.sortField,
