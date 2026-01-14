@@ -204,11 +204,18 @@ namespace PixoVR.Apex
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+            var paramsInput = new
+            {
+                search = filterParams.searchText,
+                sortField = filterParams.sortField,
+                sortOrder = filterParams.sortOrder == FilterParams.SortOrder.Ascending ? "ASC" : "DESC",
+            };
+
             var graphqlRequest = new
             {
                 operationName = "userMetrics",
-                variables = new { orgId = orgID, limit = 10, page = page, search = filterParams.searchText },
-                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $search: String) { userMetrics(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id firstName lastName username email role createdAt org { id name } orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
+                variables = new { orgId = orgID, limit = 10, page = page, @params = paramsInput },
+                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $params: UserMetricsParamsInput) { userMetrics(orgId: $orgId, limit: $limit, page: $page, params: $params) { result { id firstName lastName username email role orgId org { id name } createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
@@ -296,18 +303,19 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
         }
 
-        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters , FilterParams filterParams) //. TODO
+        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams) //. TODO
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            var sessionParams = new {
+            var sessionParams = new
+            {
                 orgIds = sessionFilters.orgIDs,
                 userIds = sessionFilters.userIDs,
                 includeAffiliates = false,
             };
-            
+
             var graphqlRequest = new
             {
                 operationName = "OrgDeviceLicenses",
