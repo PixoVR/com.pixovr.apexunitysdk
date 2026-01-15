@@ -303,7 +303,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
         }
 
-        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams) //. TODO
+        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -313,91 +313,37 @@ namespace PixoVR.Apex
             {
                 orgIds = sessionFilters.orgIDs,
                 userIds = sessionFilters.userIDs,
-                includeAffiliates = false,
             };
 
             var graphqlRequest = new
             {
-                operationName = "OrgDeviceLicenses",
+                operationName = "sessionAnalyticsPaginated",
                 variables = new
                 {
                     limit = 10,
                     page = page,
-                    search = filterParams.searchText,
                     @params = sessionParams,
                 },
-                query = "query OrgDeviceLicenses($orgId: ID!, $limit: Int!, $page: Int!, $search: String, $sortField: String, $sortOrder: SortOrder) { orgDeviceLicenses(orgId: $orgId, limit: $limit, page: $page, search: $search, deviceLicenseParams: { sortField: $sortField, sortOrder: $sortOrder }) { result { id name serial manufacturer macAddress model notes online batteryLevel lastSeen location { city region country continent timezone latitude longitude formatter } expiresAt org { id name } deviceType currentApp { id abbreviation description } user { fullname email username } } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
+                query = "query sessionAnalyticsPaginated($limit: Int, $page: Int, $params: SessionParams) { sessionAnalyticsPaginated(limit: $limit, page: $page, params: $params) { result { id username firstName lastName organization orgUnit module eventCount rawScore maxScore scaledScore status result createdAt duration startedAt completedAt } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
             };
-
-            //var graphqlRequest = new
-            //{
-            //    operationName = "sessionAnalyticsPaginated",
-            //    variables = new
-            //    {
-            //        orgId = orgID,
-            //        limit = 10,
-            //        page = page,
-            //        search = filterParams.searchText,
-            //    },
-            //    query = "query sessionAnalyticsPaginated($orgId: ID!, $limit: Int!, $page: Int!, $search: String) { orgSessionHistory(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id module { id abbreviation description } user { id firstName lastName username email } device { id name serial } startedAt endedAt durationInSeconds location { city region country continent timezone latitude longitude formatter } } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
-            //};
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
             HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
             HttpResponseMessage response;
             object responseContent;
             try
             {
-
-                // create a dummy response for testing
-                response = await apiHandlingClient.GetAsync("/v2/health");
-                //response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
-                //string body = await response.Content.ReadAsStringAsync();
-                //JObject jsonResponse = JObject.Parse(body);
-                //var failureResponse = GetGQLFailureResponse(jsonResponse, "orgSessionHistory");
-                //if (failureResponse != null)
-                //{
-                //    OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, failureResponse);
-                //    return;
-                //}
-                //var sessionHistoryJSON = jsonResponse["data"]["sessionAnalyticsPaginated"];
-                //var sessionHistoryResponse = JsonConvert.DeserializeObject<SessionHistoryResponse>(sessionHistoryJSON.ToString());
-                //sessionHistoryResponse.result.ForEach(u => u.RefreshDisplayFields());
-
-                var sessionHistoryResponse = new SessionHistoryResponse()
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                JObject jsonResponse = JObject.Parse(body);
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "sessionAnalyticsPaginated");
+                if (failureResponse != null)
                 {
-                    result = new List<Session>()
-                    {
-                        new Session()
-                        {
-                            id = 1,
-                            username = "jdoe",
-                            firstName = "John",
-                            lastName = "Doe",
-                            organization = "Example Org",
-                            module = "Example Module",
-                            orgUnit = "Example Unit",
-                            eventCount = 5,
-                            rawScore = 85.0f,
-                            maxScore = 100.0f,
-                            scaledScore = 0.85f,
-                            status = "completed",
-                            result = "passed",
-                            createdAt = DateTime.UtcNow.AddDays(-2),
-                            startedAt = DateTime.UtcNow.AddDays(-2).AddHours(1),
-                            duration = 3600,
-                            completedAt = DateTime.UtcNow.AddDays(-2).AddHours(2),
-                        },
-                    },
-                    pageInfo = new PageInfo()
-                    {
-                        totalCount = 1,
-                        page = page,
-                        offset = 0,
-                        pageSize = 10,
-                        previousPage = null,
-                        nextPage = null,
-                    },
-                };
+                    OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, failureResponse);
+                    return;
+                }
+                var sessionHistoryJSON = jsonResponse["data"]["sessionAnalyticsPaginated"];
+                var sessionHistoryResponse = JsonConvert.DeserializeObject<SessionHistoryResponse>(sessionHistoryJSON.ToString());
+
                 responseContent = sessionHistoryResponse;
             }
             catch (Exception ex)
