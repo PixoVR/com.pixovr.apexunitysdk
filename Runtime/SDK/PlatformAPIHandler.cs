@@ -28,6 +28,7 @@ namespace PixoVR.Apex
         RT_QUICK_ID_AUTH_LOGIN,
         RT_GET_USER_METRICS_FOR_ORG,
         RT_GET_DEVICES_FOR_ORG,
+        RT_GET_SESSION_HISTORY,
     }
 
     public class APIHandler
@@ -203,11 +204,18 @@ namespace PixoVR.Apex
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+            var paramsInput = new
+            {
+                search = filterParams.searchText,
+                sortField = filterParams.sortField,
+                sortOrder = filterParams.sortOrder == FilterParams.SortOrder.Ascending ? "ASC" : "DESC",
+            };
+
             var graphqlRequest = new
             {
                 operationName = "userMetrics",
-                variables = new { orgId = orgID, limit = 10, page = page, search = filterParams.searchText },
-                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $search: String) { userMetrics(orgId: $orgId, limit: $limit, page: $page, search: $search) { result { id firstName lastName username email role createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
+                variables = new { orgId = orgID, limit = 10, page = page, @params = paramsInput },
+                query = "query userMetrics($orgId: ID!, $limit: Int, $page: Int, $params: UserMetricsParamsInput) { userMetrics(orgId: $orgId, limit: $limit, page: $page, params: $params) { result { id firstName lastName username email role orgId org { id name } createdAt orgUnitId orgUnit { id name externalId } lastModuleId lastModule { id abbreviation description } sessionCount lastActiveAt isInModule } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
@@ -251,7 +259,8 @@ namespace PixoVR.Apex
             var graphqlRequest = new
             {
                 operationName = "OrgDeviceLicenses",
-                variables = new {
+                variables = new
+                {
                     orgId = orgID,
                     limit = 25,
                     page = page,
@@ -292,6 +301,59 @@ namespace PixoVR.Apex
             }
 
             OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
+        }
+
+        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams)
+        {
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var sessionParams = new
+            {
+                orgIds = sessionFilters.orgIDs,
+                userIds = sessionFilters.userIDs,
+            };
+
+            var graphqlRequest = new
+            {
+                operationName = "sessionAnalyticsPaginated",
+                variables = new
+                {
+                    limit = 10,
+                    page = page,
+                    @params = sessionParams,
+                },
+                query = "query sessionAnalyticsPaginated($limit: Int, $page: Int, $params: SessionParams) { sessionAnalyticsPaginated(limit: $limit, page: $page, params: $params) { result { id username firstName lastName organization orgUnit module eventCount rawScore maxScore scaledScore status result createdAt duration startedAt completedAt } pageInfo { totalCount page offset pageSize previousPage nextPage } } }"
+            };
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
+            object responseContent;
+            try
+            {
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                JObject jsonResponse = JObject.Parse(body);
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "sessionAnalyticsPaginated");
+                if (failureResponse != null)
+                {
+                    OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, failureResponse);
+                    return;
+                }
+                var sessionHistoryJSON = jsonResponse["data"]["sessionAnalyticsPaginated"];
+                var sessionHistoryResponse = JsonConvert.DeserializeObject<SessionHistoryResponse>(sessionHistoryJSON.ToString());
+
+                responseContent = sessionHistoryResponse;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error retrieving session history: {ex.Message}");
+                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+            }
+            OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, responseContent);
+
         }
 
         public async void LoginWithToken(string token)

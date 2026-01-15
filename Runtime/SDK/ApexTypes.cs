@@ -643,6 +643,8 @@ namespace PixoVR.Apex
         public string username;
         public string email;
         public string role;
+        public Organization org;
+
         public DateTime createdAt;
         public int? orgUnitId;
         public OrgUnit orgUnit;
@@ -661,6 +663,7 @@ namespace PixoVR.Apex
         [SerializeField] private string usernameEmail;
         [SerializeField] private string lastActiveDisplay;
         [SerializeField] private string lastSessionDisplay;
+        [SerializeField] private string createdAtDisplay;
 
         // =============================
         // Read-only public accessors
@@ -670,6 +673,8 @@ namespace PixoVR.Apex
         public string UsernameEmail => usernameEmail;
         public string LastActiveDisplay => lastActiveDisplay;
         public string LastSessionDisplay => lastSessionDisplay;
+        public string CreatedAtDisplay => createdAtDisplay;
+
 
         // =============================
         // Call when data changes
@@ -718,6 +723,10 @@ namespace PixoVR.Apex
             {
                 lastSessionDisplay = "No session";
             }
+
+
+            // Created at
+            createdAtDisplay = createdAt.ToString(dateFormat);
         }
     }
 
@@ -788,6 +797,7 @@ namespace PixoVR.Apex
                     currentUsernameEmailDisplay = String.IsNullOrWhiteSpace(user.email)
                         ? user.username
                         : $"{user.username} ({user.email})";
+
                 }
             }
 
@@ -837,6 +847,48 @@ namespace PixoVR.Apex
         }
     }
 
+
+    public class Session
+    {
+        public int id;
+        public string username;
+        public string firstName;
+        public string lastName;
+        public string organization;
+
+        public string module;
+        public string orgUnit;
+        public int eventCount;
+        public float? rawScore;
+        public float? maxScore;
+        public float scaledScore;
+        public string status;
+        public string result;
+        public DateTime createdAt;
+        public DateTime startedAt;
+        public DateTime? completedAt;
+
+        /// <summary>
+        /// Duration of the session in seconds
+        /// </summary>
+        public int duration;
+    }
+
+    public class SessionHistoryResponse : IFailure, IPlatformErrorable
+    {
+        public List<Session> result;
+        public PageInfo pageInfo;
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
+    public class SessionFilters
+    {
+        public List<int> orgIDs;
+        public List<int> userIDs;
+    }
     #endregion
 
 
