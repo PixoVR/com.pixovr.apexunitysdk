@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using TinCan;
 using TinCan.Json;
 using UnityEngine;
+using static Codice.Client.Common.EventTracking.TrackFeatureUseEvent.Features.DesktopGUI.Filters;
 
 namespace PixoVR.Apex.Utils
 {
@@ -107,5 +108,27 @@ public static class StringExtensions
     public static bool Contains(this string source, string value, StringComparison comp)
     {
         return source?.IndexOf(value, comp) >= 0;
+    }
+}
+
+
+public static class DateTimeExtensions
+{
+    public static string GetLocalFormattedDateTime(this DateTime? dateTime)
+    {
+        var localTime = dateTime?.ToLocalTime();
+        if (localTime == null)
+        {
+            return string.Empty;
+        }
+
+        return localTime.Value.Date == DateTime.Now.Date
+            ? localTime.Value.ToString("hh:mm tt")
+            : localTime.Value.ToString("MM/dd/yyyy hh:mm tt");
+    }
+
+    public static string GetLocalFormattedDateTime(this DateTime dateTime)
+    {
+        return ((DateTime?)dateTime).GetLocalFormattedDateTime();
     }
 }

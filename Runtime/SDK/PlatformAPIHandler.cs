@@ -343,7 +343,7 @@ namespace PixoVR.Apex
                 }
                 var sessionHistoryJSON = jsonResponse["data"]["sessionAnalyticsPaginated"];
                 var sessionHistoryResponse = JsonConvert.DeserializeObject<SessionHistoryResponse>(sessionHistoryJSON.ToString());
-
+                sessionHistoryResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = sessionHistoryResponse;
             }
             catch (Exception ex)

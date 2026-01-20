@@ -1,3 +1,4 @@
+using Codice.Client.BaseCommands;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -7,7 +8,10 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Unity.Properties;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.UIElements;
+using static Codice.Client.Common.EventTracking.TrackFeatureUseEvent.Features.DesktopGUI.Filters;
+using static UnityEditor.FilePathAttribute;
 
 
 namespace PixoVR.Apex
@@ -691,13 +695,9 @@ namespace PixoVR.Apex
                 : $"{username} ({email})";
 
             // Last active
-            lastActiveDisplay = lastActiveAt?.ToString("hh:mm tt");
+            lastActiveDisplay = lastActiveAt.GetLocalFormattedDateTime();
 
             // Last session
-            var dateFormat = lastActiveAt?.Date == DateTime.Now.Date
-                ? "hh:mm tt"
-                : "MM/dd/yyyy hh:mm tt";
-
             if (isInModule)
             {
                 if (lastModule == null)
@@ -711,13 +711,13 @@ namespace PixoVR.Apex
                 else
                 {
                     lastSessionDisplay =
-                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt.GetLocalFormattedDateTime()}";
                 }
             }
             else if (lastActiveAt != null)
             {
                 lastSessionDisplay =
-                    $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
+                    $"Session Completed - {lastActiveAt.GetLocalFormattedDateTime()}";
             }
             else
             {
@@ -726,7 +726,7 @@ namespace PixoVR.Apex
 
 
             // Created at
-            createdAtDisplay = createdAt.ToString(dateFormat);
+            createdAtDisplay = createdAt.GetLocalFormattedDateTime();
         }
     }
 
@@ -872,6 +872,62 @@ namespace PixoVR.Apex
         /// Duration of the session in seconds
         /// </summary>
         public int duration;
+
+
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string sessionModuleDisplay;
+        [SerializeField] private string sessionActiveStatusDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+
+            if (!isComplete() && (DateTime.Now - startedAt).TotalSeconds > 7200) // capped at 2 hours for display purposes
+            {
+                completedAt = startedAt.AddHours(2);
+            }
+
+
+            var durationFormatted = GetDurationFormatted();
+            sessionActiveStatusDisplay = String.Format("In Session For {0}", durationFormatted);
+            if (isComplete())
+            {
+                sessionActiveStatusDisplay = String.Format("Completed Session - {0}", durationFormatted);
+            }
+
+            sessionModuleDisplay = String.IsNullOrEmpty(module) ? "Unknown Module" : module;
+            if (isComplete())
+            {
+                sessionModuleDisplay = String.Format(
+                    "{0} - {1}",
+                    module,
+                    completedAt.GetLocalFormattedDateTime()
+                );
+            }
+        }
+
+        public bool isComplete()
+        {
+            return completedAt.HasValue;
+        }
+
+        private string GetDurationFormatted()
+        {
+            var endTime = isComplete() ? completedAt.Value : DateTime.Now;
+            var timeSpan = endTime - startedAt;
+
+            var totalHours = (int)timeSpan.TotalHours;
+            if (totalHours > 0)
+            {
+                return $"{totalHours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+            }
+            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+        }
     }
 
     public class SessionHistoryResponse : IFailure, IPlatformErrorable
