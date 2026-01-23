@@ -1,15 +1,12 @@
 
 using Newtonsoft.Json.Linq;
-using PixoVR.Apex.XAPI;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using TinCan;
 using TinCan.Json;
 using UnityEngine;
-using static Codice.Client.Common.EventTracking.TrackFeatureUseEvent.Features.DesktopGUI.Filters;
 
 namespace PixoVR.Apex.Utils
 {
