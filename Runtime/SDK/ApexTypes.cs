@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using Unity.Properties;
 using UnityEngine;
@@ -605,7 +604,7 @@ namespace PixoVR.Apex
         public int? previousPage;
         public int? nextPage;
 
-        public int? GetLastPageNumber()
+        public int GetLastPageNumber()
         {
             var lastPage = 1;
             if (pageSize > 0)
@@ -691,13 +690,9 @@ namespace PixoVR.Apex
                 : $"{username} ({email})";
 
             // Last active
-            lastActiveDisplay = lastActiveAt?.ToString("hh:mm tt");
+            lastActiveDisplay = lastActiveAt.GetLocalFormattedDateTime();
 
             // Last session
-            var dateFormat = lastActiveAt?.Date == DateTime.Now.Date
-                ? "hh:mm tt"
-                : "MM/dd/yyyy hh:mm tt";
-
             if (isInModule)
             {
                 if (lastModule == null)
@@ -711,13 +706,13 @@ namespace PixoVR.Apex
                 else
                 {
                     lastSessionDisplay =
-                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt?.ToString(dateFormat)}";
+                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt.GetLocalFormattedDateTime()}";
                 }
             }
             else if (lastActiveAt != null)
             {
                 lastSessionDisplay =
-                    $"Session Completed - {lastActiveAt?.ToString(dateFormat)}";
+                    $"Session Completed - {lastActiveAt.GetLocalFormattedDateTime()}";
             }
             else
             {
@@ -726,7 +721,7 @@ namespace PixoVR.Apex
 
 
             // Created at
-            createdAtDisplay = createdAt.ToString(dateFormat);
+            createdAtDisplay = createdAt.GetLocalFormattedDateTime();
         }
     }
 
@@ -851,27 +846,64 @@ namespace PixoVR.Apex
     public class Session
     {
         public int id;
-        public string username;
-        public string firstName;
-        public string lastName;
-        public string organization;
-
-        public string module;
-        public string orgUnit;
-        public int eventCount;
+        public int userId;
+        public int moduleId;
+        public Module module;
+        
         public float? rawScore;
         public float? maxScore;
         public float scaledScore;
         public string status;
         public string result;
-        public DateTime createdAt;
         public DateTime startedAt;
         public DateTime? completedAt;
 
-        /// <summary>
-        /// Duration of the session in seconds
-        /// </summary>
-        public int duration;
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string sessionModuleDisplay;
+        [SerializeField] private string sessionActiveStatusDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            var durationFormatted = GetDurationFormatted();
+            sessionActiveStatusDisplay = String.Format("In Session For {0}", durationFormatted);
+            if (isComplete())
+            {
+                sessionActiveStatusDisplay = String.Format("Completed Session - {0}", durationFormatted);
+            }
+
+            sessionModuleDisplay = module == null ? "Unknown Module" : String.Format("({0}) {1}", module.abbreviation, module.description);
+            if (isComplete())
+            {
+                sessionModuleDisplay = String.Format(
+                    "{0} - {1}",
+                    sessionModuleDisplay,
+                    completedAt.GetLocalFormattedDateTime()
+                );
+            }
+        }
+
+        public bool isComplete()
+        {
+            return completedAt.HasValue;
+        }
+
+        private string GetDurationFormatted()
+        {
+            var endTime = isComplete() ? completedAt.Value : DateTime.UtcNow;
+            var timeSpan = endTime.Subtract(startedAt);
+
+            var totalHours = (int)timeSpan.TotalHours;
+            if (totalHours > 0)
+            {
+                return $"{totalHours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+            }
+            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+        }
     }
 
     public class SessionHistoryResponse : IFailure, IPlatformErrorable

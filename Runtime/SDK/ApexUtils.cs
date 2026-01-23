@@ -1,11 +1,10 @@
 
 using Newtonsoft.Json.Linq;
-using PixoVR.Apex.XAPI;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using TinCan;
 using TinCan.Json;
 using UnityEngine;
 
@@ -107,5 +106,27 @@ public static class StringExtensions
     public static bool Contains(this string source, string value, StringComparison comp)
     {
         return source?.IndexOf(value, comp) >= 0;
+    }
+}
+
+
+public static class DateTimeExtensions
+{
+    public static string GetLocalFormattedDateTime(this DateTime? dateTime)
+    {
+        var localTime = dateTime?.ToLocalTime();
+        if (localTime == null)
+        {
+            return String.Empty;
+        }
+
+        return localTime.Value.Date == DateTime.Now.Date
+            ? localTime.Value.ToString("hh:mm tt", CultureInfo.InvariantCulture)
+            : localTime.Value.ToString("MM/dd/yyyy hh:mm tt", CultureInfo.InvariantCulture);
+    }
+
+    public static string GetLocalFormattedDateTime(this DateTime dateTime)
+    {
+        return ((DateTime?)dateTime).GetLocalFormattedDateTime();
     }
 }
