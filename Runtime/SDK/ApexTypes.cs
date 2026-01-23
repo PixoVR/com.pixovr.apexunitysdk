@@ -609,7 +609,7 @@ namespace PixoVR.Apex
         public int? previousPage;
         public int? nextPage;
 
-        public int? GetLastPageNumber()
+        public int GetLastPageNumber()
         {
             var lastPage = 1;
             if (pageSize > 0)
@@ -851,29 +851,17 @@ namespace PixoVR.Apex
     public class Session
     {
         public int id;
-        public string username;
-        public string firstName;
-        public string lastName;
-        public string organization;
-
-        public string module;
-        public string orgUnit;
-        public int eventCount;
+        public int userId;
+        public int moduleId;
+        public Module module;
+        
         public float? rawScore;
         public float? maxScore;
         public float scaledScore;
         public string status;
         public string result;
-        public DateTime createdAt;
         public DateTime startedAt;
         public DateTime? completedAt;
-
-        /// <summary>
-        /// Duration of the session in seconds
-        /// </summary>
-        public int duration;
-
-
 
 
         // =============================
@@ -886,13 +874,6 @@ namespace PixoVR.Apex
 
         public void RefreshDisplayFields()
         {
-
-            if (!isComplete() && (DateTime.Now - startedAt).TotalSeconds > 7200) // capped at 2 hours for display purposes
-            {
-                completedAt = startedAt.AddHours(2);
-            }
-
-
             var durationFormatted = GetDurationFormatted();
             sessionActiveStatusDisplay = String.Format("In Session For {0}", durationFormatted);
             if (isComplete())
@@ -900,12 +881,12 @@ namespace PixoVR.Apex
                 sessionActiveStatusDisplay = String.Format("Completed Session - {0}", durationFormatted);
             }
 
-            sessionModuleDisplay = String.IsNullOrEmpty(module) ? "Unknown Module" : module;
+            sessionModuleDisplay = module == null ? "Unknown Module" : String.Format("({0}) {1}", module.abbreviation, module.description);
             if (isComplete())
             {
                 sessionModuleDisplay = String.Format(
                     "{0} - {1}",
-                    module,
+                    sessionModuleDisplay,
                     completedAt.GetLocalFormattedDateTime()
                 );
             }

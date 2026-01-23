@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using PixoVR.Apex.XAPI;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -119,12 +120,12 @@ public static class DateTimeExtensions
         var localTime = dateTime?.ToLocalTime();
         if (localTime == null)
         {
-            return string.Empty;
+            return String.Empty;
         }
 
         return localTime.Value.Date == DateTime.Now.Date
-            ? localTime.Value.ToString("hh:mm tt")
-            : localTime.Value.ToString("MM/dd/yyyy hh:mm tt");
+            ? localTime.Value.ToString("hh:mm tt", CultureInfo.InvariantCulture)
+            : localTime.Value.ToString("MM/dd/yyyy hh:mm tt", CultureInfo.InvariantCulture);
     }
 
     public static string GetLocalFormattedDateTime(this DateTime dateTime)
