@@ -306,7 +306,6 @@ namespace PixoVR.Apex
 
         public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams)
         {
-            Debug.Log("PageRequested: " + page);
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

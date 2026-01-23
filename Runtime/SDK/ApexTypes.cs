@@ -894,8 +894,8 @@ namespace PixoVR.Apex
 
         private string GetDurationFormatted()
         {
-            var endTime = isComplete() ? completedAt.Value : DateTime.Now;
-            var timeSpan = endTime - startedAt;
+            var endTime = isComplete() ? completedAt.Value : DateTime.UtcNow;
+            var timeSpan = endTime.Subtract(startedAt);
 
             var totalHours = (int)timeSpan.TotalHours;
             if (totalHours > 0)
