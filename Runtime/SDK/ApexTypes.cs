@@ -1,17 +1,12 @@
-using Codice.Client.BaseCommands;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using Unity.Properties;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.UIElements;
-using static Codice.Client.Common.EventTracking.TrackFeatureUseEvent.Features.DesktopGUI.Filters;
-using static UnityEditor.FilePathAttribute;
 
 
 namespace PixoVR.Apex
