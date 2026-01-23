@@ -324,7 +324,7 @@ namespace PixoVR.Apex
                 variables = new
                 {
                     userId = sessionFilters.userIDs[0],
-                    limit = 5,  
+                    limit = 10,  
                     page = page,
 
                     @params = paramsInput,
