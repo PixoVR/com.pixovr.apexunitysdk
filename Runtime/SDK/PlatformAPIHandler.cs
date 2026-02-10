@@ -27,8 +27,6 @@ namespace PixoVR.Apex
         RT_QUICK_ID_AUTH_GET_USERS,
         RT_QUICK_ID_AUTH_LOGIN,
         RT_GET_USER_METRICS_FOR_ORG,
-        RT_GET_DEVICES_FOR_ORG,
-        RT_GET_SESSION_HISTORY,
     }
 
     public class APIHandler
@@ -159,7 +157,7 @@ namespace PixoVR.Apex
 
             HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
             HttpResponseMessage response;
-            object responseContent;
+            object responseContent = null;
             try
             {
                 response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
@@ -250,7 +248,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
         }
 
-        public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams)
+        public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -274,7 +272,7 @@ namespace PixoVR.Apex
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
             HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
             HttpResponseMessage response;
-            object responseContent;
+            OrgDevicesResponse responseContent = null;
             try
             {
                 response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
@@ -284,7 +282,7 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "orgDeviceLicenses");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, failureResponse);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
 
@@ -297,13 +295,14 @@ namespace PixoVR.Apex
             {
                 Debug.LogError($"Error retrieving devices: {ex.Message}");
                 response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
-                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_DEVICES_FOR_ORG, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
-        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams)
+        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -329,10 +328,11 @@ namespace PixoVR.Apex
                 },
                 query = "query userSessionHistory($userId: ID!, $limit: Int, $page: Int, $params: GenericQueryParamsInput ){ userSessionHistory(userId: $userId, limit: $limit, page: $page, params: $params) { result { id userId moduleId module { id abbreviation description } rawScore maxScore status result startedAt completedAt } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
             };
+
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
             HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
             HttpResponseMessage response;
-            object responseContent;
+            SessionHistoryResponse responseContent;
             try
             {
                 response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
@@ -341,7 +341,7 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userSessionHistory");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, failureResponse);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
                 var sessionHistoryJSON = jsonResponse["data"]["userSessionHistory"];
@@ -353,9 +353,11 @@ namespace PixoVR.Apex
             {
                 Debug.LogError($"Error retrieving session history: {ex.Message}");
                 response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
-                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
+                return;
             }
-            OnAPIResponse.Invoke(ResponseType.RT_GET_SESSION_HISTORY, response, responseContent);
+
+            success?.Invoke(response, responseContent);
         }
 
         public async void LoginWithToken(string token)

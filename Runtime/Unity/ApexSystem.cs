@@ -235,12 +235,6 @@ namespace PixoVR.Apex
         public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
         public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
-        public OnGetDevicesForOrgSuccessEvent OnGetDevicesForOrgSuccess = new();
-        public OnApexFailureEvent OnGetDevicesForOrgFailed = new OnApexFailureEvent();
-
-        public OnGetSessionHistorySuccessEvent OnGetSessionHistorySuccess = new();
-        public OnApexFailureEvent OnGetSessionHistoryFailed = new OnApexFailureEvent();
-
         void Awake()
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"ApexSystem found on {gameObject.name}");
@@ -1551,38 +1545,6 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
-                case ResponseType.RT_GET_DEVICES_FOR_ORG:
-                    {
-                        if (success)
-                        {
-                            OnGetDevicesForOrgSuccess.Invoke(responseData as OrgDevicesResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(
-                                string.Format("[ApexSystem] Failed to get devices for org.\nError: {0}", failureData.Message)
-                            );
-                            OnGetDevicesForOrgFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_GET_SESSION_HISTORY:
-                    {
-                        if (success)
-                        {
-                            OnGetSessionHistorySuccess.Invoke(responseData as SessionHistoryResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(
-                                string.Format("[ApexSystem] Failed to get session history.\nError: {0}", failureData.Message)
-                            );
-                            OnGetSessionHistoryFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
                 default:
                     {
                         break;
@@ -1645,19 +1607,21 @@ namespace PixoVR.Apex
             return Instance._GetUserMetricsForCurrentUsersOrg(page, filterParams);
         }
 
-        public static bool GetDevicesForOrg(int page, FilterParams filterParams)
+        public static bool GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (Instance.currentActiveLogin == null)
                 return false;
-            return Instance._GetDevicesForOrg(page, filterParams);
+            return Instance._GetDevicesForOrg(page, filterParams, success, failure);
         }
 
-        public static bool GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams)
+        public static bool GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (Instance.currentActiveLogin == null)
                 return false;
-            return Instance._GetSessionHistory(page, sessionFilters, filterParams);
+
+            return Instance._GetSessionHistory(page, sessionFilters, filterParams, success, failure);
         }
+
         bool _GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
@@ -1700,7 +1664,7 @@ namespace PixoVR.Apex
             return true;
         }
 
-        bool _GetDevicesForOrg(int page, FilterParams filterParams)
+        bool _GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
@@ -1708,11 +1672,11 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page, filterParams);
+            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page, filterParams, success, failure);
             return true;
         }
 
-        bool _GetSessionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams)
+        bool _GetSessionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
@@ -1720,7 +1684,7 @@ namespace PixoVR.Apex
                 return false;
             }
 
-            apexAPIHandler.GetSessionHistory(currentActiveLogin.Token, page, sessionFilters, filterParams);
+            apexAPIHandler.GetSessionHistory(currentActiveLogin.Token, page, sessionFilters, filterParams, success, failure);
             return true;
         }
     }

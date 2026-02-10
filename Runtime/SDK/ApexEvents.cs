@@ -54,9 +54,5 @@ namespace PixoVR.Apex.Events
 
 
     [System.Serializable]
-    public class OnGetDevicesForOrgSuccessEvent : UnityEvent<OrgDevicesResponse> { };
-
-
-    [System.Serializable]
     public class OnGetSessionHistorySuccessEvent : UnityEvent<SessionHistoryResponse> { };
 }
