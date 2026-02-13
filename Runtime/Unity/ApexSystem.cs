@@ -1,13 +1,14 @@
+using Newtonsoft.Json;
+using PixoVR.Apex.Events;
+using PixoVR.Apex.Utils;
+using PixoVR.Apex.XAPI;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using PixoVR.Apex.Events;
-using PixoVR.Apex.Utils;
-using PixoVR.Apex.XAPI;
 using TinCan;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -154,7 +155,7 @@ namespace PixoVR.Apex
         protected string moduleName = "Generic";
 
         [SerializeField]
-        protected string moduleVersion = "0.00.00";
+        protected string moduleVersion = "";
 
         [SerializeField]
         protected string scenarioID = "Generic";
@@ -241,6 +242,15 @@ namespace PixoVR.Apex
             if (!InitializeInstance(this))
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, "Instance already initialized.");
+            }
+
+            var projectSettings = Resources.Load<Editor.PixoVRProjectSettings>("PixoVRProjectSettings");
+            if (projectSettings != null)
+            {
+                if (string.IsNullOrEmpty(moduleVersion))
+                {
+                    moduleVersion = projectSettings.ModuleVersion;
+                }
             }
 
             SetupPlatformConfiguration();

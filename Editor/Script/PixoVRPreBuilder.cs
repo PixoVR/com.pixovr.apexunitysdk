@@ -46,8 +46,8 @@ namespace PixoVR.Editor
                 return;
 
             Debug.Log("PixoVR Build Preprocess Ran!");
-            Debug.Log($"Module version is {ApexSystem.ModuleVersion}.");
-            PlayerSettings.bundleVersion = ApexSystem.ModuleVersion;
+            Debug.Log($"Module version is {ProjectSettings.ModuleVersion}.");
+            PlayerSettings.bundleVersion = ProjectSettings.ModuleVersion;
             Debug.Log($"Player version is {PlayerSettings.bundleVersion}.");
         }
 
