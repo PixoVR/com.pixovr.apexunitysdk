@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
 using System.Diagnostics;
@@ -27,32 +27,33 @@ namespace PixoVR.Apex
             return PixoAndroidUtils.LaunchApp(applicationPath, argumentKeys, argumentValues);
         }
 
+        public override void CloseCurrentApplication()
+        {
+            PixoAndroidUtils.CurrentActivity.Call("finishAndRemoveTask");
+        }
+
         public override Dictionary<string, string> ParseApplicationArguments()
         {
-            AndroidJavaClass unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-
-            AndroidJavaObject currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
-
-            AndroidJavaObject intent = currentActivity.Call<AndroidJavaObject>("getIntent");
-
-            string urlData = intent.Call<string>("getDataString");
-
             string optionalParameter = "", returnTargetParameter = "", targetTypeParameter = "", pixotoken = "";
+            using (AndroidJavaObject intent = PixoAndroidUtils.CurrentActivity.Call<AndroidJavaObject>("getIntent"))
+            {
+                string urlData = intent.Call<string>("getDataString");
 
-            UDebug.Log("[PixoAndroidPlatformUtilities] Parsed Passed Data.");
-            if(urlData != null && urlData.Length > 0)
-            {
-                UDebug.Log("[PixoAndroidPlatformUtilities] Parse from URL.");
-                return ParseURLArguments(urlData);
-            }
-            else
-            {
-                // TODO: Loop through ALL extras and return them
-                UDebug.Log("[PixoAndroidPlatformUtilities] Parsing from extras.");
-                optionalParameter = intent.Call<string>("getStringExtra", "optional");
-                returnTargetParameter = intent.Call<string>("getStringExtra", "returntarget");
-                targetTypeParameter = intent.Call<string>("getStringExtra", "targettype");
-                pixotoken = intent.Call<string>("getStringExtra", "pixotoken");
+                UDebug.Log("[PixoAndroidPlatformUtilities] Parsed Passed Data.");
+                if(urlData != null && urlData.Length > 0)
+                {
+                    UDebug.Log("[PixoAndroidPlatformUtilities] Parse from URL.");
+                    return ParseURLArguments(urlData);
+                }
+                else
+                {
+                    // TODO: Loop through ALL extras and return them
+                    UDebug.Log("[PixoAndroidPlatformUtilities] Parsing from extras.");
+                    optionalParameter = intent.Call<string>("getStringExtra", "optional");
+                    returnTargetParameter = intent.Call<string>("getStringExtra", "returntarget");
+                    targetTypeParameter = intent.Call<string>("getStringExtra", "targettype");
+                    pixotoken = intent.Call<string>("getStringExtra", "pixotoken");
+                }
             }
 
             Dictionary<string, string> parameters = new Dictionary<string, string>();

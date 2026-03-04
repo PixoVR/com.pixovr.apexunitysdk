@@ -33,6 +33,12 @@ namespace PixoVR.Apex
             return Instance.PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
         }
 
+        public static void CloseCurrentApplication()
+        {
+            UDebug.Log($"PixoPlatformUtilities::CloseCurrentApplication");
+            Instance.PlatformUtilities.CloseCurrentApplication();
+        }
+
         public static Dictionary<string, string> ParseApplicationArguments()
         {
             return Instance._ParseApplicationArguments();

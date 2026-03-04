@@ -479,6 +479,7 @@ namespace PixoVR.Apex
                     }
                     Debug.unityLogger.Log(LogType.Log, TAG, "Custom Target: " + returnURL);
                     PixoPlatformUtilities.OpenURL(returnURL);
+                    PixoPlatformUtilities.CloseCurrentApplication();
                     return;
                 }
                 else
@@ -526,11 +527,12 @@ namespace PixoVR.Apex
                     }
 
                     PixoPlatformUtilities.OpenApplication(CurrentExitTarget, keys.ToArray(), values.ToArray());
+                    PixoPlatformUtilities.CloseCurrentApplication();
                     return;
                 }
             }
 
-            PixoAndroidUtils.Quit();
+            PixoPlatformUtilities.CloseCurrentApplication();
         }
 
         string GetEndpointFromTarget(PlatformServer target)
