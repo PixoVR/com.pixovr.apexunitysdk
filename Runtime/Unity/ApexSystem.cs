@@ -11,6 +11,7 @@ using TinCan;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.XR;
+using static UnityEngine.Audio.ProcessorInstance;
 
 #if MANAGE_XR
 using MXR.SDK;
@@ -142,6 +143,11 @@ namespace PixoVR.Apex
             get { return ((APIPlatformServer)Instance.PlatformTargetServer).ToUrlString(); }
         }
 
+        public static APIHandler ApexAPIHandler
+        {
+            get { return Instance.apexAPIHandler; }
+        }
+
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
 
@@ -232,9 +238,6 @@ namespace PixoVR.Apex
 
         public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
         public OnApexFailureEvent OnQuickIDAuthLoginFailed = new();
-
-        public OnGetUserMetricsForOrgSuccessEvent OnGetUserMetricsForOrgSuccess = new();
-        public OnApexFailureEvent OnGetUserMetricsForOrgFailed = new OnApexFailureEvent();
 
         void Awake()
         {
@@ -1541,22 +1544,6 @@ namespace PixoVR.Apex
                         }
                         break;
                     }
-                case ResponseType.RT_GET_USER_METRICS_FOR_ORG:
-                    {
-                        if (success)
-                        {
-                            OnGetUserMetricsForOrgSuccess.Invoke(responseData as UserMetricsResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.Log(
-                                string.Format("[ApexSystem] Failed to get user metrics for org.\nError: {0}", failureData.Message)
-                            );
-                            OnGetUserMetricsForOrgFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
                 default:
                     {
                         break;
@@ -1604,100 +1591,70 @@ namespace PixoVR.Apex
 
         public static bool GenerateOneTimeLoginForCurrentUser(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            return Instance._GenerateOneTimeLoginForCurrentUser(success, failure);
-        }
-
-        public static bool GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
-        {
-            return Instance._GenerateOneTimeLoginForUser(userId, success, failure);
-        }
-
-        public static bool GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams)
-        {
-            if (Instance.currentActiveLogin == null)
+            if (CurrentActiveLogin == null)
+            {
+                Debug.unityLogger.Log(LogType.Error, TAG, "No user logged in to generate code.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to generate code." });
                 return false;
-            return Instance._GetUserMetricsForCurrentUsersOrg(page, filterParams);
+            }
+
+            ApexAPIHandler.GenerateAssistedLogin(CurrentActiveLogin.Token, -1, success, failure);
+            return true;
         }
 
-        public static bool GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public static void GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (Instance.currentActiveLogin == null)
-                return false;
-            return Instance._GetDevicesForOrg(page, filterParams, success, failure);
-        }
-
-        public static bool GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
-        {
-            if (Instance.currentActiveLogin == null)
-                return false;
-
-            return Instance._GetSessionHistory(page, sessionFilters, filterParams, success, failure);
-        }
-
-        bool _GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
-        {
-            if (currentActiveLogin == null)
+            if (CurrentActiveLogin == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "No current user logged in.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No current user logged in." });
+                return;
             }
 
             if (userId < 0)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "User id is invalid.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User id is invalid." });
+                return;
             }
 
-            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, userId, success, failure);
-            return true;
+            ApexAPIHandler.GenerateAssistedLogin(CurrentActiveLogin.Token, userId, success, failure);
         }
 
-        bool _GenerateOneTimeLoginForCurrentUser(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (currentActiveLogin == null)
+            if (CurrentActiveLogin == null)
             {
-                Debug.unityLogger.Log(LogType.Error, TAG, "No user logged in to generate code.");
-                return false;
+                Debug.LogError("[ApexSystem] No user logged in to get the user metrics for the current user org.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve org devices." });
+                return;
             }
-
-            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token, -1, success, failure);
-            return true;
+            
+            ApexAPIHandler.GetUserMetricsForOrg(CurrentActiveLogin.Token, CurrentActiveLogin.OrgId, page, filterParams, success, failure);
         }
 
-        bool _GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams)
+        public static void GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (currentActiveLogin == null)
-            {
-                Debug.LogError("[ApexSystem] No user logged in to retrieve users.");
-                return false;
-            }
-
-            apexAPIHandler.GetUserMetricsForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page, filterParams);
-            return true;
-        }
-
-        bool _GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
-        {
-            if (currentActiveLogin == null)
+            if (CurrentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] No user logged in to retrieve org devices.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve org devices." });
+                return;
             }
 
-            apexAPIHandler.GetDevicesForOrg(currentActiveLogin.Token, currentActiveLogin.OrgId, page, filterParams, success, failure);
-            return true;
+            ApexAPIHandler.GetDevicesForOrg(CurrentActiveLogin.Token, CurrentActiveLogin.OrgId, page, filterParams, success, failure);
         }
 
-        bool _GetSessionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public static void GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (currentActiveLogin == null)
+            if (CurrentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] No user logged in to retrieve session history.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve session history." });
+                return;
             }
 
-            apexAPIHandler.GetSessionHistory(currentActiveLogin.Token, page, sessionFilters, filterParams, success, failure);
-            return true;
+            ApexAPIHandler.GetSessionHistory(CurrentActiveLogin.Token, page, sessionFilters, filterParams, success, failure);
         }
     }
 }

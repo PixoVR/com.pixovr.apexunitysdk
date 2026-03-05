@@ -196,7 +196,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams)
+        public async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -230,6 +230,7 @@ namespace PixoVR.Apex
                 if (failureResponse != null)
                 {
                     OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
 
@@ -237,15 +238,16 @@ namespace PixoVR.Apex
                 var userMetricsResponse = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = userMetricsResponse;
+
+                success?.Invoke(userMetricsResponse, response);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error retrieving users: {ex.Message}");
                 response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
                 responseContent = new FailureResponse { Error = "true", Message = ex.Message };
+                failure?.Invoke(response, responseContent as FailureResponse);
             }
-
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, responseContent);
         }
 
         public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
