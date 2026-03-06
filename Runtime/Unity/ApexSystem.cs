@@ -771,24 +771,24 @@ namespace PixoVR.Apex
             return Instance._CheckModuleAccess(targetModuleID);
         }
 
-        public static bool JoinSession(string scenarioID = null, Extension contextExtension = null, Action<HttpResponseMessage, JoinSessionResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        public static void JoinSession(string scenarioID = null, Extension contextExtension = null, Action<HttpResponseMessage, JoinSessionResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._JoinSession(scenarioID, contextExtension, success, failure);
+            Instance._JoinSession(scenarioID, contextExtension, success, failure);
         }
 
-        public static bool CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        public static void CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, success, failure);
+            Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, success, failure);
         }
 
-        public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        public static void SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSimpleSessionEvent(action, targetObject, contextExtension, success, failure);
+            Instance._SendSimpleSessionEvent(action, targetObject, contextExtension, success, failure);
         }
 
-        public static bool SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        public static void SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSessionEvent(eventStatement, success, failure);
+            Instance._SendSessionEvent(eventStatement, success, failure);
         }
 
         public static bool GetCurrentUser()
@@ -915,17 +915,19 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _JoinSession(string newScenarioID, Extension contextExtension, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        protected void _JoinSession(string newScenarioID, Extension contextExtension, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "Cannot join session with no active login.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot join session with no active login." });
+                return;
             }
 
             if (userAccessVerified == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
 
             if (newScenarioID != null)
@@ -976,20 +978,15 @@ namespace PixoVR.Apex
             sessionData.JsonData = sessionStatement;
 
             apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData, success, failure);
-
-            return true;
         }
 
-        protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        protected void _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (userAccessVerified == false)
-                return false;
-
-            if (verbName == null)
-                return false;
-
-            if (verbName.Length == 0)
-                return false;
+            if (string.IsNullOrEmpty(verbName))
+            {
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Verb name is invalid." });
+                return;
+            }
 
             Statement sessionStatement = new Statement();
 
@@ -1025,32 +1022,36 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = sessionStatement;
 
-            return _SendSessionEvent(sessionStatement, success, failure);
+            _SendSessionEvent(sessionStatement, success, failure);
         }
 
-        protected bool _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        protected void _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (userAccessVerified == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
 
             if (currentActiveLogin == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "Cannot send a session event with no active login.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot send a session event with no active login." });
+                return;
             }
 
             if (sessionInProgress == false)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "No session in progress to send event for.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No session in progress to send event for." });
+                return;
             }
 
             if (eventStatement == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "No event data to send.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No event data to send." });
+                return;
             }
 
             if (eventStatement.actor != null)
@@ -1061,19 +1062,22 @@ namespace PixoVR.Apex
             if (eventStatement.verb == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "Verb missing from eventStatement.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Verb missing from eventStatement." });
+                return;
             }
 
             if (eventStatement.verb.id == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "verb.id missing from eventStatement.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "verb.id missing from eventStatement." });
+                return;
             }
 
             if (eventStatement.target == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "Object (target) missing from eventStatement.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Object (target) missing from eventStatement." });
+                return;
             }
 
             eventStatement.actor = new Agent();
@@ -1098,27 +1102,28 @@ namespace PixoVR.Apex
             sessionEvent.JsonData = eventStatement;
 
             apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent, success, failure);
-
-            return true;
         }
 
-        protected bool _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        protected void _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (userAccessVerified == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
 
             if (currentActiveLogin == null)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "Cannot complete session with no active login.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot complete session with no active login." });
+                return;
             }
 
             if (sessionInProgress == false)
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, "No session in progress to complete.");
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No session in progress to complete." });
+                return;
             }
 
             // Create our actor
@@ -1188,8 +1193,6 @@ namespace PixoVR.Apex
             );
 
             apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData, success, failure);
-
-            return true;
         }
 
         protected bool _SendHeartbeat()
