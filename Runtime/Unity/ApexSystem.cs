@@ -199,9 +199,6 @@ namespace PixoVR.Apex
         protected Task<bool> socketConnectTask;
         protected Task socketDisconnectTask;
 
-        public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
-        public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
-
         public OnModuleAccessSuccessEvent OnModuleAccessSuccess = new OnModuleAccessSuccessEvent();
         public OnApexFailureEvent OnModuleAccessFailed = new OnApexFailureEvent();
 
@@ -213,15 +210,6 @@ namespace PixoVR.Apex
 
         public OnGetUserModulesSuccessEvent OnGetUserModulesSuccess = new OnGetUserModulesSuccessEvent();
         public OnApexFailureEvent OnGetUserModulesFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnJoinSessionSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnJoinSessionFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnCompleteSessionSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnCompleteSessionFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
         public OnGetOrgModulesSuccessEvent OnGetOrganizationModulesSuccess = new OnGetOrgModulesSuccessEvent();
         public OnApexFailureEvent OnGetOrganizationModulesFailed = new OnApexFailureEvent();
@@ -543,14 +531,6 @@ namespace PixoVR.Apex
             return target.ToUrlString();
         }
 
-        string GetWebEndpointFromPlatformTarget(PlatformServer target)
-        {
-            int targetValue = (int)target;
-            WebPlatformServer webTarget = (WebPlatformServer)targetValue;
-
-            return webTarget.ToUrlString();
-        }
-
         string GetPlatformEndpointFromPlatformTarget(PlatformServer target)
         {
             int targetValue = (int)target;
@@ -722,9 +702,9 @@ namespace PixoVR.Apex
             Instance._ChangePlatformServer(newServer);
         }
 
-        public static void Ping()
+        public static void Ping(Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Instance._Ping();
+            ApexAPIHandler.Ping(success, failure);
         }
 
         public static bool LoginWithToken()
@@ -735,17 +715,55 @@ namespace PixoVR.Apex
 
         public static bool LoginWithToken(string token)
         {
-            return Instance._LoginWithToken(token);
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Calling LoginWithToken ({token})");
+            if (token.Length <= 0)
+            {
+                return false;
+            }
+
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Logging in with token: {token}");
+            ApexAPIHandler.LoginWithToken(token);
+
+            return true;
         }
 
         public static bool Login(LoginData login)
         {
-            return Instance._Login(login);
+            Debug.unityLogger.Log(LogType.Log, TAG, "_Login called.");
+            if (ApexAPIHandler == null)
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "API Handler is null.");
+                Instance.OnLoginFailed.Invoke(
+                    Instance.GenerateFailureResponse(
+                        "There was an error reaching the platform, please contact your administrator."
+                    )
+                );
+                return false;
+            }
+
+            if (login.Login.Length <= 0)
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No user name.");
+                Instance.OnLoginFailed.Invoke(Instance.GenerateFailureResponse("No username or email entered."));
+                return false;
+            }
+
+            if (login.Password.Length <= 0)
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No password.");
+                login.Password = "<empty>";
+            }
+
+            ApexAPIHandler.Login(login);
+
+            Debug.unityLogger.Log(LogType.Log, TAG, "Login called.");
+
+            return true;
         }
 
         public static bool Login(string username, string password)
         {
-            return Instance._Login(username, password);
+            return Login(new LoginData(username, password));
         }
 
         public static bool CheckModuleAccess(int targetModuleID = -1)
@@ -753,28 +771,24 @@ namespace PixoVR.Apex
             return Instance._CheckModuleAccess(targetModuleID);
         }
 
-        public static bool JoinSession(string scenarioID = null, Extension contextExtension = null)
+        public static bool JoinSession(string scenarioID = null, Extension contextExtension = null, Action<HttpResponseMessage, JoinSessionResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._JoinSession(scenarioID, contextExtension);
+            return Instance._JoinSession(scenarioID, contextExtension, success, failure);
         }
 
-        public static bool CompleteSession(
-            SessionData currentSessionData,
-            Extension contextExtension = null,
-            Extension resultExtension = null
-        )
+        public static bool CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
+            return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, success, failure);
         }
 
-        public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension)
+        public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSimpleSessionEvent(action, targetObject, contextExtension);
+            return Instance._SendSimpleSessionEvent(action, targetObject, contextExtension, success, failure);
         }
 
-        public static bool SendSessionEvent(Statement eventStatement)
+        public static bool SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSessionEvent(eventStatement);
+            return Instance._SendSessionEvent(eventStatement, success, failure);
         }
 
         public static bool GetCurrentUser()
@@ -819,11 +833,6 @@ namespace PixoVR.Apex
             SetupAPI();
         }
 
-        protected void _Ping()
-        {
-            apexAPIHandler.Ping();
-        }
-
         protected bool _LoginWithToken(string token)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"Calling LoginWithToken ({token})");
@@ -838,51 +847,14 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _Login(LoginData login)
-        {
-            Debug.unityLogger.Log(LogType.Log, TAG, "_Login called.");
-            if (apexAPIHandler == null)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "API Handler is null.");
-                OnLoginFailed.Invoke(
-                    GenerateFailureResponse(
-                        "There was an error reaching the platform, please contact your administrator."
-                    )
-                );
-                return false;
-            }
-
-            if (login.Login.Length <= 0)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No user name.");
-                OnLoginFailed.Invoke(GenerateFailureResponse("No username or email entered."));
-                return false;
-            }
-
-            if (login.Password.Length <= 0)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No password.");
-                login.Password = "<empty>";
-            }
-
-            apexAPIHandler.Login(login);
-
-            Debug.unityLogger.Log(LogType.Log, TAG, "Login called.");
-
-            return true;
-        }
-
-        protected bool _Login(string username, string password)
-        {
-            return _Login(new LoginData(username, password));
-        }
-
         protected FailureResponse GenerateFailureResponse(string message)
         {
-            FailureResponse failureResponse = new FailureResponse();
-            failureResponse.Error = "true";
-            failureResponse.HttpCode = "400";
-            failureResponse.Message = message;
+            FailureResponse failureResponse = new FailureResponse()
+            {
+                Error = "True",
+                HttpCode = "400",
+                Message = message,
+            };
 
             return failureResponse;
         }
@@ -943,7 +915,7 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _JoinSession(string newScenarioID = null, Extension contextExtension = null)
+        protected bool _JoinSession(string newScenarioID, Extension contextExtension, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (currentActiveLogin == null)
             {
@@ -1003,12 +975,12 @@ namespace PixoVR.Apex
             sessionData.EventType = ApexEventTypes.PIXOVR_SESSION_JOINED;
             sessionData.JsonData = sessionStatement;
 
-            apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData);
+            apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData, success, failure);
 
             return true;
         }
 
-        protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension)
+        protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (userAccessVerified == false)
                 return false;
@@ -1020,8 +992,6 @@ namespace PixoVR.Apex
                 return false;
 
             Statement sessionStatement = new Statement();
-            Agent sessionActor = new Agent();
-            sessionActor.mbox = currentActiveLogin.Email;
 
             Verb sessionVerb = new Verb();
             sessionVerb.id = new Uri("https://pixovr.com/xapi/verbs/" + verbName.Replace(' ', '_').ToLower());
@@ -1043,7 +1013,7 @@ namespace PixoVR.Apex
 
             sessionContext.extensions = AppendStandardContextExtension(contextExtension);
 
-            sessionStatement.actor = sessionActor;
+            sessionStatement.actor = null;
             sessionStatement.verb = sessionVerb;
             sessionStatement.target = sessionActivity;
             sessionStatement.context = sessionContext;
@@ -1055,12 +1025,10 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = sessionStatement;
 
-            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
-
-            return true;
+            return _SendSessionEvent(sessionStatement, success, failure);
         }
 
-        protected bool _SendSessionEvent(Statement eventStatement)
+        protected bool _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             if (userAccessVerified == false)
             {
@@ -1129,16 +1097,12 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
-            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
+            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent, success, failure);
 
             return true;
         }
 
-        protected bool _CompleteSession(
-            SessionData currentSessionData,
-            Extension contextExtension,
-            Extension resultExtension
-        )
+        protected bool _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (userAccessVerified == false)
             {
@@ -1223,7 +1187,7 @@ namespace PixoVR.Apex
                 currentSessionData.MaximumScore
             );
 
-            apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData);
+            apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData, success, failure);
 
             return true;
         }
@@ -1348,20 +1312,6 @@ namespace PixoVR.Apex
 
             switch (response)
             {
-                case ResponseType.RT_PING:
-                    {
-                        if (success)
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "Ping successful.");
-                            OnPingSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "Ping failed.");
-                            OnPingFailed.Invoke(message);
-                        }
-                        break;
-                    }
                 case ResponseType.RT_LOGIN:
                     {
                         Debug.unityLogger.Log(LogType.Log, TAG, "Calling to handle login.");
@@ -1393,63 +1343,6 @@ namespace PixoVR.Apex
                             FailureResponse failureData = responseData as FailureResponse;
                             Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get user.\nError: {0}", failureData.Message));
                             OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_JOINED:
-                    {
-                        if (success)
-                        {
-                            JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Session Id is {0}.", joinSessionResponse.SessionId));
-                            heartbeatSessionID = joinSessionResponse.SessionId;
-                            sessionInProgress = true;
-                            OnJoinSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG,
-                                string.Format("Failed to join session.\nError: {0}", failureData.Message)
-                            );
-                            currentSessionID = Guid.Empty;
-                            sessionInProgress = false;
-                            OnJoinSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_COMPLETE:
-                    {
-                        if (success)
-                        {
-                            sessionInProgress = false;
-                            currentSessionID = Guid.Empty;
-                            OnCompleteSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG,
-                                string.Format("Failed to complete session.\nError: {0}", failureData.Message)
-                            );
-                            OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_EVENT:
-                    {
-                        if (success)
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "Session event sent.");
-                            OnSendEventSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG,
-                                string.Format("Failed to send session event.\nError: {0}", failureData.Message)
-                            );
-                            OnSendEventFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
                     }
