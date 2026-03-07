@@ -77,13 +77,11 @@ namespace PixoVR.Apex
         public static bool LoginCheckModuleAccess
         {
             get { return Instance.loginCheckModuleAccess; }
-            set { }
         }
 
         public static string DeviceSerialNumber
         {
             get { return Instance.deviceSerialNumber; }
-            set { }
         }
 
         public static string PassedLoginToken
@@ -130,6 +128,11 @@ namespace PixoVR.Apex
                     TargetType = "app";
                 }
             }
+        }
+
+        public static bool IsSessionInProgress
+        {
+            get { return Instance.sessionInProgress; }
         }
 
         public static string TargetType
@@ -773,12 +776,28 @@ namespace PixoVR.Apex
 
         public static void JoinSession(string scenarioID = null, Extension contextExtension = null, Action<HttpResponseMessage, JoinSessionResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Instance._JoinSession(scenarioID, contextExtension, success, failure);
+            Instance._JoinSession(scenarioID, contextExtension, (response, formattedResponse) =>
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Session Id is {0}.", formattedResponse.SessionId));
+                Instance.heartbeatSessionID = formattedResponse.SessionId;
+                Instance.sessionInProgress = true;
+                success?.Invoke(response, formattedResponse);
+            }, (response, formattedResponse) =>
+            {
+                Instance.sessionInProgress = false;
+                Instance.currentSessionID = Guid.Empty;
+                failure?.Invoke(response, formattedResponse);
+            });
         }
 
         public static void CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, success, failure);
+            Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, (response, formattedResponse) =>
+            {
+                Instance.sessionInProgress = false;
+                Instance.currentSessionID = Guid.Empty;
+                success?.Invoke(response, formattedResponse);
+            }, failure);
         }
 
         public static void SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
