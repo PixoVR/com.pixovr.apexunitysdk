@@ -29,7 +29,7 @@ public static class PixoVREditorCommands
         AssetDatabase.Refresh();
     }
 
-    [MenuItem("PixoVR/Update Plugin Version")]
+    [MenuItem("PixoVR/Development/Update Plugin Version")]
     public static async Task PixoVRVersionUpdate()
     {
         await VersionUpdate();

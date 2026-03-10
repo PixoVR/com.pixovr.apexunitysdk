@@ -8,10 +8,8 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TinCan;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.XR;
-using static UnityEngine.Audio.ProcessorInstance;
 
 #if MANAGE_XR
 using MXR.SDK;
@@ -151,7 +149,9 @@ namespace PixoVR.Apex
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
 
+#if PIXOVR_DEBUG
         [SerializeField]
+#endif
         protected string serverIP = "";
 
         [SerializeField]
@@ -160,7 +160,9 @@ namespace PixoVR.Apex
         [SerializeField]
         protected string moduleName = "Generic";
 
+#if PIXOVR_DEBUG
         [SerializeField]
+#endif
         protected string moduleVersion = "";
 
         [SerializeField]
