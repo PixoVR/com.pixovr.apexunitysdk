@@ -171,13 +171,19 @@ namespace PixoVR.Apex
         [SerializeField]
         protected string scenarioID = "Generic";
 
+#if PIXOVR_DEBUG
         [SerializeField]
-        public bool runSetupOnAwake = true;
+#endif
+        protected bool runSetupOnAwake = true;
 
+#if PIXOVR_DEBUG
         [SerializeField]
-        public bool loginCheckModuleAccess = true;
+#endif
+        protected bool loginCheckModuleAccess = true;
 
+#if PIXOVR_DEBUG
         [SerializeField]
+#endif
         protected float heartbeatTime = 5.0f;
 
         protected string webSocketUrl;

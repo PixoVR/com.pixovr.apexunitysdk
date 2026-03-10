@@ -32,8 +32,6 @@ namespace PixoVR.Editor
                 EditorGUILayout.LabelField($"Module version {Target.ModuleVersion} is invalid.", LabelStyle);
             }
 
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.SyncModuleWithApplicationVersion)));
-
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.CustomURLScheme)));
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.SyncVersionsOnBuildPreProcess)));
             if (Target.SyncVersionsOnBuildPreProcess)
@@ -47,7 +45,7 @@ namespace PixoVR.Editor
 
             if(serializedObject.ApplyModifiedProperties())
             {
-                if(Target.SyncModuleWithApplicationVersion)
+                if(Target.SyncVersionsOnBuildPreProcess)
                 {
                     PlayerSettings.bundleVersion = Target.ModuleVersion;
                 }
