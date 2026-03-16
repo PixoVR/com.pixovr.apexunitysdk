@@ -273,6 +273,11 @@ namespace PixoVR.Apex
 #endif
         }
 
+        void OnApplicationQuit()
+        {
+            CompleteSession(null);
+        }
+
 #if MANAGE_XR
         async void InitMXRSDK()
         {
@@ -1151,6 +1156,11 @@ namespace PixoVR.Apex
                 Debug.unityLogger.Log(LogType.Error, TAG, "No session in progress to complete.");
                 failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No session in progress to complete." });
                 return;
+            }
+
+            if (currentSessionData != null)
+            {
+                currentSessionData = new SessionData(0f, 0f, 0f, 0f, 0, true, false);
             }
 
             // Create our actor
