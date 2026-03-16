@@ -1546,6 +1546,8 @@ namespace PixoVR.Apex
 
         public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
+            failure = WrapFailure("GetUserMetricsForCurrentUsersOrg", failure);
+
             if (CurrentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] No user logged in to get the user metrics for the current user org.");
@@ -1558,6 +1560,8 @@ namespace PixoVR.Apex
 
         public static void GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
+            failure = WrapFailure("GetDevicesForOrg", failure);
+
             if (CurrentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] No user logged in to retrieve org devices.");
@@ -1570,6 +1574,8 @@ namespace PixoVR.Apex
 
         public static void GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
+            failure = WrapFailure("GetSesssionHistory", failure);
+
             if (CurrentActiveLogin == null)
             {
                 Debug.LogError("[ApexSystem] No user logged in to retrieve session history.");
@@ -1578,6 +1584,21 @@ namespace PixoVR.Apex
             }
 
             ApexAPIHandler.GetSessionHistory(CurrentActiveLogin.Token, page, sessionFilters, filterParams, success, failure);
+        }
+
+        public static Action<HttpResponseMessage, FailureResponse> WrapFailure(string functionName, Action<HttpResponseMessage, FailureResponse> failureAction)
+        {
+#if PIXOVR_LOG_VERBOSE
+            Action<HttpResponseMessage, FailureResponse> systemFailure = (response, formattedReponse) =>
+            {
+                SendSimpleSessionEvent(functionName, "ApexSystem", new Extension(new Dictionary<string, string>() { { "Error", formattedReponse.Error } }), null, null);
+                failureAction?.Invoke(response, formattedReponse);
+            };
+
+            return systemFailure;
+#else
+            return failureAction;
+#endif
         }
     }
 }
