@@ -8,7 +8,6 @@ using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-
 namespace PixoVR.Apex
 {
     public interface IPlatformErrorable
