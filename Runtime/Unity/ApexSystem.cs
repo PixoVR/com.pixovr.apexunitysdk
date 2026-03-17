@@ -956,11 +956,17 @@ namespace PixoVR.Apex
                 return;
             }
 
+            Debug.Log("Joining Session.");
+#if PIXOVR_HUBAPP_ONLY
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
+            newScenarioID += " - Hub App";
+#else
             if (userAccessVerified == false)
             {
                 failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
                 return;
             }
+#endif
 
             if (newScenarioID != null)
             {
