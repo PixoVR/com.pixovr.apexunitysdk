@@ -1065,11 +1065,15 @@ namespace PixoVR.Apex
 
         protected void _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
+#if PIXOVR_HUBAPP_ONLY
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
+#else
             if (userAccessVerified == false)
             {
                 failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
                 return;
             }
+#endif
 
             if (currentActiveLogin == null)
             {
@@ -1144,11 +1148,15 @@ namespace PixoVR.Apex
 
         protected void _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
+#if PIXOVR_HUBAPP_ONLY
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
+#else
             if (userAccessVerified == false)
             {
                 failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
                 return;
             }
+#endif
 
             if (currentActiveLogin == null)
             {
