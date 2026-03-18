@@ -1046,7 +1046,12 @@ namespace PixoVR.Apex
             sessionContext.revision = moduleVersion;
             sessionContext.platform = platform;
 
-            sessionContext.extensions = AppendStandardContextExtension(contextExtension);
+            if(contextExtension == null)
+            {
+                contextExtension = new Extension();
+            }
+
+            sessionContext.extensions = new Extensions(contextExtension.ToJObject());
 
             sessionStatement.actor = null;
             sessionStatement.verb = sessionVerb;
