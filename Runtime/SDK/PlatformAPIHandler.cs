@@ -662,9 +662,12 @@ namespace PixoVR.Apex
 
             try
             {
-                var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-                OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
-                return;
+                if (body.Contains("\"Error\":", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+                    return;
+                }
             }
             catch (Exception ex)
             {
