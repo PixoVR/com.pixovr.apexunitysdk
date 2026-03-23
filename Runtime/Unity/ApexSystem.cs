@@ -959,8 +959,7 @@ namespace PixoVR.Apex
 
             Debug.Log("Joining Session.");
 #if PIXOVR_MODULEACCESS_BYPASS
-            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
-            newScenarioID += " - Hub App";
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check..");
 #else
             if (userAccessVerified == false)
             {
@@ -1072,7 +1071,7 @@ namespace PixoVR.Apex
         protected void _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
 #if PIXOVR_MODULEACCESS_BYPASS
-            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check.");
 #else
             if (userAccessVerified == false)
             {
@@ -1155,7 +1154,7 @@ namespace PixoVR.Apex
         protected void _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
 #if PIXOVR_MODULEACCESS_BYPASS
-            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check..");
 #else
             if (userAccessVerified == false)
             {
@@ -1352,6 +1351,11 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
             contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
+#if PIXOVR_MODULEACCESS_BYPASS
+            contextExtension.AddSimple("module_access_checked", "false");
+#else
+            contextExtension.AddSimple("module_access_checked", "true");
+#endif
 
             if (string.IsNullOrEmpty(deviceSerialNumber))
             {
