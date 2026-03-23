@@ -1411,6 +1411,8 @@ namespace PixoVR.Apex
                         if (success)
                         {
                             var userAccessResponseContent = responseData as UserAccessResponseContent;
+                            string hasAccessString = userAccessResponseContent.Access == true ? "does" : "does not";
+                            Debug.Log($"User {hasAccessString} have access to module {moduleID}");
                             if (userAccessResponseContent.Access)
                             {
                                 if (userAccessResponseContent.PassingScore.HasValue)
