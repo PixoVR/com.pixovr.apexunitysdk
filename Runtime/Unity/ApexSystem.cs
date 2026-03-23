@@ -176,10 +176,11 @@ namespace PixoVR.Apex
 #endif
         protected bool runSetupOnAwake = true;
 
-#if PIXOVR_DEBUG
-        [SerializeField]
-#endif
+#if PIXOVR_MODULEACCESS_BYPASS
+        protected bool loginCheckModuleAccess = false;
+#else
         protected bool loginCheckModuleAccess = true;
+#endif
 
 #if PIXOVR_DEBUG
         [SerializeField]
@@ -957,7 +958,7 @@ namespace PixoVR.Apex
             }
 
             Debug.Log("Joining Session.");
-#if PIXOVR_HUBAPP_ONLY
+#if PIXOVR_MODULEACCESS_BYPASS
             Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
             newScenarioID += " - Hub App";
 #else
@@ -1070,7 +1071,7 @@ namespace PixoVR.Apex
 
         protected void _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-#if PIXOVR_HUBAPP_ONLY
+#if PIXOVR_MODULEACCESS_BYPASS
             Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
 #else
             if (userAccessVerified == false)
@@ -1153,7 +1154,7 @@ namespace PixoVR.Apex
 
         protected void _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-#if PIXOVR_HUBAPP_ONLY
+#if PIXOVR_MODULEACCESS_BYPASS
             Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check for Hub App only.");
 #else
             if (userAccessVerified == false)
@@ -1177,7 +1178,7 @@ namespace PixoVR.Apex
                 return;
             }
 
-            if (currentSessionData != null)
+            if (currentSessionData == null)
             {
                 currentSessionData = new SessionData(0f, 0f, 0f, 0f, 0, true, false);
             }
