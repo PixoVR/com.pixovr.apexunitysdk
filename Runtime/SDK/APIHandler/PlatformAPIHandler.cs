@@ -13,12 +13,8 @@ namespace PixoVR.Apex
     {
         RT_NONE = 0,
         RT_FAILED_RESPONSE,
-        RT_PING,
         RT_LOGIN,
         RT_GET_USER,
-        RT_SESSION_JOINED,
-        RT_SESSION_COMPLETE,
-        RT_SESSION_EVENT,
         RT_GET_USER_ACCESS,
         RT_GET_USER_MODULES,
         RT_GET_MODULES_LIST,
@@ -29,7 +25,7 @@ namespace PixoVR.Apex
         RT_GET_USER_METRICS_FOR_ORG,
     }
 
-    public class APIHandler
+    public class PlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
@@ -42,10 +38,10 @@ namespace PixoVR.Apex
         protected string apiURL = "";
         protected HttpClient apiHandlingClient = null;
 
-        public APIHandler()
+        public PlatformAPIHandler()
             : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
-        public APIHandler(string endpointUrl)
+        public PlatformAPIHandler(string endpointUrl)
         {
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);
@@ -61,16 +57,16 @@ namespace PixoVR.Apex
             return badRequestResponse;
         }
 
-        public void SetEndpoint(string endpointUrl)
+        public override void SetEndpoint(string endpointUrl)
         {
             EnsureURLHasProtocol(ref endpointUrl);
 
             URL = endpointUrl;
-            Debug.Log("[APIHandler] Set Endpoint to " + URL);
+            Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
             handlingClient.BaseAddress = new Uri(URL);
         }
 
-        public void SetPlatformEndpoint(string endpointUrl)
+        public override void SetPlatformEndpoint(string endpointUrl)
         {
             EnsureURLHasProtocol(ref endpointUrl);
 
@@ -97,7 +93,7 @@ namespace PixoVR.Apex
             }
         }
 
-        public async void Ping(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void Ping(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -121,7 +117,7 @@ namespace PixoVR.Apex
             public int[] userIds;
         }
 
-        public async void GenerateAssistedLogin(string authToken, int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GenerateAssistedLogin(string authToken, int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -197,7 +193,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -251,7 +247,7 @@ namespace PixoVR.Apex
             }
         }
 
-        public async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -305,7 +301,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -363,7 +359,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public async void LoginWithToken(string token)
+        public override async void LoginWithToken(string token, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             Debug.Log($"[Platform API] Logging in with token: {token}");
             apiHandlingClient.DefaultRequestHeaders.Clear();
@@ -378,15 +374,17 @@ namespace PixoVR.Apex
             if ((responseContent as UserLoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, responseContent as FailureResponse);
+                return;
             }
 
             Debug.Log($"[Platform API] Got a valid login response!");
-            object loginResponseContent = (responseContent as UserLoginResponseContent).User;
-
-            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, loginResponseContent);
+            ActiveUserInformation userInformation = new ActiveUserInformation();
+            userInformation.User = (responseContent as UserLoginResponseContent).User;
+            success?.Invoke(response, userInformation);
         }
 
-        public async void Login(LoginData login)
+        public override async void Login(LoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             Debug.Log("[Platform API] Calling Login.");
             handlingClient.DefaultRequestHeaders.Clear();
@@ -402,13 +400,17 @@ namespace PixoVR.Apex
             if ((responseContent as LoginResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, responseContent as FailureResponse);
+                return;
             }
 
             Debug.Log("[Platform API] Response content deserialized.");
-            OnAPIResponse.Invoke(ResponseType.RT_LOGIN, response, responseContent);
+            ActiveUserInformation userInformation = new ActiveUserInformation();
+            userInformation.User = responseContent as LoginResponseContent;
+            success?.Invoke(response, userInformation);
         }
 
-        public async void GetUserData(string authToken, int userId)
+        public override async void GetUserData(string authToken, int userId)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -426,7 +428,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
         }
 
-        public async void GetUserModules(string authToken, int userId)
+        public override async void GetUserModules(string authToken, int userId)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -452,7 +454,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
         }
 
-        public async void GetQuickIDAuthenticationUsers(string serialNumber)
+        public override async void GetQuickIDAuthenticationUsers(string serialNumber)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -471,7 +473,7 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_GET_USERS, response, responseContent);
         }
 
-        public async void QuickIDLogin(QuickIDLoginData login)
+        public override async void QuickIDLogin(QuickIDLoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             Debug.Log("[Platform API] Calling Quick ID login.");
             apiHandlingClient.DefaultRequestHeaders.Clear();
@@ -510,13 +512,18 @@ namespace PixoVR.Apex
                 {
                     Debug.Log("[Platform API] Quick ID login response did not contain user data.");
                 }
+
+                ActiveUserInformation userInformation = new ActiveUserInformation();
+                userInformation.User = loginResponseContent;
+                success?.Invoke(response, userInformation);
+                return;
             }
 
             Debug.Log("[Platform API] Response content deserialized and mapped.");
-            OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_LOGIN, response, loginResponseContent);
+            failure?.Invoke(response, responseContent as FailureResponse);
         }
 
-        public async void GetModuleAccess(int moduleId, int userId, string serialNumber)
+        public override async void GetModuleAccess(int moduleId, int userId, string serialNumber, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             Debug.Log("[Platform API Handler] Get Module Access");
             handlingClient.DefaultRequestHeaders.Clear();
@@ -544,11 +551,16 @@ namespace PixoVR.Apex
             if (!(responseContent as FailureResponse).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
+                ActiveUserInformation userInformation = new ActiveUserInformation();
+                userInformation.User = responseContent as LoginResponseContent;
+                success?.Invoke(response, userInformation);
+                return;
             }
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_ACCESS, response, responseContent);
+
+            failure?.Invoke(response, responseContent as FailureResponse);
         }
 
-        public async void SendHeartbeat(string authToken, int sessionId, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        public override async void SendHeartbeat(string authToken, int sessionId, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -574,7 +586,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, null);
         }
 
-        public async void JoinSession(string authToken, JoinSessionData joinData, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void JoinSession(string authToken, JoinSessionData joinData, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -601,7 +613,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent as JoinSessionResponse);
         }
 
-        public async void CompleteSession(string authToken, CompleteSessionData completionData, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void CompleteSession(string authToken, CompleteSessionData completionData, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -622,7 +634,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, null);
         }
 
-        public async void SendSessionEvent(string authToken, SessionEventData sessionEvent, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void SendSessionEvent(string authToken, SessionEventData sessionEvent, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -643,7 +655,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, null);
         }
 
-        public async void GetModuleList(string authToken, string platform)
+        public override async void GetModuleList(string authToken, string platform)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);

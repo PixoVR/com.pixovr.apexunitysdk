@@ -187,6 +187,13 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
+    public class ActiveUserInformation
+    {
+        public LoginResponseContent User = null;
+        public UserAccessResponseContent ModuleUserInformation = null;
+    }
+
+    [Serializable]
     public class Organization
     {
         public int ID;

@@ -81,7 +81,7 @@ namespace PixoVR.Apex
             }
         }
 
-        private static bool ApplicationIsQuitting = false;
+        protected static bool ApplicationIsQuitting = false;
         /// <summary>
         /// When Unity quits, it destroys objects in a random order.
         /// In principle, a Singleton is only destroyed when application quits.
