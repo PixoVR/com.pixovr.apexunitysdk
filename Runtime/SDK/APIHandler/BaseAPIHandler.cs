@@ -4,6 +4,7 @@ using System.Net.Http;
 
 namespace PixoVR.Apex
 {
+#pragma warning disable CS0162
     public class BaseAPIHandler
     {
         public BaseAPIHandler()
@@ -125,4 +126,5 @@ namespace PixoVR.Apex
             await System.Threading.Tasks.Task.FromResult(0);
         }
     }
+#pragma warning restore CS0162
 }

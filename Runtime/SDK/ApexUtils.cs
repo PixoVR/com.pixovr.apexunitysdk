@@ -20,6 +20,9 @@ namespace PixoVR.Apex.Utils
         public static string GetMacAddress()
         {
             string macAddress = "";
+#if UNITY_WEBGL
+            macAddress = HOME_IP;
+#else
             try
             {
                 PhysicalAddress physicalMacAddress = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)?.GetPhysicalAddress();
@@ -29,11 +32,15 @@ namespace PixoVR.Apex.Utils
             {
                 Debug.LogError("[ApexUtils] " + exception.Message);
             }
+#endif
             return macAddress;
         }
 
         public static string GetLocalIP()
         {
+#if UNITY_WEBGL
+            return HOME_IP;
+#else
             string currentIp = GetIP(ADDRESSFAM.IPv4);
             if(currentIp == INVALID_IP)
             {
@@ -41,10 +48,14 @@ namespace PixoVR.Apex.Utils
             }
 
             return currentIp;
+#endif
         }
 
         private static string GetIP(ADDRESSFAM Addfam)
         {
+#if UNITY_WEBGL
+            return HOME_IP;
+#else
             //Return null if ADDRESSFAM is Ipv6 but Os does not support it
             if (Addfam == ADDRESSFAM.IPv6 && !Socket.OSSupportsIPv6)
             {
@@ -87,7 +98,9 @@ namespace PixoVR.Apex.Utils
                 }
             }
             return output;
+#endif
         }
+
         public enum ADDRESSFAM
         {
             IPv4, IPv6

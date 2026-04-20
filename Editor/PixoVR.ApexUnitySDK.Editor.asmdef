@@ -1,0 +1,17 @@
+{
+    "name": "PixoVR.ApexUnitySDK.Editor",
+    "rootNamespace": "PixoVR.Editor",
+    "references": [
+        "PixoVR.ApexUnitySDK",
+		"UnityEditor.Build"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

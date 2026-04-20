@@ -387,19 +387,30 @@ namespace PixoVR.Apex
                 serverIP = GetEndpointFromTarget(PlatformTargetServer);
             }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            apexAPIHandler = new WebGLPlatformAPIHandler(serverIP);
+#else
             apexAPIHandler = new PlatformAPIHandler(serverIP);
+#endif
 
             if (apexAPIHandler != null)
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, "Apex API Handler is not null!");
             }
 
-            // TODO: Move to new plugin
+#if UNITY_WEBGL && !UNITY_EDITOR
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
+            if (apexAPIHandler is WebGLPlatformAPIHandler)
+            {
+                ((WebGLPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
+            }
+#else
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
             if(apexAPIHandler is PlatformAPIHandler)
             {
                 ((PlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
             }
+#endif
 
             if (webSocket != null)
             {
@@ -988,7 +999,12 @@ namespace PixoVR.Apex
             }
 
             Debug.unityLogger.Log(LogType.Log, TAG, $"Checking module access of module {targetModuleID} from user {CurrentUser.ID} and device serial number {(string.IsNullOrEmpty(deviceSerialNumber) == true ? "---" : deviceSerialNumber)}");
-            apexAPIHandler.GetModuleAccess(targetModuleID, CurrentUser.ID, deviceSerialNumber, success, failure);
+            apexAPIHandler.GetModuleAccess(targetModuleID, CurrentUser.ID, deviceSerialNumber, (message, userInformation) =>
+                {
+                    currentUserInformation.ModuleUserInformation = userInformation.ModuleUserInformation;
+                    success(message, currentUserInformation);
+                }, 
+                failure);
 
             return true;
         }

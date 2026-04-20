@@ -1,90 +1,121 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PixoVR.Apex.XAPI;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace PixoVR.Apex
 {
-    public enum ResponseType
-    {
-        RT_NONE = 0,
-        RT_FAILED_RESPONSE,
-        RT_GET_USER,
-        RT_GET_USER_MODULES,
-        RT_GET_MODULES_LIST,
-        RT_GEN_AUTH_LOGIN,
-        RT_HEARTBEAT,
-        RT_QUICK_ID_AUTH_GET_USERS,
-        RT_QUICK_ID_AUTH_LOGIN,
-        RT_GET_USER_METRICS_FOR_ORG,
-    }
-
-    public class PlatformAPIHandler : BaseAPIHandler
+    public class WebGLPlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
 
         protected string URL = "";
-        protected HttpClient handlingClient = null;
-
-
-        // Need to migrate to this in the future
         protected string apiURL = "";
-        protected HttpClient apiHandlingClient = null;
 
-        public PlatformAPIHandler()
-            : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
+        // ---------------------------------------------------------------------------
+        // Helpers to bridge UnityWebRequest -> HttpResponseMessage (kept for
+        // override signatures that return HttpResponseMessage to callers).
+        // ---------------------------------------------------------------------------
 
-        public PlatformAPIHandler(string endpointUrl)
+        private static HttpResponseMessage ToHttpResponse(UnityWebRequest uwr)
         {
-            handlingClient = new HttpClient();
-            SetEndpoint(endpointUrl);
-
-            apiHandlingClient = new HttpClient();
+            var code = (System.Net.HttpStatusCode)(uwr.responseCode > 0 ? uwr.responseCode : 400);
+            return new HttpResponseMessage(code);
         }
 
-        HttpResponseMessage HandleException(Exception exception)
+        private static HttpResponseMessage BadRequestResponse()
+            => new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
+
+        private static HttpResponseMessage InternalErrorResponse()
+            => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+
+        // Awaitable wrapper so async methods can use a single await instead of coroutines.
+        private static Task<UnityWebRequest> SendAsync(UnityWebRequest uwr)
         {
-            Debug.LogWarning("Exception has occurred: " + exception.Message);
-            HttpResponseMessage badRequestResponse = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
-            OnAPIResponse.Invoke(ResponseType.RT_FAILED_RESPONSE, badRequestResponse, null);
-            return badRequestResponse;
+            var tcs = new TaskCompletionSource<UnityWebRequest>();
+            var op = uwr.SendWebRequest();
+            op.completed += _ => tcs.SetResult(uwr);
+            return tcs.Task;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Request factory helpers
+        // ---------------------------------------------------------------------------
+
+        private UnityWebRequest MakeGet(string baseUrl, string path, string authToken = null)
+        {
+            string uri = baseUrl.TrimEnd('/') + path;
+            var uwr = UnityWebRequest.Get(uri);
+            uwr.SetRequestHeader("Accept", "application/json");
+            if (!string.IsNullOrEmpty(authToken))
+                uwr.SetRequestHeader("Authorization", "Bearer " + authToken);
+            return uwr;
+        }
+
+        private UnityWebRequest MakePost(string baseUrl, string path, string jsonBody, string authToken = null, string contentType = "application/json")
+        {
+            string uri = baseUrl.TrimEnd('/') + path;
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+            var uwr = new UnityWebRequest(uri, "POST");
+            uwr.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            uwr.downloadHandler = new DownloadHandlerBuffer();
+            uwr.SetRequestHeader("Content-Type", contentType);
+            uwr.SetRequestHeader("Accept", "application/json");
+            if (!string.IsNullOrEmpty(authToken))
+                uwr.SetRequestHeader("Authorization", "Bearer " + authToken);
+            return uwr;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Constructor / endpoint setup
+        // ---------------------------------------------------------------------------
+
+        public WebGLPlatformAPIHandler()
+            : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
+
+        public WebGLPlatformAPIHandler(string endpointUrl)
+        {
+            SetEndpoint(endpointUrl);
         }
 
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
             Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
-            handlingClient.BaseAddress = new Uri(URL);
         }
 
         public override void SetPlatformEndpoint(string endpointUrl)
         {
             apiURL = endpointUrl;
-            apiHandlingClient.BaseAddress = new Uri(apiURL);
         }
+
+        // ---------------------------------------------------------------------------
+        // API methods
+        // ---------------------------------------------------------------------------
 
         public override async void Ping(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            HttpResponseMessage response;
+            UnityWebRequest uwr = MakeGet(URL, "/ping");
             try
             {
-                response = await handlingClient.GetAsync("/ping");
+                await SendAsync(uwr);
             }
             catch (Exception ex)
             {
-                response = HandleException(ex);
-                failure?.Invoke(response, new FailureResponse { Error = "True", HttpCode = "400", Message = "Failed " });
+                Debug.LogWarning("Exception has occurred: " + ex.Message);
+                var bad = BadRequestResponse();
+                OnAPIResponse?.Invoke(ResponseType.RT_FAILED_RESPONSE, bad, null);
+                failure?.Invoke(bad, new FailureResponse { Error = "True", HttpCode = "400", Message = "Failed " });
+                return;
             }
 
-            success?.Invoke(response, null);
+            success?.Invoke(ToHttpResponse(uwr), null);
         }
 
         class GenerateAuthCodeInput
@@ -94,25 +125,18 @@ namespace PixoVR.Apex
 
         public override async void GenerateAssistedLogin(string authToken, int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            // Create the GraphQL request payload
-            string jsonContent = "";
+            string jsonContent;
 
             if (userId >= 0)
             {
                 var userIdArray = new int[1] { userId };
                 var input = new { input = new GenerateAuthCodeInput { userIds = userIdArray } };
-                // Create the GraphQL request payload
                 var graphqlRequest = new
                 {
                     operationName = "generateAuthCode",
                     variables = input,
                     query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
                 };
-
                 jsonContent = JsonConvert.SerializeObject(graphqlRequest);
             }
             else
@@ -123,20 +147,19 @@ namespace PixoVR.Apex
                     variables = new { input = new { } },
                     query = "mutation generateAuthCode($input: AuthCodeInput!) { generateAuthCode(input: $input) { code expiresAt __typename }}",
                 };
-
                 jsonContent = JsonConvert.SerializeObject(graphqlRequest);
             }
 
-            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-            HttpResponseMessage response;
+            UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken);
             object responseContent = null;
+            HttpResponseMessage response;
             try
             {
-                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
-                string body = await response.Content.ReadAsStringAsync();
+                await SendAsync(uwr);
+                response = ToHttpResponse(uwr);
+                string body = uwr.downloadHandler.text;
                 Debug.Log(body);
 
-                // Parse the GraphQL response structure
                 JObject jsonResponse = JObject.Parse(body);
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "generateAuthCode");
                 if (failureResponse != null)
@@ -145,22 +168,19 @@ namespace PixoVR.Apex
                     return;
                 }
 
-                // Extract the relevant data from the GraphQL response
                 string code = jsonResponse["data"]["generateAuthCode"]["code"]?.ToString();
                 string expiresAt = jsonResponse["data"]["generateAuthCode"]["expiresAt"]?.ToString();
 
-                // Create the GeneratedAssistedLogin object with the extracted data
                 GeneratedAssistedLogin assistedLogin = new GeneratedAssistedLogin
                 {
                     AssistedLogin = new AssistedLoginCode { AuthCode = code, Expires = expiresAt },
                 };
-
                 responseContent = assistedLogin;
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error generating assisted login: {ex.Message}");
-                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                response = InternalErrorResponse();
                 failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
                 return;
             }
@@ -170,10 +190,6 @@ namespace PixoVR.Apex
 
         public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             var paramsInput = new
             {
                 search = filterParams.searchText,
@@ -189,19 +205,19 @@ namespace PixoVR.Apex
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
-            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken);
             HttpResponseMessage response;
-            object responseContent;
             try
             {
-                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
-                string body = await response.Content.ReadAsStringAsync();
+                await SendAsync(uwr);
+                response = ToHttpResponse(uwr);
+                string body = uwr.downloadHandler.text;
 
                 JObject jsonResponse = JObject.Parse(body);
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
+                    OnAPIResponse?.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
                     failure?.Invoke(response, failureResponse);
                     return;
                 }
@@ -209,25 +225,19 @@ namespace PixoVR.Apex
                 var userMetricsJSON = jsonResponse["data"]["userMetrics"];
                 var userMetricsResponse = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
-                responseContent = userMetricsResponse;
 
                 success?.Invoke(userMetricsResponse, response);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error retrieving users: {ex.Message}");
-                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
-                responseContent = new FailureResponse { Error = "true", Message = ex.Message };
-                failure?.Invoke(response, responseContent as FailureResponse);
+                response = InternalErrorResponse();
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
             }
         }
 
         public override async void GetDevicesForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             var graphqlRequest = new
             {
                 operationName = "OrgDeviceLicenses",
@@ -244,13 +254,14 @@ namespace PixoVR.Apex
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
-            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken);
             HttpResponseMessage response;
             OrgDevicesResponse responseContent = null;
             try
             {
-                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
-                string body = await response.Content.ReadAsStringAsync();
+                await SendAsync(uwr);
+                response = ToHttpResponse(uwr);
+                string body = uwr.downloadHandler.text;
 
                 JObject jsonResponse = JObject.Parse(body);
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "orgDeviceLicenses");
@@ -268,7 +279,7 @@ namespace PixoVR.Apex
             catch (Exception ex)
             {
                 Debug.LogError($"Error retrieving devices: {ex.Message}");
-                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                response = InternalErrorResponse();
                 failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
                 return;
             }
@@ -278,10 +289,6 @@ namespace PixoVR.Apex
 
         public override async void GetSessionHistory(string authToken, int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             var paramsInput = new
             {
                 search = filterParams.searchText,
@@ -295,22 +302,23 @@ namespace PixoVR.Apex
                 variables = new
                 {
                     userId = sessionFilters.userIDs[0],
-                    limit = 10,  
+                    limit = 10,
                     page = page,
-
                     @params = paramsInput,
                 },
                 query = "query userSessionHistory($userId: ID!, $limit: Int, $page: Int, $params: GenericQueryParamsInput ){ userSessionHistory(userId: $userId, limit: $limit, page: $page, params: $params) { result { id userId moduleId module { id abbreviation description } rawScore maxScore status result startedAt completedAt } pageInfo { totalCount page offset pageSize previousPage nextPage } } }\r\n"
             };
 
             string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
-            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken);
             HttpResponseMessage response;
             SessionHistoryResponse responseContent;
             try
             {
-                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
-                string body = await response.Content.ReadAsStringAsync();
+                await SendAsync(uwr);
+                response = ToHttpResponse(uwr);
+                string body = uwr.downloadHandler.text;
+
                 JObject jsonResponse = JObject.Parse(body);
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userSessionHistory");
                 if (failureResponse != null)
@@ -318,6 +326,7 @@ namespace PixoVR.Apex
                     failure?.Invoke(response, failureResponse);
                     return;
                 }
+
                 var sessionHistoryJSON = jsonResponse["data"]["userSessionHistory"];
                 var sessionHistoryResponse = JsonConvert.DeserializeObject<SessionHistoryResponse>(sessionHistoryJSON.ToString());
                 sessionHistoryResponse.result.ForEach(u => u.RefreshDisplayFields());
@@ -326,7 +335,7 @@ namespace PixoVR.Apex
             catch (Exception ex)
             {
                 Debug.LogError($"Error retrieving session history: {ex.Message}");
-                response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                response = InternalErrorResponse();
                 failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
                 return;
             }
@@ -336,15 +345,15 @@ namespace PixoVR.Apex
 
         public override async void LoginWithToken(string token, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            Debug.Log($"[Platform API] Logging in with token: {token}");
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            Debug.Log($"[WebGLPA] Logging in with token: {token}");
+            UnityWebRequest uwr = MakeGet(apiURL, "/v2/auth/validate-signature", token);
+            Debug.Log($"[WebGLPA] Sending login with a token.");
 
-            Debug.Log($"[Platform API] Sending login with a token.");
-            HttpResponseMessage response = await apiHandlingClient.GetAsync("/v2/auth/validate-signature");
-            string body = await response.Content.ReadAsStringAsync();
-            Debug.Log($"[Platform API] Body returned as {body}");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+            Debug.Log($"[WebGLPA] Body returned as {body}");
+
             object responseContent = JsonConvert.DeserializeObject<UserLoginResponseContent>(body);
             if ((responseContent as UserLoginResponseContent).HasErrored())
             {
@@ -353,7 +362,7 @@ namespace PixoVR.Apex
                 return;
             }
 
-            Debug.Log($"[Platform API] Got a valid login response!");
+            Debug.Log($"[WebGLPA] Got a valid login response!");
             ActiveUserInformation userInformation = new ActiveUserInformation();
             userInformation.User = (responseContent as UserLoginResponseContent).User;
             success?.Invoke(response, userInformation);
@@ -361,16 +370,16 @@ namespace PixoVR.Apex
 
         public override async void Login(LoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            Debug.Log("[Platform API] Calling Login.");
-            handlingClient.DefaultRequestHeaders.Clear();
+            Debug.Log("[WebGLPA] Calling Login.");
+            string jsonBody = JsonUtility.ToJson(login);
+            UnityWebRequest uwr = MakePost(URL, "/login", jsonBody);
 
-            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(login));
-            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            Debug.Log("[WebGLPA] Call to post api login.");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+            Debug.Log("[WebGLPA] Got response body: " + body);
 
-            Debug.Log("[Platform API] Call to post api login.");
-            HttpResponseMessage response = await handlingClient.PostAsync("/login", loginRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
-            Debug.Log("[Platform API] Got response body: " + body);
             object responseContent = JsonConvert.DeserializeObject<LoginResponseContent>(body);
             if ((responseContent as LoginResponseContent).HasErrored())
             {
@@ -379,7 +388,7 @@ namespace PixoVR.Apex
                 return;
             }
 
-            Debug.Log("[Platform API] Response content deserialized.");
+            Debug.Log("[WebGLPA] Response content deserialized.");
             ActiveUserInformation userInformation = new ActiveUserInformation();
             userInformation.User = responseContent as LoginResponseContent;
             success?.Invoke(response, userInformation);
@@ -387,14 +396,13 @@ namespace PixoVR.Apex
 
         public override async void GetUserData(string authToken, int userId)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            UnityWebRequest uwr = MakeGet(URL, string.Format("/user/{0}", userId), authToken);
 
-            HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/user/{0}", userId));
-            string body = await response.Content.ReadAsStringAsync();
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+
             object responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
-            GetUserResponseContent userInfo = responseContent as GetUserResponseContent;
             if ((responseContent as GetUserResponseContent).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
@@ -405,17 +413,15 @@ namespace PixoVR.Apex
 
         public override async void GetUserModules(string authToken, int userId)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             UserModulesRequestData usersModulesRequest = new UserModulesRequestData();
             usersModulesRequest.UserIds.Add(userId);
-            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(usersModulesRequest));
-            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            string jsonBody = JsonUtility.ToJson(usersModulesRequest);
+            UnityWebRequest uwr = MakePost(URL, "/access/users", jsonBody, authToken);
 
-            HttpResponseMessage response = await handlingClient.PostAsync("/access/users", loginRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+
             object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
             if ((responseContent as GetUserModulesResponse).HasErrored())
             {
@@ -431,13 +437,12 @@ namespace PixoVR.Apex
 
         public override async void GetQuickIDAuthenticationUsers(string serialNumber)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            UnityWebRequest uwr = MakeGet(apiURL, string.Format("/v2/auth/quick-id/get-users?serialNumber={0}", serialNumber));
 
-            HttpResponseMessage response = await apiHandlingClient.GetAsync(string.Format("/v2/auth/quick-id/get-users?serialNumber={0}", serialNumber));
-            string body = await response.Content.ReadAsStringAsync();
-
-            Debug.Log($"[Platform API] Body returned as {body}");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+            Debug.Log($"[WebGLPA] Body returned as {body}");
 
             object responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
             if ((responseContent as QuickIDAuthGetUsersResponse).HasErrored())
@@ -450,59 +455,53 @@ namespace PixoVR.Apex
 
         public override async void QuickIDLogin(QuickIDLoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            Debug.Log("[Platform API] Calling Quick ID login.");
-            apiHandlingClient.DefaultRequestHeaders.Clear();
+            Debug.Log("[WebGLPA] Calling Quick ID login.");
+            string jsonBody = JsonUtility.ToJson(login);
+            Debug.Log("[WebGLPA] Quick ID login request content: " + jsonBody);
+            UnityWebRequest uwr = MakePost(apiURL, "/v2/auth/quick-id/login", jsonBody);
 
-            HttpContent loginRequestContent = new StringContent(JsonUtility.ToJson(login));
-            Debug.Log("[Platform API] Quick ID login request content: " + JsonUtility.ToJson(login));
-            loginRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            Debug.Log("[WebGLPA] Call to post api Quick ID login.");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
+            Debug.Log("[WebGLPA] Got response body: " + body);
 
-            Debug.Log("[Platform API] Call to post api Quick ID login.");
-            HttpResponseMessage response = await apiHandlingClient.PostAsync("/v2/auth/quick-id/login", loginRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
-            Debug.Log("[Platform API] Got response body: " + body);
             object responseContent = JsonConvert.DeserializeObject<PlatformLoginResponse>(body);
-
             var loginResponseContent = new LoginResponseContent();
+
             if ((responseContent as PlatformLoginResponse).HasErrored())
             {
                 responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-            }
-            else
-            {
-                var platformLoginResponse = responseContent as PlatformLoginResponse;
-
-                loginResponseContent.Token = platformLoginResponse.Token;
-                if (platformLoginResponse.User != null)
-                {
-                    loginResponseContent.ID = platformLoginResponse.User.Id;
-                    loginResponseContent.OrgId = platformLoginResponse.User.OrgId;
-                    loginResponseContent.First = platformLoginResponse.User.FirstName;
-                    loginResponseContent.Last = platformLoginResponse.User.LastName;
-                    loginResponseContent.Email = platformLoginResponse.User.Email;
-                    loginResponseContent.Role = platformLoginResponse.User.Role;
-                    loginResponseContent.Org = platformLoginResponse.User.Org;
-                }
-                else
-                {
-                    Debug.Log("[Platform API] Quick ID login response did not contain user data.");
-                }
-
-                ActiveUserInformation userInformation = new ActiveUserInformation();
-                userInformation.User = loginResponseContent;
-                success?.Invoke(response, userInformation);
+                Debug.Log("[WebGLPA] Response content deserialized and mapped.");
+                failure?.Invoke(response, responseContent as FailureResponse);
                 return;
             }
 
-            Debug.Log("[Platform API] Response content deserialized and mapped.");
-            failure?.Invoke(response, responseContent as FailureResponse);
+            var platformLoginResponse = responseContent as PlatformLoginResponse;
+            loginResponseContent.Token = platformLoginResponse.Token;
+            if (platformLoginResponse.User != null)
+            {
+                loginResponseContent.ID = platformLoginResponse.User.Id;
+                loginResponseContent.OrgId = platformLoginResponse.User.OrgId;
+                loginResponseContent.First = platformLoginResponse.User.FirstName;
+                loginResponseContent.Last = platformLoginResponse.User.LastName;
+                loginResponseContent.Email = platformLoginResponse.User.Email;
+                loginResponseContent.Role = platformLoginResponse.User.Role;
+                loginResponseContent.Org = platformLoginResponse.User.Org;
+            }
+            else
+            {
+                Debug.Log("[WebGLPA] Quick ID login response did not contain user data.");
+            }
+
+            ActiveUserInformation userInformation = new ActiveUserInformation();
+            userInformation.User = loginResponseContent;
+            success?.Invoke(response, userInformation);
         }
 
         public override async void GetModuleAccess(int moduleId, int userId, string serialNumber, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            Debug.Log("[Platform API Handler] Get Module Access");
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+            Debug.Log("[WebGLPA Handler] Get Module Access");
 
             string optionalParameters = "";
             Debug.Log($"Checking for a serial number: {serialNumber}");
@@ -511,23 +510,25 @@ namespace PixoVR.Apex
                 optionalParameters = "?serial=" + serialNumber;
             }
 
-            Debug.Log(
-                $"[{GetType().Name}] Checking module access at: "
-                    + String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters)
-            );
+            string path = String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters);
+            Debug.Log($"[{GetType().Name}] Checking module access at: " + path);
 
-            HttpResponseMessage response = await handlingClient.GetAsync(
-                String.Format("/access/user/{0}/module/{1}{2}", userId, moduleId, optionalParameters)
-            );
-            string body = await response.Content.ReadAsStringAsync();
+            // Accept: */* — set manually after construction
+            string uri = URL.TrimEnd('/') + path;
+            var uwr = UnityWebRequest.Get(uri);
+            uwr.SetRequestHeader("Accept", "*/*");
 
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
             Debug.Log($"[{GetType().Name}] GetModuleAccess return body: {body}");
+
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if (!(responseContent as FailureResponse).HasErrored())
             {
-                UserAccessResponseContent userAccessInformation = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
+                var userAccessContent = JsonConvert.DeserializeObject<UserAccessResponseContent>(body);
                 ActiveUserInformation userInformation = new ActiveUserInformation();
-                userInformation.ModuleUserInformation = userAccessInformation;
+                userInformation.ModuleUserInformation = userAccessContent;
                 success?.Invoke(response, userInformation);
                 return;
             }
@@ -537,20 +538,13 @@ namespace PixoVR.Apex
 
         public override async void SendHeartbeat(string authToken, int sessionId, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            apiHandlingClient.DefaultRequestHeaders.Clear();
-            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             HeartbeatData heartbeatData = new HeartbeatData(sessionId);
+            UnityWebRequest uwr = MakePost(apiURL, "/heartbeat/pulse", heartbeatData.ToJSON(), authToken);
 
-            HttpContent heartbeatRequestContent = new StringContent(heartbeatData.ToJSON());
-            heartbeatRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
 
-            HttpResponseMessage response = await apiHandlingClient.PostAsync(
-                "/heartbeat/pulse",
-                heartbeatRequestContent
-            );
-            string body = await response.Content.ReadAsStringAsync();
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
@@ -563,42 +557,32 @@ namespace PixoVR.Apex
 
         public override async void JoinSession(string authToken, JoinSessionData joinData, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            UnityWebRequest uwr = MakePost(URL, "/event", joinData.ToJSON(), authToken);
 
-            HttpContent joinSessionRequestContent = new StringContent(joinData.ToJSON());
-            joinSessionRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
 
-            HttpResponseMessage response = await handlingClient.PostAsync("/event", joinSessionRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
             object responseContent = JsonConvert.DeserializeObject<JoinSessionResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
                 failure?.Invoke(response, responseContent as FailureResponse);
                 return;
             }
-            else
-            {
-                JoinSessionResponse joinSessionResponse = (responseContent as JoinSessionResponse);
-                joinSessionResponse.ParseData();
-                responseContent = joinSessionResponse;
-            }
 
-            success?.Invoke(response, responseContent as JoinSessionResponse);
+            JoinSessionResponse joinSessionResponse = (responseContent as JoinSessionResponse);
+            joinSessionResponse.ParseData();
+            success?.Invoke(response, joinSessionResponse);
         }
 
         public override async void CompleteSession(string authToken, CompleteSessionData completionData, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            UnityWebRequest uwr = MakePost(URL, "/event", completionData.ToJSON(), authToken);
 
-            HttpContent completeSessionRequestContent = new StringContent(completionData.ToJSON());
-            completeSessionRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
 
-            HttpResponseMessage response = await handlingClient.PostAsync("/event", completeSessionRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
@@ -611,15 +595,12 @@ namespace PixoVR.Apex
 
         public override async void SendSessionEvent(string authToken, SessionEventData sessionEvent, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            UnityWebRequest uwr = MakePost(URL, "/event", sessionEvent.ToJSON(), authToken);
 
-            HttpContent sessionEventRequestContent = new StringContent(sessionEvent.ToJSON());
-            sessionEventRequestContent.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
 
-            HttpResponseMessage response = await handlingClient.PostAsync("/event", sessionEventRequestContent);
-            string body = await response.Content.ReadAsStringAsync();
             object responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
             if ((responseContent as FailureResponse).HasErrored())
             {
@@ -632,20 +613,16 @@ namespace PixoVR.Apex
 
         public override async void GetModuleList(string authToken, string platform)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            string path = "/modules";
+            if (!string.IsNullOrEmpty(platform))
+                path += $"?platform={platform}";
 
-            string endpoint = "/modules";
-            if (platform != null && platform.Length > 0)
-            {
-                endpoint += $"?platform={platform}";
-            }
+            Debug.Log($"GetModuleList built endpoint: {path}");
+            UnityWebRequest uwr = MakeGet(URL, path, authToken);
 
-            Debug.Log($"GetModuleList built endpoint: {endpoint}");
-
-            HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
-            string body = await response.Content.ReadAsStringAsync();
+            await SendAsync(uwr);
+            HttpResponseMessage response = ToHttpResponse(uwr);
+            string body = uwr.downloadHandler.text;
 
             try
             {
@@ -665,8 +642,7 @@ namespace PixoVR.Apex
             JArray array = JArray.Parse(body);
             if (array != null)
             {
-                var tokens = array.Children();
-                foreach (JToken selectedToken in tokens)
+                foreach (JToken selectedToken in array.Children())
                 {
                     OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
                     orgModule.Parse(selectedToken);
@@ -678,16 +654,20 @@ namespace PixoVR.Apex
             OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
         }
 
+        // ---------------------------------------------------------------------------
+        // Private helpers
+        // ---------------------------------------------------------------------------
+
         private FailureResponse GetGQLFailureResponse(JObject jsonResponse, string jsonDataObjectKey)
         {
-
             if (!String.IsNullOrEmpty(jsonResponse["errors"]?.ToString()))
             {
                 string errorMessage = jsonResponse["errors"]?[0]?["message"]?.ToString() ?? "Unknown GraphQL error";
                 return new FailureResponse { Error = "true", Message = errorMessage };
             }
 
-            if (String.IsNullOrEmpty(jsonResponse["data"]?.ToString()) || String.IsNullOrEmpty(jsonResponse["data"][jsonDataObjectKey]?.ToString()))
+            if (String.IsNullOrEmpty(jsonResponse["data"]?.ToString()) ||
+                String.IsNullOrEmpty(jsonResponse["data"][jsonDataObjectKey]?.ToString()))
             {
                 return new FailureResponse
                 {

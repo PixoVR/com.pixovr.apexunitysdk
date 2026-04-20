@@ -1,9 +1,10 @@
-using PixoVR.Apex;
+#if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+
 namespace PixoVR.Editor
 {
     public class PixoVRPreBuilder : IPreprocessBuildWithReport
@@ -67,3 +68,4 @@ namespace PixoVR.Editor
         }
     }
 }
+#endif
