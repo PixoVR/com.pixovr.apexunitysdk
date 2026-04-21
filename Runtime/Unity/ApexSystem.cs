@@ -1418,7 +1418,7 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("module_access_checked", "true");
 #endif
 
-            if (string.IsNullOrEmpty(deviceSerialNumber))
+            if (!string.IsNullOrEmpty(deviceSerialNumber))
             {
                 contextExtension.AddSimple("device_serial", deviceSerialNumber.ToString());
             }
