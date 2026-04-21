@@ -1003,7 +1003,7 @@ namespace PixoVR.Apex
             apexAPIHandler.GetModuleAccess(targetModuleID, CurrentUser.ID, deviceSerialNumber, (message, userInformation) =>
                 {
                     currentUserInformation.ModuleUserInformation = userInformation.ModuleUserInformation;
-                    success(message, currentUserInformation);
+                    success?.Invoke(message, currentUserInformation);
                 }, 
                 failure);
 
