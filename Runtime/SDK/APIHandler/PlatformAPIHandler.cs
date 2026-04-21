@@ -82,6 +82,7 @@ namespace PixoVR.Apex
             {
                 response = HandleException(ex);
                 failure?.Invoke(response, new FailureResponse { Error = "True", HttpCode = "400", Message = "Failed " });
+                return;
             }
 
             success?.Invoke(response, null);
