@@ -793,6 +793,7 @@ namespace PixoVR.Apex
             if (string.IsNullOrEmpty(token))
             {
                 failure?.Invoke(null, Instance.GenerateFailureResponse("No token passed to login with."));
+                return;
             }
 
             Debug.unityLogger.Log(LogType.Log, TAG, $"Logging in with token: {token}");
