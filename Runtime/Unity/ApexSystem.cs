@@ -793,6 +793,7 @@ namespace PixoVR.Apex
             if (string.IsNullOrEmpty(token))
             {
                 failure?.Invoke(null, Instance.GenerateFailureResponse("No token passed to login with."));
+                return;
             }
 
             Debug.unityLogger.Log(LogType.Log, TAG, $"Logging in with token: {token}");
@@ -1002,7 +1003,7 @@ namespace PixoVR.Apex
             apexAPIHandler.GetModuleAccess(targetModuleID, CurrentUser.ID, deviceSerialNumber, (message, userInformation) =>
                 {
                     currentUserInformation.ModuleUserInformation = userInformation.ModuleUserInformation;
-                    success(message, currentUserInformation);
+                    success?.Invoke(message, currentUserInformation);
                 }, 
                 failure);
 
@@ -1418,7 +1419,7 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("module_access_checked", "true");
 #endif
 
-            if (string.IsNullOrEmpty(deviceSerialNumber))
+            if (!string.IsNullOrEmpty(deviceSerialNumber))
             {
                 contextExtension.AddSimple("device_serial", deviceSerialNumber.ToString());
             }
