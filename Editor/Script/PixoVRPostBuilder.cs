@@ -48,6 +48,20 @@ public class PixoVRPostBuilder
             urlTypes = rootDict.CreateArray(urlTypesKey);
         }
 
+        const string appCategoryKey = "LSApplicationCategoryType";
+
+        if(!rootDict.values.ContainsKey(appCategoryKey))
+        {
+            rootDict.SetString(appCategoryKey, "public.app-category.educational-games");
+        }
+
+        const string useEncryptionKey = "ITSAppUsesNonExemptEncryption";
+
+        if(!rootDict.values.ContainsKey(useEncryptionKey))
+        {
+            rootDict.SetBoolean(useEncryptionKey, false);
+        }
+
         // Add your custom scheme
         PlistElementDict urlSchemeDict = urlTypes.AddDict();
         PlistElementArray schemesArray = urlSchemeDict.CreateArray("CFBundleURLSchemes");

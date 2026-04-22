@@ -1,13 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
+#if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.UIElements;
-using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace PixoVR.Editor
 {
@@ -19,3 +11,4 @@ namespace PixoVR.Editor
         }
     }
 }
+#endif

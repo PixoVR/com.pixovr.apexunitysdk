@@ -1,12 +1,12 @@
+using Newtonsoft.Json;
+using PixoVR.Apex.Events;
+using PixoVR.Apex.Utils;
+using PixoVR.Apex.XAPI;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using PixoVR.Apex.Events;
-using PixoVR.Apex.Utils;
-using PixoVR.Apex.XAPI;
 using TinCan;
 using UnityEngine;
 using UnityEngine.XR;
@@ -60,10 +60,20 @@ namespace PixoVR.Apex
             set { Instance.scenarioID = value; }
         }
 
+        [System.Obsolete("CurrentUser is deprecated. Please use CurrentUser in its place.", false)]
         public static LoginResponseContent CurrentActiveLogin
         {
-            get { return Instance.currentActiveLogin; }
-            set { }
+            get { return Instance.currentUserInformation.User; }
+        }
+
+        public static UserAccessResponseContent CurrentUserModuleInformation
+        {
+            get { return Instance.currentUserInformation.ModuleUserInformation; }
+        }
+
+        public static LoginResponseContent CurrentUser
+        {
+            get { return Instance.currentUserInformation.User; }
         }
 
         public static bool RunSetupOnAwake
@@ -75,24 +85,22 @@ namespace PixoVR.Apex
         public static bool LoginCheckModuleAccess
         {
             get { return Instance.loginCheckModuleAccess; }
-            set { }
         }
 
         public static string DeviceSerialNumber
         {
             get { return Instance.deviceSerialNumber; }
-            set { }
         }
 
         public static string PassedLoginToken
         {
-            get 
+            get
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, $"Getting passed login token as {Instance.loginToken} in instance {Instance.gameObject.name}");
-                return Instance.loginToken; 
+                return Instance.loginToken;
             }
 
-            protected set 
+            protected set
             {
                 Debug.unityLogger.Log(LogType.Error, TAG, $"Setting passed login token to {value}");
                 Instance.loginToken = value;
@@ -105,21 +113,21 @@ namespace PixoVR.Apex
             set { Instance.optionalParameter = value; }
         }
 
-        public static string ReturnTarget
+        public static string CurrentExitTarget
         {
-            get { return Instance.returnTargetParameter; }
+            get { return Instance.currentExitTargetParameter; }
             set
             {
                 if (value != null)
                 {
-                    Instance.returnTargetParameter = value;
+                    Instance.currentExitTargetParameter = value;
                 }
                 else
                 {
-                    Instance.returnTargetParameter = "";
+                    Instance.currentExitTargetParameter = "";
                 }
 
-                if (Instance.returnTargetParameter.Contains("://"))
+                if (Instance.currentExitTargetParameter.Contains("://"))
                 {
                     TargetType = "url";
                 }
@@ -130,16 +138,41 @@ namespace PixoVR.Apex
             }
         }
 
+        public static bool IsSessionInProgress
+        {
+            get { return Instance.sessionInProgress; }
+        }
+
         public static string TargetType
         {
             get { return Instance.targetTypeParameter; }
             private set { Instance.targetTypeParameter = value; }
         }
 
+        public static string APIEndpoint
+        {
+            get { return ((APIPlatformServer)Instance.PlatformTargetServer).ToUrlString(); }
+        }
+
+        public static BaseAPIHandler ApexAPIHandler
+        {
+            get { return Instance.apexAPIHandler; }
+        }
+
+        public static bool UserHasAccess
+        {
+            get
+            {
+                return Instance.currentUserInformation.ModuleUserInformation?.Access ?? false;
+            }
+        }
+
         [SerializeField, EndpointDisplay]
         protected PlatformServer PlatformTargetServer;
 
+#if PIXOVR_DEBUG
         [SerializeField]
+#endif
         protected string serverIP = "";
 
         [SerializeField]
@@ -148,19 +181,28 @@ namespace PixoVR.Apex
         [SerializeField]
         protected string moduleName = "Generic";
 
+#if PIXOVR_DEBUG
         [SerializeField]
-        protected string moduleVersion = "0.00.00";
+#endif
+        protected string moduleVersion = "";
 
         [SerializeField]
         protected string scenarioID = "Generic";
 
+#if PIXOVR_DEBUG
         [SerializeField]
-        public bool runSetupOnAwake = true;
+#endif
+        protected bool runSetupOnAwake = true;
 
-        [SerializeField]
-        public bool loginCheckModuleAccess = true;
+#if PIXOVR_MODULEACCESS_BYPASS
+        protected bool loginCheckModuleAccess = false;
+#else
+        protected bool loginCheckModuleAccess = true;
+#endif
 
+#if PIXOVR_DEBUG
         [SerializeField]
+#endif
         protected float heartbeatTime = 5.0f;
 
         protected string webSocketUrl;
@@ -172,44 +214,28 @@ namespace PixoVR.Apex
         protected int heartbeatSessionID;
         protected float heartbeatTimer;
         protected bool sessionInProgress;
-        protected bool userAccessVerified = false;
         protected string deviceSerialNumber = "";
         protected bool hasParsedArguments = false;
 
         protected string loginToken = "";
         protected string optionalParameter = "";
-        protected string returnTargetParameter = "";
+        protected string currentExitTargetParameter = "";
         protected string targetTypeParameter = "";
 
-        protected LoginResponseContent currentActiveLogin = null;
-        protected APIHandler apexAPIHandler;
+        protected ActiveUserInformation currentUserInformation = new ActiveUserInformation();
+        protected BaseAPIHandler apexAPIHandler;
         protected ApexWebsocket webSocket;
         protected Task<bool> socketConnectTask;
         protected Task socketDisconnectTask;
 
-        public OnHttpResponseEvent OnPingSuccess = new OnHttpResponseEvent();
-        public OnHttpResponseEvent OnPingFailed = new OnHttpResponseEvent();
-
-        public OnModuleAccessSuccessEvent OnModuleAccessSuccess = new OnModuleAccessSuccessEvent();
-        public OnApexFailureEvent OnModuleAccessFailed = new OnApexFailureEvent();
-
-        public OnLoginSuccessEvent OnLoginSuccess = new OnLoginSuccessEvent();
-        public OnApexFailureEvent OnLoginFailed = new OnApexFailureEvent();
+        public OnWebSocketLoginSucceededEvent OnWebSocketLoginSucceeded = new OnWebSocketLoginSucceededEvent();
+        public OnWebSocketLoginFailedEvent OnWebSocketLoginFailed = new OnWebSocketLoginFailedEvent();
 
         public OnGetUserSuccessEvent OnGetUserSuccess = new OnGetUserSuccessEvent();
         public OnApexFailureEvent OnGetUserFailed = new OnApexFailureEvent();
 
         public OnGetUserModulesSuccessEvent OnGetUserModulesSuccess = new OnGetUserModulesSuccessEvent();
         public OnApexFailureEvent OnGetUserModulesFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnJoinSessionSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnJoinSessionFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnCompleteSessionSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnCompleteSessionFailed = new OnApexFailureEvent();
-
-        public OnHttpResponseEvent OnSendEventSuccess = new OnHttpResponseEvent();
-        public OnApexFailureEvent OnSendEventFailed = new OnApexFailureEvent();
 
         public OnGetOrgModulesSuccessEvent OnGetOrganizationModulesSuccess = new OnGetOrgModulesSuccessEvent();
         public OnApexFailureEvent OnGetOrganizationModulesFailed = new OnApexFailureEvent();
@@ -224,15 +250,21 @@ namespace PixoVR.Apex
         public OnGetQuickIDAuthUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
         public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
 
-        public OnQuickIDAuthLoginSuccessEvent OnQuickIDAuthLoginSuccess = new();
-        public OnApexFailureEvent OnQuickIDAuthLoginFailed = new();
-
         void Awake()
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"ApexSystem found on {gameObject.name}");
-            if(!InitializeInstance(this))
+            if (!InitializeInstance(this))
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, "Instance already initialized.");
+            }
+
+            var projectSettings = Resources.Load<Editor.PixoVRProjectSettings>("PixoVRProjectSettings");
+            if (projectSettings != null)
+            {
+                if (string.IsNullOrEmpty(moduleVersion))
+                {
+                    moduleVersion = projectSettings.ModuleVersion;
+                }
             }
 
             SetupPlatformConfiguration();
@@ -242,15 +274,20 @@ namespace PixoVR.Apex
 #endif
             if (runSetupOnAwake)
             {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Running on awake!");
+                Debug.unityLogger.Log(LogType.Log, TAG, "Running on awake!");
                 SetupAPI();
             }
 
             DontDestroyOnLoad(gameObject);
-#if MANAGE_XR && !UNITY_EDITOR
+#if MANAGE_XR && !UNITY_EDITOR && !UNITY_WEBGL
             Debug.unityLogger.Log(LogType.Log, TAG, "Using ManageXR");
             InitMXRSDK();
 #endif
+        }
+
+        void OnApplicationQuit()
+        {
+            CompleteSession(null);
         }
 
 #if MANAGE_XR
@@ -350,17 +387,30 @@ namespace PixoVR.Apex
                 serverIP = GetEndpointFromTarget(PlatformTargetServer);
             }
 
-            apexAPIHandler = new APIHandler(serverIP);
+#if UNITY_WEBGL
+            apexAPIHandler = new WebGLPlatformAPIHandler(serverIP);
+#else
+            apexAPIHandler = new PlatformAPIHandler(serverIP);
+#endif
 
             if (apexAPIHandler != null)
             {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Apex API Handler is not null!");
+                Debug.unityLogger.Log(LogType.Log, TAG, "Apex API Handler is not null!");
             }
 
-            // TODO: Move to new plugin
-            apexAPIHandler.SetWebEndpoint(GetWebEndpointFromPlatformTarget(PlatformTargetServer));
+#if UNITY_WEBGL && !UNITY_EDITOR
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
-            apexAPIHandler.OnAPIResponse += OnAPIResponse;
+            if (apexAPIHandler is WebGLPlatformAPIHandler)
+            {
+                ((WebGLPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
+            }
+#else
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
+            if(apexAPIHandler is PlatformAPIHandler)
+            {
+                ((PlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
+            }
+#endif
 
             if (webSocket != null)
             {
@@ -378,40 +428,39 @@ namespace PixoVR.Apex
 
             PopulateWebSocketURL();
 
-            if(!hasParsedArguments)
+            if (!hasParsedArguments)
             {
                 var applicationArugments = PixoPlatformUtilities.ParseApplicationArguments();
                 _ParsePassedData(applicationArugments);
-                Debug.unityLogger.Log(LogType.Log, TAG, $"[ApexSystem] Login Token: {(string.IsNullOrEmpty(PassedLoginToken) ? "<Null>" : PassedLoginToken)}");
+                Debug.unityLogger.Log(LogType.Log, TAG, $"Login Token: {(string.IsNullOrEmpty(PassedLoginToken) ? "<Null>" : PassedLoginToken)}");
                 hasParsedArguments = true;
             }
         }
 
-        // TODO: Rename the entered 'returnTarget' and the passed returnTargetParameter.
-        void _ExitApplication(string returnTarget)
+        void _ExitApplication(string nextExitApplication)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, "ApexSystem::_ExitApplication");
-            if (returnTarget == null)
+            if (nextExitApplication == null)
             {
-                returnTarget = "";
+                nextExitApplication = "";
             }
 
             string returnTargetType = "app";
 
-            if (returnTarget.Contains("://"))
+            if (nextExitApplication.Contains("://"))
             {
                 returnTargetType = "url";
             }
 
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] " + returnTarget + " " + returnTargetType);
+            Debug.unityLogger.Log(LogType.Log, TAG, "" + nextExitApplication + " " + returnTargetType);
 
             string parameters = "";
 
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Building parameters for url.");
+            Debug.unityLogger.Log(LogType.Log, TAG, "Building parameters for url.");
 
-            if (CurrentActiveLogin != null)
+            if (CurrentUser != null)
             {
-                parameters += "pixotoken=" + CurrentActiveLogin.Token;
+                parameters += "pixotoken=" + CurrentUser.Token;
             }
             else if (!string.IsNullOrEmpty(PassedLoginToken))
             {
@@ -428,11 +477,11 @@ namespace PixoVR.Apex
                 }
             }
 
-            if (returnTarget.Length > 0)
+            if (nextExitApplication.Length > 0)
             {
                 if (parameters.Length > 0)
                     parameters += "&";
-                parameters += "returntarget=" + returnTarget;
+                parameters += "returntarget=" + nextExitApplication;
             }
 
             if (returnTargetType.Length > 0)
@@ -442,16 +491,16 @@ namespace PixoVR.Apex
                 parameters += "targettype=" + returnTargetType;
             }
 
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Checking the return target parameter.");
+            Debug.unityLogger.Log(LogType.Log, TAG, "Checking the return target parameter.");
 
-            if (!string.IsNullOrEmpty(returnTargetParameter))
+            if (!string.IsNullOrEmpty(CurrentExitTarget))
             {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Had a valid return target parameter.");
+                Debug.unityLogger.Log(LogType.Log, TAG, "Had a valid return target parameter.");
                 if (targetTypeParameter.Equals("url", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Return Target is a URL.");
+                    Debug.unityLogger.Log(LogType.Log, TAG, "Return Target is a URL.");
 
-                    string returnURL = returnTargetParameter;
+                    string returnURL = CurrentExitTarget;
                     if (!string.IsNullOrEmpty(parameters))
                     {
                         if (!returnURL.Contains('?'))
@@ -463,21 +512,22 @@ namespace PixoVR.Apex
                     }
                     Debug.unityLogger.Log(LogType.Log, TAG, "Custom Target: " + returnURL);
                     PixoPlatformUtilities.OpenURL(returnURL);
+                    PixoPlatformUtilities.CloseCurrentApplication();
                     return;
                 }
                 else
                 {
-                    Debug.unityLogger.Log(LogType.Log, TAG, $"[ApexSystem] Return Target is a package name. {returnTargetParameter}");
+                    Debug.unityLogger.Log(LogType.Log, TAG, $"Return Target is a package name. {CurrentExitTarget}");
 
                     List<string> keys = new List<string>(),
                         values = new List<string>();
 
-                    Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Adding pixo token.");
+                    Debug.unityLogger.Log(LogType.Log, TAG, "Adding pixo token.");
 
-                    if (CurrentActiveLogin != null)
+                    if (CurrentUser != null)
                     {
                         keys.Add("pixotoken");
-                        values.Add(CurrentActiveLogin.Token);
+                        values.Add(CurrentUser.Token);
                     }
                     else if (!string.IsNullOrEmpty(PassedLoginToken))
                     {
@@ -485,7 +535,7 @@ namespace PixoVR.Apex
                         values.Add(PassedLoginToken);
                     }
 
-                    Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Adding optional.");
+                    Debug.unityLogger.Log(LogType.Log, TAG, "Adding optional.");
 
                     if (!string.IsNullOrEmpty(optionalParameter))
                     {
@@ -493,15 +543,15 @@ namespace PixoVR.Apex
                         values.Add(optionalParameter);
                     }
 
-                    Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Adding return target.");
+                    Debug.unityLogger.Log(LogType.Log, TAG, "Adding return target.");
 
-                    if (!string.IsNullOrEmpty(returnTarget))
+                    if (!string.IsNullOrEmpty(nextExitApplication))
                     {
                         keys.Add("returntarget");
-                        values.Add(returnTarget);
+                        values.Add(nextExitApplication);
                     }
 
-                    Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Adding return target type.");
+                    Debug.unityLogger.Log(LogType.Log, TAG, "Adding return target type.");
 
                     if (!string.IsNullOrEmpty(returnTargetType))
                     {
@@ -509,25 +559,18 @@ namespace PixoVR.Apex
                         values.Add(returnTargetType);
                     }
 
-                    PixoPlatformUtilities.OpenApplication(returnTargetParameter, keys.ToArray(), values.ToArray());
+                    PixoPlatformUtilities.OpenApplication(CurrentExitTarget, keys.ToArray(), values.ToArray());
+                    PixoPlatformUtilities.CloseCurrentApplication();
                     return;
                 }
             }
 
-            PixoAndroidUtils.Quit();
+            PixoPlatformUtilities.CloseCurrentApplication();
         }
 
         string GetEndpointFromTarget(PlatformServer target)
         {
             return target.ToUrlString();
-        }
-
-        string GetWebEndpointFromPlatformTarget(PlatformServer target)
-        {
-            int targetValue = (int)target;
-            WebPlatformServer webTarget = (WebPlatformServer)targetValue;
-
-            return webTarget.ToUrlString();
         }
 
         string GetPlatformEndpointFromPlatformTarget(PlatformServer target)
@@ -559,7 +602,7 @@ namespace PixoVR.Apex
         {
             if (!IsModuleVersionValid())
             {
-                Debug.LogWarning($"{moduleVersion} is an invalid module version.");
+                Debug.unityLogger.Log(LogType.Warning, TAG, $"{moduleVersion} is an invalid module version.");
             }
             deviceID = SystemInfo.deviceUniqueIdentifier;
             deviceModel = SystemInfo.deviceModel;
@@ -604,7 +647,7 @@ namespace PixoVR.Apex
 
         void OnWebSocketConnectFailed(string reason)
         {
-            Debug.LogError("Websocket failed to connect with error: " + reason);
+            Debug.unityLogger.Log(LogType.Error, TAG, "Websocket failed to connect with error: " + reason);
         }
 
         void OnWebSocketReceive(string data)
@@ -621,12 +664,44 @@ namespace PixoVR.Apex
                 if (data.Contains("Token", StringComparison.OrdinalIgnoreCase))
                 {
                     object loginResponse = JsonConvert.DeserializeObject<LoginResponseContent>(data);
-                    HandleLogin(true, loginResponse);
+                    HandleWebSocketLogin(true, loginResponse);
                 }
             }
             catch (Exception ex)
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, ex.Message);
+            }
+        }
+
+        // TODO: Replace this for OnWebSocketReceive auth login as well.
+        protected void HandleWebSocketLogin(bool successful, object responseData)
+        {
+            Debug.unityLogger.Log(LogType.Log, TAG, "Handling Login");
+            currentUserInformation.User = null;
+            currentUserInformation.ModuleUserInformation = null;
+
+            if (successful)
+            {
+                currentUserInformation.User = responseData as LoginResponseContent;
+
+                if (loginCheckModuleAccess)
+                {
+                    CheckModuleAccess(moduleID, (rawResponse, response) =>
+                    {
+                        currentUserInformation = response;
+                        OnWebSocketLoginSucceeded.Invoke(null, currentUserInformation);
+                    });
+                }
+                else
+                {
+                    OnWebSocketLoginSucceeded.Invoke(null, currentUserInformation);
+                }
+            }
+            else
+            {
+                FailureResponse failureData = responseData as FailureResponse;
+                Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to log in.\nError: {0}", failureData.Message));
+                OnWebSocketLoginFailed.Invoke(null, failureData);
             }
         }
 
@@ -686,15 +761,9 @@ namespace PixoVR.Apex
             return true;
         }
 
-        [Obsolete("ReturnToHub has been deprecated, please use ExitApplication.", true)]
-        public static void ReturnToHub()
+        public static void ExitApplication(string nextExitTarget = "")
         {
-            Instance._ReturnToHub();
-        }
-
-        public static void ExitApplication(string returnTarget = "")
-        {
-            Instance._ExitApplication(returnTarget);
+            Instance._ExitApplication(nextExitTarget);
         }
 
         public static bool RequestAuthorizationCode()
@@ -707,59 +776,123 @@ namespace PixoVR.Apex
             Instance._ChangePlatformServer(newServer);
         }
 
-        public static void Ping()
+        public static void Ping(Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Instance._Ping();
+            ApexAPIHandler.Ping(success, failure);
         }
 
-        public static bool LoginWithToken()
+        public static void LoginWithToken(Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             Debug.unityLogger.Log(LogType.Log, TAG, $"Login with token of token {(string.IsNullOrEmpty(PassedLoginToken) ? "<none>" : PassedLoginToken)}");
-            return LoginWithToken(PassedLoginToken);
+            LoginWithToken(PassedLoginToken, success, failure);
         }
 
-        public static bool LoginWithToken(string token)
+        public static void LoginWithToken(string token, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._LoginWithToken(token);
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Calling LoginWithToken ({token})");
+            if (string.IsNullOrEmpty(token))
+            {
+                failure?.Invoke(null, Instance.GenerateFailureResponse("No token passed to login with."));
+                return;
+            }
+
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Logging in with token: {token}");
+            ApexAPIHandler.LoginWithToken(token, (rawResponse, response) =>
+            {
+                Instance.OnLoginSucceeded(rawResponse, response, success, failure);
+            }, (rawResponse, response) =>
+            {
+                Instance.OnLoginFailed(rawResponse, response);
+                failure?.Invoke(rawResponse, response);
+            });
         }
 
-        public static bool Login(LoginData login)
+        public static void Login(LoginData login, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._Login(login);
+            Debug.unityLogger.Log(LogType.Log, TAG, "_Login called.");
+            if (ApexAPIHandler == null)
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "API Handler is null.");
+                failure?.Invoke(null,
+                    Instance.GenerateFailureResponse(
+                        "There was an error reaching the platform, please contact your administrator."
+                    )
+                );
+                return;
+            }
+
+            if (string.IsNullOrEmpty(login.Login))
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No user name.");
+                failure?.Invoke(null, Instance.GenerateFailureResponse("No username or email entered."));
+                return;
+            }
+
+            if (string.IsNullOrEmpty(login.Password))
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No password.");
+                login.Password = "<empty>";
+            }
+
+            ApexAPIHandler.Login(login, (rawResponse, response) =>
+            {
+                Instance.OnLoginSucceeded(rawResponse, response, success, failure);
+            }, (rawResponse, response) =>
+            {
+                Instance.OnLoginFailed(rawResponse, response);
+                failure?.Invoke(rawResponse, response);
+            });
+
+            Debug.unityLogger.Log(LogType.Log, TAG, "Login called.");
         }
 
-        public static bool Login(string username, string password)
+        public static void Login(string username, string password, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._Login(username, password);
+            Login(new LoginData(username, password), success, failure);
         }
 
-        public static bool CheckModuleAccess(int targetModuleID = -1)
+        public static bool CheckModuleAccess(int targetModuleID = -1, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._CheckModuleAccess(targetModuleID);
+            return Instance._CheckModuleAccess(targetModuleID, success, failure);
         }
 
-        public static bool JoinSession(string scenarioID = null, Extension contextExtension = null)
+        public static void JoinSession(string scenarioID = null, Extension contextExtension = null, Action<HttpResponseMessage, JoinSessionResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._JoinSession(scenarioID, contextExtension);
+            Instance._JoinSession(scenarioID, contextExtension, (response, formattedResponse) =>
+            {
+                Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Session Id is {0}.", formattedResponse.SessionId));
+                Instance.heartbeatSessionID = formattedResponse.SessionId;
+                Instance.sessionInProgress = true;
+                success?.Invoke(response, formattedResponse);
+            }, (response, formattedResponse) =>
+            {
+                Instance.sessionInProgress = false;
+                Instance.currentSessionID = Guid.Empty;
+                failure?.Invoke(response, formattedResponse);
+            });
         }
 
-        public static bool CompleteSession(
-            SessionData currentSessionData,
-            Extension contextExtension = null,
-            Extension resultExtension = null
-        )
+        public static void CompleteSession(SessionData currentSessionData, Extension contextExtension = null, Extension resultExtension = null, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._CompleteSession(currentSessionData, contextExtension, resultExtension);
+            Instance._CompleteSession(currentSessionData, contextExtension, resultExtension, (response, formattedResponse) =>
+            {
+                if(!ApplicationIsQuitting)
+                {
+                    Instance.sessionInProgress = false;
+                    Instance.currentSessionID = Guid.Empty;
+                    success?.Invoke(response, formattedResponse);
+                }
+            }, failure);
         }
 
-        public static bool SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension)
+        public static void SendSimpleSessionEvent(string action, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSimpleSessionEvent(action, targetObject, contextExtension);
+            Instance._SendSimpleSessionEvent(action, targetObject, contextExtension, success, failure);
         }
 
-        public static bool SendSessionEvent(Statement eventStatement)
+        public static void SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._SendSessionEvent(eventStatement);
+            Instance._SendSessionEvent(eventStatement, success, failure);
         }
 
         public static bool GetCurrentUser()
@@ -792,9 +925,9 @@ namespace PixoVR.Apex
             return Instance._GetQuickIDAuthUsers(serialNumber);
         }
 
-        public static bool QuickIDLogin(string serialNumber, string username)
+        public static bool QuickIDLogin(string serialNumber, string username, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._QuickIDLogin(serialNumber, username);
+            return Instance._QuickIDLogin(serialNumber, username, success, failure);
         }
 
         protected void _ChangePlatformServer(PlatformServer newServer)
@@ -804,70 +937,14 @@ namespace PixoVR.Apex
             SetupAPI();
         }
 
-        protected void _Ping()
-        {
-            apexAPIHandler.Ping();
-        }
-
-        public bool _LoginWithToken(string token)
-        {
-            Debug.unityLogger.Log(LogType.Log, TAG, $"[ApexSystem] Calling LoginWithToken ({token})");
-            if (token.Length <= 0)
-            {
-                return false;
-            }
-
-            Debug.unityLogger.Log(LogType.Log, TAG, $"[ApexSystem] Logging in with token: {token}");
-            apexAPIHandler.LoginWithToken(token);
-
-            return true;
-        }
-
-        protected bool _Login(LoginData login)
-        {
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] _Login called.");
-            if (apexAPIHandler == null)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] API Handler is null.");
-                OnLoginFailed.Invoke(
-                    GenerateFailureResponse(
-                        "There was an error reaching the platform, please contact your administrator."
-                    )
-                );
-                return false;
-            }
-
-            if (login.Login.Length <= 0)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No user name.");
-                OnLoginFailed.Invoke(GenerateFailureResponse("No username or email entered."));
-                return false;
-            }
-
-            if (login.Password.Length <= 0)
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, "[Login] No password.");
-                login.Password = "<empty>";
-            }
-
-            apexAPIHandler.Login(login);
-
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Login called.");
-
-            return true;
-        }
-
-        protected bool _Login(string username, string password)
-        {
-            return _Login(new LoginData(username, password));
-        }
-
         protected FailureResponse GenerateFailureResponse(string message)
         {
-            FailureResponse failureResponse = new FailureResponse();
-            failureResponse.Error = "true";
-            failureResponse.HttpCode = "400";
-            failureResponse.Message = message;
+            FailureResponse failureResponse = new FailureResponse()
+            {
+                Error = "True",
+                HttpCode = "400",
+                Message = message,
+            };
 
             return failureResponse;
         }
@@ -885,13 +962,13 @@ namespace PixoVR.Apex
                 optionalParameter = arguments["optional"];
 
             if (arguments.ContainsKey("returntarget"))
-                returnTargetParameter = arguments["returntarget"];
+                CurrentExitTarget = arguments["returntarget"];
 
             if (arguments.ContainsKey("targettype"))
-                targetTypeParameter = arguments["targettype"];
+                TargetType = arguments["targettype"];
 
             Debug.unityLogger.Log(LogType.Log, TAG, "Is the token already set?");
-            if(string.IsNullOrEmpty(PassedLoginToken))
+            if (string.IsNullOrEmpty(PassedLoginToken))
             {
                 Debug.unityLogger.Log(LogType.Log, TAG, "Token is not set, but does the arguments contain a token?");
                 if (arguments.ContainsKey("pixotoken"))
@@ -899,7 +976,7 @@ namespace PixoVR.Apex
                     Debug.unityLogger.Log(LogType.Log, TAG, "Token was found in the arguments.");
                     string token = arguments["pixotoken"];
                     Debug.unityLogger.Log(LogType.Log, TAG, $"Found pixotoken {token}.");
-                    if(!string.IsNullOrEmpty(token))
+                    if (!string.IsNullOrEmpty(token))
                     {
                         PassedLoginToken = string.Copy(token);
                     }
@@ -907,15 +984,13 @@ namespace PixoVR.Apex
             }
         }
 
-
-
-        public bool _CheckModuleAccess(int targetModuleID = -1)
+        protected bool _CheckModuleAccess(int targetModuleID = -1, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] _CheckModuleAccess called.");
+            Debug.unityLogger.Log(LogType.Log, TAG, "_CheckModuleAccess called.");
 
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
             {
-                Debug.LogError("[ApexSystem] Cannot check user's module access with no active login.");
+                Debug.unityLogger.Log(LogType.Error, TAG, "Cannot check user's module access with no active login.");
                 return false;
             }
 
@@ -924,24 +999,36 @@ namespace PixoVR.Apex
                 targetModuleID = moduleID;
             }
 
-            Debug.unityLogger.Log(LogType.Log, TAG, $"[ApexSystem] Checking module access of module {targetModuleID} from user {currentActiveLogin.ID} and device serial number {(string.IsNullOrEmpty(deviceSerialNumber) == true ? "---" : deviceSerialNumber)}");
-            apexAPIHandler.GetModuleAccess(targetModuleID, currentActiveLogin.ID, deviceSerialNumber);
+            Debug.unityLogger.Log(LogType.Log, TAG, $"Checking module access of module {targetModuleID} from user {CurrentUser.ID} and device serial number {(string.IsNullOrEmpty(deviceSerialNumber) == true ? "---" : deviceSerialNumber)}");
+            apexAPIHandler.GetModuleAccess(targetModuleID, CurrentUser.ID, deviceSerialNumber, (message, userInformation) =>
+                {
+                    currentUserInformation.ModuleUserInformation = userInformation.ModuleUserInformation;
+                    success?.Invoke(message, currentUserInformation);
+                }, 
+                failure);
 
             return true;
         }
 
-        protected bool _JoinSession(string newScenarioID = null, Extension contextExtension = null)
+        protected void _JoinSession(string newScenarioID, Extension contextExtension, Action<HttpResponseMessage, JoinSessionResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
             {
-                Debug.LogError("[ApexSystem] Cannot join session with no active login.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "Cannot join session with no active login.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot join session with no active login." });
+                return;
             }
 
-            if (userAccessVerified == false)
+            Debug.Log("Joining Session.");
+#if PIXOVR_MODULEACCESS_BYPASS
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check..");
+#else
+            if (UserHasAccess == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
+#endif
 
             if (newScenarioID != null)
             {
@@ -950,8 +1037,8 @@ namespace PixoVR.Apex
 
             if (sessionInProgress == true)
             {
-                Debug.LogError(
-                    "[ApexSystem] Session is already in progress."
+                Debug.unityLogger.Log(LogType.Error, TAG,
+                    "Session is already in progress."
                         + " The previous session didn't complete or a new session was started during an active session."
                 );
             }
@@ -960,7 +1047,7 @@ namespace PixoVR.Apex
 
             Statement sessionStatement = new Statement();
             Agent sessionActor = new Agent();
-            sessionActor.mbox = currentActiveLogin.Email;
+            sessionActor.mbox = CurrentUser.Email;
 
             Verb sessionVerb = new Verb();
             sessionVerb.id = ApexVerbs.JOINED_SESSION;
@@ -990,25 +1077,18 @@ namespace PixoVR.Apex
             sessionData.EventType = ApexEventTypes.PIXOVR_SESSION_JOINED;
             sessionData.JsonData = sessionStatement;
 
-            apexAPIHandler.JoinSession(currentActiveLogin.Token, sessionData);
-
-            return true;
+            apexAPIHandler.JoinSession(CurrentUser.Token, sessionData, success, failure);
         }
 
-        protected bool _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension)
+        protected void _SendSimpleSessionEvent(string verbName, string targetObject, Extension contextExtension, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (userAccessVerified == false)
-                return false;
-
-            if (verbName == null)
-                return false;
-
-            if (verbName.Length == 0)
-                return false;
+            if (string.IsNullOrEmpty(verbName))
+            {
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Verb name is invalid." });
+                return;
+            }
 
             Statement sessionStatement = new Statement();
-            Agent sessionActor = new Agent();
-            sessionActor.mbox = currentActiveLogin.Email;
 
             Verb sessionVerb = new Verb();
             sessionVerb.id = new Uri("https://pixovr.com/xapi/verbs/" + verbName.Replace(' ', '_').ToLower());
@@ -1028,9 +1108,14 @@ namespace PixoVR.Apex
             sessionContext.revision = moduleVersion;
             sessionContext.platform = platform;
 
-            sessionContext.extensions = AppendStandardContextExtension(contextExtension);
+            if(contextExtension == null)
+            {
+                contextExtension = new Extension();
+            }
 
-            sessionStatement.actor = sessionActor;
+            sessionContext.extensions = new Extensions(contextExtension.ToJObject());
+
+            sessionStatement.actor = null;
             sessionStatement.verb = sessionVerb;
             sessionStatement.target = sessionActivity;
             sessionStatement.context = sessionContext;
@@ -1042,61 +1127,70 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = sessionStatement;
 
-            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
-
-            return true;
+            _SendSessionEvent(sessionStatement, success, failure);
         }
 
-        protected bool _SendSessionEvent(Statement eventStatement)
+        protected void _SendSessionEvent(Statement eventStatement, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (userAccessVerified == false)
+#if PIXOVR_MODULEACCESS_BYPASS
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check.");
+#else
+            if (UserHasAccess == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
+#endif
 
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
             {
-                Debug.LogError("[ApexSystem] Cannot send a session event with no active login.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "Cannot send a session event with no active login.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot send a session event with no active login." });
+                return;
             }
 
             if (sessionInProgress == false)
             {
-                Debug.LogError("[ApexSystem] No session in progress to send event for.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "No session in progress to send event for.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No session in progress to send event for." });
+                return;
             }
 
             if (eventStatement == null)
             {
-                Debug.LogError("[ApexSystem] No event data to send.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "No event data to send.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No event data to send." });
+                return;
             }
 
             if (eventStatement.actor != null)
             {
-                Debug.LogWarning("[ApexSystem] Actor data should not be filled out.");
+                Debug.unityLogger.Log(LogType.Warning, TAG, "Actor data should not be filled out.");
             }
 
             if (eventStatement.verb == null)
             {
-                Debug.LogError("[ApexSystem] Verb missing from eventStatement.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "Verb missing from eventStatement.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Verb missing from eventStatement." });
+                return;
             }
 
             if (eventStatement.verb.id == null)
             {
-                Debug.LogError("[ApexSystem] verb.id missing from eventStatement.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "verb.id missing from eventStatement.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "verb.id missing from eventStatement." });
+                return;
             }
 
             if (eventStatement.target == null)
             {
-                Debug.LogError("[ApexSystem] Object (target) missing from eventStatement.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "Object (target) missing from eventStatement.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Object (target) missing from eventStatement." });
+                return;
             }
 
             eventStatement.actor = new Agent();
-            eventStatement.actor.mbox = currentActiveLogin.Email;
+            eventStatement.actor.mbox = CurrentUser.Email;
 
             if (eventStatement.context == null)
             {
@@ -1116,37 +1210,43 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
-            apexAPIHandler.SendSessionEvent(currentActiveLogin.Token, sessionEvent);
-
-            return true;
+            apexAPIHandler.SendSessionEvent(CurrentUser.Token, sessionEvent, success, failure);
         }
 
-        protected bool _CompleteSession(
-            SessionData currentSessionData,
-            Extension contextExtension,
-            Extension resultExtension
-        )
+        protected void _CompleteSession(SessionData currentSessionData, Extension contextExtension, Extension resultExtension, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            if (userAccessVerified == false)
+#if PIXOVR_MODULEACCESS_BYPASS
+            Debug.unityLogger.Log(LogType.Warning, TAG, "Bypassing user access check..");
+#else
+            if (UserHasAccess == false)
             {
-                return false;
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User access not verified." });
+                return;
             }
+#endif
 
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
             {
-                Debug.LogError("[ApexSystem] Cannot complete session with no active login.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "Cannot complete session with no active login.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "Cannot complete session with no active login." });
+                return;
             }
 
             if (sessionInProgress == false)
             {
-                Debug.LogError("[ApexSystem] No session in progress to complete.");
-                return false;
+                Debug.unityLogger.Log(LogType.Error, TAG, "No session in progress to complete.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No session in progress to complete." });
+                return;
+            }
+
+            if (currentSessionData == null)
+            {
+                currentSessionData = new SessionData(0f, 0f, 0f, 0f, 0, true, false);
             }
 
             // Create our actor
             Agent sessionActor = new Agent();
-            sessionActor.mbox = currentActiveLogin.Email;
+            sessionActor.mbox = CurrentUser.Email;
 
             // Create our verb
             Verb sessionVerb = new Verb();
@@ -1210,9 +1310,7 @@ namespace PixoVR.Apex
                 currentSessionData.MaximumScore
             );
 
-            apexAPIHandler.CompleteSession(currentActiveLogin.Token, sessionData);
-
-            return true;
+            apexAPIHandler.CompleteSession(CurrentUser.Token, sessionData, success, failure);
         }
 
         protected bool _SendHeartbeat()
@@ -1221,48 +1319,48 @@ namespace PixoVR.Apex
             if (!sessionInProgress)
                 return false;
 
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
                 return false;
 
-            apexAPIHandler.SendHeartbeat(currentActiveLogin.Token, heartbeatSessionID);
+            apexAPIHandler.SendHeartbeat(CurrentUser.Token, heartbeatSessionID);
 
             return true;
         }
 
         protected bool _GetUser(int userId = -1)
         {
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
                 return false;
 
             if (userId < 0)
             {
-                userId = currentActiveLogin.ID;
+                userId = CurrentUser.ID;
             }
 
-            apexAPIHandler.GetUserData(currentActiveLogin.Token, userId);
+            apexAPIHandler.GetUserData(CurrentUser.Token, userId);
             return true;
         }
 
         protected bool _GetUserModules(int userId = -1)
         {
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
                 return false;
 
             if (userId < 0)
             {
-                userId = currentActiveLogin.ID;
+                userId = CurrentUser.ID;
             }
 
-            apexAPIHandler.GetUserModules(currentActiveLogin.Token, userId);
+            apexAPIHandler.GetUserModules(CurrentUser.Token, userId);
             return true;
         }
 
         protected bool _GetModuleList(string platformName)
         {
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
                 return false;
 
-            apexAPIHandler.GetModuleList(currentActiveLogin.Token, platformName);
+            apexAPIHandler.GetModuleList(CurrentUser.Token, platformName);
             return true;
         }
 
@@ -1274,11 +1372,11 @@ namespace PixoVR.Apex
         }
 
 
-        protected bool _QuickIDLogin(string serialNumber, string username)
+        protected bool _QuickIDLogin(string serialNumber, string username, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (String.IsNullOrEmpty(serialNumber) || string.IsNullOrEmpty(username)) return false;
             var loginData = new QuickIDLoginData(serialNumber, username);
-            apexAPIHandler.QuickIDLogin(loginData);
+            apexAPIHandler.QuickIDLogin(loginData, success, failure);
             return true;
         }
 
@@ -1315,8 +1413,13 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
             contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
+#if PIXOVR_MODULEACCESS_BYPASS
+            contextExtension.AddSimple("module_access_checked", "false");
+#else
+            contextExtension.AddSimple("module_access_checked", "true");
+#endif
 
-            if(string.IsNullOrEmpty(deviceSerialNumber))
+            if (!string.IsNullOrEmpty(deviceSerialNumber))
             {
                 contextExtension.AddSimple("device_serial", deviceSerialNumber.ToString());
             }
@@ -1326,7 +1429,7 @@ namespace PixoVR.Apex
 
         protected void OnAPIResponse(ResponseType response, HttpResponseMessage message, object responseData)
         {
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] On API Response");
+            Debug.unityLogger.Log(LogType.Log, TAG, "On API Response");
             bool success = message.IsSuccessStatusCode;
             if (responseData is FailureResponse)
             {
@@ -1335,26 +1438,6 @@ namespace PixoVR.Apex
 
             switch (response)
             {
-                case ResponseType.RT_PING:
-                    {
-                        if (success)
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Ping successful.");
-                            OnPingSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Ping failed.");
-                            OnPingFailed.Invoke(message);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_LOGIN:
-                    {
-                        Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Calling to handle login.");
-                        HandleLogin(success, responseData);
-                        break;
-                    }
                 case ResponseType.RT_GET_USER:
                     {
                         if (success)
@@ -1364,7 +1447,7 @@ namespace PixoVR.Apex
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get user.\nError: {0}", failureData.Message));
                             OnGetUserFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
@@ -1378,108 +1461,8 @@ namespace PixoVR.Apex
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to get user.\nError: {0}", failureData.Message));
+                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get user.\nError: {0}", failureData.Message));
                             OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_JOINED:
-                    {
-                        if (success)
-                        {
-                            JoinSessionResponse joinSessionResponse = responseData as JoinSessionResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Session Id is {0}.", joinSessionResponse.SessionId));
-                            heartbeatSessionID = joinSessionResponse.SessionId;
-                            sessionInProgress = true;
-                            OnJoinSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, 
-                                string.Format("[ApexSystem] Failed to join session.\nError: {0}", failureData.Message)
-                            );
-                            currentSessionID = Guid.Empty;
-                            sessionInProgress = false;
-                            OnJoinSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_COMPLETE:
-                    {
-                        if (success)
-                        {
-                            sessionInProgress = false;
-                            currentSessionID = Guid.Empty;
-                            OnCompleteSessionSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, 
-                                string.Format("[ApexSystem] Failed to complete session.\nError: {0}", failureData.Message)
-                            );
-                            OnCompleteSessionFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_SESSION_EVENT:
-                    {
-                        if (success)
-                        {
-                            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Session event sent.");
-                            OnSendEventSuccess.Invoke(message);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, 
-                                string.Format("[ApexSystem] Failed to send session event.\nError: {0}", failureData.Message)
-                            );
-                            OnSendEventFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_GET_USER_ACCESS:
-                    {
-                        if (success)
-                        {
-                            var userAccessResponseContent = responseData as UserAccessResponseContent;
-                            if (userAccessResponseContent.Access)
-                            {
-                                if (userAccessResponseContent.PassingScore.HasValue)
-                                {
-                                    currentActiveLogin.MinimumPassingScore = userAccessResponseContent.PassingScore.Value;
-                                }
-
-                                userAccessVerified = true;
-                                OnModuleAccessSuccess.Invoke(currentActiveLogin);
-                            }
-                            else
-                            {
-                                currentActiveLogin = null;
-                                userAccessVerified = false;
-                                OnModuleAccessFailed.Invoke(
-                                    new FailureResponse()
-                                    {
-                                        Error = "True",
-                                        HttpCode = "401",
-                                        Message = "User does not have access to module",
-                                    }
-                                );
-                            }
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, 
-                                string.Format(
-                                    "[ApexSystem] Failed to get users module access data.\nError: {0}",
-                                    failureData.Message
-                                )
-                            );
-
-                            OnModuleAccessFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
                     }
@@ -1492,27 +1475,13 @@ namespace PixoVR.Apex
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, 
-                                string.Format("[ApexSystem] Failed to get org modules.\nError: {0}", failureData.Message)
+                            Debug.unityLogger.Log(LogType.Log, TAG,
+                                string.Format("Failed to get org modules.\nError: {0}", failureData.Message)
                             );
 
                             OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
                         }
 
-                        break;
-                    }
-                case ResponseType.RT_GEN_AUTH_LOGIN:
-                    {
-                        if (success)
-                        {
-                            OnGeneratedAssistedLoginSuccess.Invoke(responseData as GeneratedAssistedLogin);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to get module.\nError: {0}", failureData.Message));
-                            OnGeneratedAssistedLoginFailed.Invoke(responseData as FailureResponse);
-                        }
                         break;
                     }
                 case ResponseType.RT_QUICK_ID_AUTH_GET_USERS:
@@ -1524,28 +1493,11 @@ namespace PixoVR.Apex
                         else
                         {
                             FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to get Quick ID Authentication users.\nError: {0}", failureData.Message));
+                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get Quick ID Authentication users.\nError: {0}", failureData.Message));
                             OnGetQuickIDAuthGetUsersFailed.Invoke(responseData as FailureResponse);
                         }
                         break;
                     }
-
-                case ResponseType.RT_QUICK_ID_AUTH_LOGIN:
-                    {
-                        HandleLogin(success, responseData);
-                        if (success)
-                        {
-                            OnQuickIDAuthLoginSuccess.Invoke(responseData as LoginResponseContent);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to authenticate with Quick ID Authentication.\nError: {0}", failureData.Message));
-                            OnQuickIDAuthLoginFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-
                 default:
                     {
                         break;
@@ -1558,47 +1510,29 @@ namespace PixoVR.Apex
             }
         }
 
-        protected void HandleLogin(bool successful, object responseData)
+        protected void OnLoginSucceeded(HttpResponseMessage response, ActiveUserInformation userInformation, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            Debug.unityLogger.Log(LogType.Log, TAG, "[ApexSystem] Handling Login");
-            userAccessVerified = false;
+            currentUserInformation = userInformation;
 
-            if (successful)
+            if(loginCheckModuleAccess && currentUserInformation.ModuleUserInformation == null)
             {
-                currentActiveLogin = responseData as LoginResponseContent;
-
-                OnLoginSuccess.Invoke();
-
-                if (loginCheckModuleAccess)
-                {
-                    CheckModuleAccess(moduleID);
-                }
+                CheckModuleAccess(moduleID, success, failure);
             }
-            else
+            else if(currentUserInformation.ModuleUserInformation != null)
             {
-                FailureResponse failureData = responseData as FailureResponse;
-                Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Failed to log in.\nError: {0}", failureData.Message));
-                OnLoginFailed.Invoke(responseData as FailureResponse);
+                // TODO: Does the user have a default minimum passing score that I know of?
+                if (currentUserInformation.ModuleUserInformation.PassingScore.HasValue)
+                {
+                    currentUserInformation.User.MinimumPassingScore = currentUserInformation.ModuleUserInformation.PassingScore.Value;
+                }
             }
         }
 
-        void _ReturnToHub()
+        protected void OnLoginFailed(HttpResponseMessage response, FailureResponse failureResponse)
         {
-            var token = currentActiveLogin.Token;
-
-            if (
-                serverIP.Contains("apexsa.", StringComparison.CurrentCultureIgnoreCase)
-                || serverIP.Contains("saudi.", StringComparison.CurrentCultureIgnoreCase)
-            )
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.SA_TrainingAcademy?pixotoken={token}");
-            }
-            else
-            {
-                Debug.unityLogger.Log(LogType.Log, TAG, $"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
-                Application.OpenURL($"pixovr://com.PixoVR.PixoHub?pixotoken={token}");
-            }
+            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to log in.\nError: {0}", failureResponse.Message));
+            currentUserInformation.ModuleUserInformation = null;
+            currentUserInformation.User = null;
         }
 
         bool _RequestAuthorizationCode()
@@ -1610,35 +1544,93 @@ namespace PixoVR.Apex
             return webSocket.RequestAuthorizationCode();
         }
 
-        public static bool GenerateOneTimeLoginForCurrentUser()
+        public static bool GenerateOneTimeLoginForCurrentUser(Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            if (Instance.currentActiveLogin == null)
-                return false;
-
-            return Instance._GenerateOneTimeLoginForUser();
-        }
-
-        bool _GenerateOneTimeLoginForCurrentUser()
-        {
-            if (currentActiveLogin == null)
+            if (CurrentUser == null)
             {
-                Debug.LogError("[ApexSystem] No current user logged in.");
+                Debug.unityLogger.Log(LogType.Error, TAG, "No user logged in to generate code.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to generate code." });
                 return false;
             }
 
-            return _GenerateOneTimeLoginForUser();
-        }
-
-        bool _GenerateOneTimeLoginForUser()
-        {
-            if (currentActiveLogin == null)
-            {
-                Debug.LogError("[ApexSystem] No user logged in to generate code.");
-                return false;
-            }
-
-            apexAPIHandler.GenerateAssistedLogin(currentActiveLogin.Token);
+            ApexAPIHandler.GenerateAssistedLogin(CurrentUser.Token, -1, success, failure);
             return true;
+        }
+
+        public static void GenerateOneTimeLoginForUser(int userId, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            if (CurrentUser == null)
+            {
+                Debug.unityLogger.Log(LogType.Error, TAG, "No current user logged in.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No current user logged in." });
+                return;
+            }
+
+            if (userId < 0)
+            {
+                Debug.unityLogger.Log(LogType.Error, TAG, "User id is invalid.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "User id is invalid." });
+                return;
+            }
+
+            ApexAPIHandler.GenerateAssistedLogin(CurrentUser.Token, userId, success, failure);
+        }
+
+        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            failure = WrapFailure("GetUserMetricsForCurrentUsersOrg", failure);
+
+            if (CurrentUser == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to get the user metrics for the current user org.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve org devices." });
+                return;
+            }
+            
+            ApexAPIHandler.GetUserMetricsForOrg(CurrentUser.Token, CurrentUser.OrgId, page, filterParams, success, failure);
+        }
+
+        public static void GetDevicesForOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, OrgDevicesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            failure = WrapFailure("GetDevicesForOrg", failure);
+
+            if (CurrentUser == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to retrieve org devices.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve org devices." });
+                return;
+            }
+
+            ApexAPIHandler.GetDevicesForOrg(CurrentUser.Token, CurrentUser.OrgId, page, filterParams, success, failure);
+        }
+
+        public static void GetSesssionHistory(int page, SessionFilters sessionFilters, FilterParams filterParams, Action<HttpResponseMessage, SessionHistoryResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            failure = WrapFailure("GetSesssionHistory", failure);
+
+            if (CurrentUser == null)
+            {
+                Debug.LogError("[ApexSystem] No user logged in to retrieve session history.");
+                failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve session history." });
+                return;
+            }
+
+            ApexAPIHandler.GetSessionHistory(CurrentUser.Token, page, sessionFilters, filterParams, success, failure);
+        }
+
+        public static Action<HttpResponseMessage, FailureResponse> WrapFailure(string functionName, Action<HttpResponseMessage, FailureResponse> failureAction)
+        {
+#if PIXOVR_LOG_VERBOSE
+            Action<HttpResponseMessage, FailureResponse> systemFailure = (response, formattedReponse) =>
+            {
+                SendSimpleSessionEvent(functionName, "ApexSystem", new Extension(new Dictionary<string, string>() { { "Error", formattedReponse.Error } }), null, null);
+                failureAction?.Invoke(response, formattedReponse);
+            };
+
+            return systemFailure;
+#else
+            return failureAction;
+#endif
         }
     }
 }

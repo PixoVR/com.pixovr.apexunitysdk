@@ -1,9 +1,9 @@
-﻿using UnityEditor.Build.Reporting;
-using UnityEditor.Build;
-using UnityEngine;
-using PixoVR.Apex;
-using UnityEditor;
+#if UNITY_EDITOR
 using System.IO;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace PixoVR.Editor
 {
@@ -47,8 +47,8 @@ namespace PixoVR.Editor
                 return;
 
             Debug.Log("PixoVR Build Preprocess Ran!");
-            Debug.Log($"Module version is {ApexSystem.ModuleVersion}.");
-            PlayerSettings.bundleVersion = ApexSystem.ModuleVersion;
+            Debug.Log($"Module version is {ProjectSettings.ModuleVersion}.");
+            PlayerSettings.bundleVersion = ProjectSettings.ModuleVersion;
             Debug.Log($"Player version is {PlayerSettings.bundleVersion}.");
         }
 
@@ -68,3 +68,4 @@ namespace PixoVR.Editor
         }
     }
 }
+#endif

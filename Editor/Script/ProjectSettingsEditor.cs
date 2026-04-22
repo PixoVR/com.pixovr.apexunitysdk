@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -24,8 +25,7 @@ namespace PixoVR.Editor
         }
 
 
-
-        protected static string GetSettingsPath(string name) => $"Project/{EditorUtilities.EditorRootPath}{name}";
+        protected static string GetSettingsPath(string name) => $"Project/Resources/{EditorUtilities.EditorRootPath}{name}";
 
 
         protected virtual void DrawInspectorWithoutScriptProperty()
@@ -63,3 +63,4 @@ namespace PixoVR.Editor
         }
     }
 }
+#endif

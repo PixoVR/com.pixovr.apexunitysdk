@@ -1,12 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
-
 
 namespace PixoVR.Apex
 {
@@ -187,6 +187,13 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
+    public class ActiveUserInformation
+    {
+        public LoginResponseContent User = null;
+        public UserAccessResponseContent ModuleUserInformation = null;
+    }
+
+    [Serializable]
     public class Organization
     {
         public int ID;
@@ -259,7 +266,8 @@ namespace PixoVR.Apex
 #if UNITY_6000_0_OR_NEWER
     public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
 #else
-    public class OrgModule : ScriptableObject
+    [Serializable]
+    public class OrgModule
 #endif
     {
         public int ID = -1;
@@ -426,7 +434,7 @@ namespace PixoVR.Apex
         }
     }
 
-#region Platform Models
+    #region Platform Models
     [Serializable]
     public class PlatformPlayer
     {
@@ -483,13 +491,13 @@ namespace PixoVR.Apex
 
 
     [Serializable]
-    public class PlatformLoginResponse: IPlatformErrorable
+    public class PlatformLoginResponse : IPlatformErrorable
     {
- 		public string Token { get; set; }
+        public string Token { get; set; }
         public string Msg { get; set; }
         public User User { get; set; }
 
-       public bool HasErrored()
+        public bool HasErrored()
         {
             return (User == null || string.IsNullOrEmpty(Token));
         }
@@ -573,13 +581,368 @@ namespace PixoVR.Apex
         public string Username;
         public string SerialNumber;
 
-        public QuickIDLoginData( string serialNumber, string username)
+        public QuickIDLoginData(string serialNumber, string username)
         {
             SerialNumber = serialNumber;
             Username = username;
         }
     }
 
-#endregion
+    [Serializable]
+    public class UserMetricsResponse : IFailure, IPlatformErrorable
+    {
+        public List<UserMetric> result;
+        public PageInfo pageInfo;
+
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
+
+    [Serializable]
+    public class PageInfo
+    {
+        public int totalCount;
+        public int page;
+        public int offset;
+        public int pageSize;
+        public int? previousPage;
+        public int? nextPage;
+
+        public int GetLastPageNumber()
+        {
+            var lastPage = 1;
+            if (pageSize > 0)
+            {
+                lastPage = (int)Math.Ceiling((double)totalCount / pageSize);
+            }
+            return lastPage;
+        }
+    }
+
+    public enum UserRoles
+    {
+        [Description("superadmin")]
+        Superadmin = 0,
+        [Description("admin")]
+        Admin = 1,
+        [Description("manager")]
+        Manager = 2,
+        [Description("developer")]
+        Developer = 3,
+        [Description("user")]
+        User = 4,
+        [Description("student")]
+        Student = 5,
+        [Description("trial")]
+        Trial = 6
+    }
+
+    [Serializable]
+    public class UserMetric
+    {
+        public int id;
+        public string firstName;
+        public string lastName;
+        public string username;
+        public string email;
+        public string role;
+        public Organization org;
+
+        public DateTime createdAt;
+        public int? orgUnitId;
+        public OrgUnit orgUnit;
+        public int? lastModuleId;
+        public Module lastModule;
+        public int sessionCount;
+        public DateTime? lastActiveAt;
+        public bool isInModule;
+        public string passcode;
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string displayName;
+        [SerializeField] private string usernameEmail;
+        [SerializeField] private string lastActiveDisplay;
+        [SerializeField] private string lastSessionDisplay;
+        [SerializeField] private string createdAtDisplay;
+
+        // =============================
+        // Read-only public accessors
+        // =============================
+
+        public string DisplayName => displayName;
+        public string UsernameEmail => usernameEmail;
+        public string LastActiveDisplay => lastActiveDisplay;
+        public string LastSessionDisplay => lastSessionDisplay;
+        public string CreatedAtDisplay => createdAtDisplay;
+
+
+        // =============================
+        // Call when data changes
+        // =============================
+
+        public void RefreshDisplayFields()
+        {
+            // Display name
+            displayName = $"{firstName} {lastName}";
+
+            // Username / email
+            usernameEmail = string.IsNullOrWhiteSpace(email)
+                ? username
+                : $"{username} ({email})";
+
+            // Last active
+            lastActiveDisplay = lastActiveAt.GetLocalFormattedDateTime();
+
+            // Last session
+            if (isInModule)
+            {
+                if (lastModule == null)
+                {
+                    lastSessionDisplay = "In module...";
+                }
+                else if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    lastSessionDisplay = "In Hub App";
+                }
+                else
+                {
+                    lastSessionDisplay =
+                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt.GetLocalFormattedDateTime()}";
+                }
+            }
+            else if (lastActiveAt != null)
+            {
+                lastSessionDisplay =
+                    $"Session Completed - {lastActiveAt.GetLocalFormattedDateTime()}";
+            }
+            else
+            {
+                lastSessionDisplay = "No session";
+            }
+
+
+            // Created at
+            createdAtDisplay = createdAt.GetLocalFormattedDateTime();
+        }
+    }
+
+    [Serializable]
+    public class OrgUnit
+    {
+        public int id;
+        public string name;
+        public string externalId;
+    }
+
+    [Serializable]
+    public class Module
+    {
+        public int id;
+        public string abbreviation;
+        public string description;
+    }
+
+
+    [Serializable]
+    public class Location
+    {
+        public string city;
+        public string region;
+        public string country;
+    }
+
+    [Serializable]
+    public class Device
+    {
+        public int id;
+        public string name;
+        public string serial;
+        public Location location;
+        public int? batteryLevel;
+        public bool online;
+        public string model;
+        public Module currentApp;
+        public DeviceUser user;
+
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string currentUserDisplay;
+        [SerializeField] private string batteryLevelDisplay;
+        [SerializeField] private string currentModuleDisplay;
+        [SerializeField] private string locationDisplay;
+        [SerializeField] private string currentUsernameEmailDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            // Display name
+            if (!online)
+            {
+                currentUserDisplay = "Offline";
+            }
+            else
+            {
+                currentUserDisplay = "Available";
+                if (user != null)
+                {
+                    currentUserDisplay = user.fullName;
+                    currentUsernameEmailDisplay = String.IsNullOrWhiteSpace(user.email)
+                        ? user.username
+                        : $"{user.username} ({user.email})";
+
+                }
+            }
+
+            if (online && currentApp != null)
+            {
+
+                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                {
+                    currentModuleDisplay = "In Hub App";
+                }
+                else
+                {
+                    currentModuleDisplay =
+                        $"In module - ({currentApp.abbreviation}) {currentApp.description}";
+                }
+            }
+
+            batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
+
+            locationDisplay = "Location Unknown";
+            if (location != null)
+            {
+                locationDisplay = $"{location.city}, {location.region}, {location.country}";
+            }
+        }
+
+    }
+
+
+    [Serializable]
+    public class DeviceUser
+    {
+        public string fullName;
+        public string email;
+        public string username;
+    }
+
+    [Serializable]
+    public class OrgDevicesResponse : IFailure, IPlatformErrorable
+    {
+        public List<Device> result;
+        public PageInfo pageInfo;
+
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
+
+    public class Session
+    {
+        public int id;
+        public int userId;
+        public int moduleId;
+        public Module module;
+        
+        public float? rawScore;
+        public float? maxScore;
+        public float scaledScore;
+        public string status;
+        public string result;
+        public DateTime startedAt;
+        public DateTime? completedAt;
+
+
+        // =============================
+        // UI Toolkit bindable fields
+        // =============================
+
+        [SerializeField] private string sessionModuleDisplay;
+        [SerializeField] private string sessionActiveStatusDisplay;
+
+
+        public void RefreshDisplayFields()
+        {
+            var durationFormatted = GetDurationFormatted();
+            sessionActiveStatusDisplay = String.Format("In Session For {0}", durationFormatted);
+            if (isComplete())
+            {
+                sessionActiveStatusDisplay = String.Format("Completed Session - {0}", durationFormatted);
+            }
+
+            sessionModuleDisplay = module == null ? "Unknown Module" : String.Format("({0}) {1}", module.abbreviation, module.description);
+            if (isComplete())
+            {
+                sessionModuleDisplay = String.Format(
+                    "{0} - {1}",
+                    sessionModuleDisplay,
+                    completedAt.GetLocalFormattedDateTime()
+                );
+            }
+        }
+
+        public bool isComplete()
+        {
+            return completedAt.HasValue;
+        }
+
+        private string GetDurationFormatted()
+        {
+            var endTime = isComplete() ? completedAt.Value : DateTime.UtcNow;
+            var timeSpan = endTime.Subtract(startedAt);
+
+            var totalHours = (int)timeSpan.TotalHours;
+            if (totalHours > 0)
+            {
+                return $"{totalHours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+            }
+            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+        }
+    }
+
+    public class SessionHistoryResponse : IFailure, IPlatformErrorable
+    {
+        public List<Session> result;
+        public PageInfo pageInfo;
+        public bool HasErrored()
+        {
+            return (result == null || result.Count <= 0);
+        }
+    }
+
+    public class SessionFilters
+    {
+        public List<int> orgIDs;
+        public List<int> userIDs;
+    }
+    #endregion
+
+
+    public class FilterParams
+    {
+        public string searchText = "";
+        public string sortField;
+        public SortOrder sortOrder = SortOrder.Ascending;
+        public enum SortOrder
+        {
+            Ascending,
+            Descending
+        }
+    }
+
+
 
 }

@@ -14,7 +14,10 @@ namespace PixoVR.Apex.Events
     public class OnModuleAccessSuccessEvent : UnityEvent<LoginResponseContent> { };
 
     [System.Serializable]
-    public class OnLoginSuccessEvent : UnityEvent { };
+    public class OnWebSocketLoginSucceededEvent : UnityEvent<HttpResponseMessage, ActiveUserInformation> { };
+
+    [System.Serializable]
+    public class OnWebSocketLoginFailedEvent : UnityEvent<HttpResponseMessage, FailureResponse> { };
 
     [System.Serializable]
     public class OnGetUserSuccessEvent : UnityEvent<GetUserResponseContent> { };
@@ -44,8 +47,14 @@ namespace PixoVR.Apex.Events
     public class OnGeneratedAssistedLoginSuccessEvent : UnityEvent<GeneratedAssistedLogin> { };
 
     [System.Serializable]
+    public class OnQuickIDAuthLoginSuccessEvent : UnityEvent<LoginResponseContent> { };
+
+    [System.Serializable]
     public class OnGetQuickIDAuthUsersSuccessEvent : UnityEvent<QuickIDAuthGetUsersResponse> { };
 
     [System.Serializable]
-    public class OnQuickIDAuthLoginSuccessEvent : UnityEvent<LoginResponseContent> { };
+    public class OnGetUserMetricsForOrgSuccessEvent : UnityEvent<UserMetricsResponse> { };
+
+    [System.Serializable]
+    public class OnGetSessionHistorySuccessEvent : UnityEvent<SessionHistoryResponse> { };
 }

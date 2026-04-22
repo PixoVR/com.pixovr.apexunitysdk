@@ -18,7 +18,7 @@ namespace PixoVR.Editor
             T settings;
 
 #if UNITY_EDITOR
-            string defaultPath = $"Assets/{typeof(T).Name}.asset";
+            string defaultPath = $"Assets/Resources/{typeof(T).Name}.asset";
             settings = AssetDatabase.LoadAssetAtPath<T>(defaultPath);
 
             if (settings == null)

@@ -111,9 +111,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Changes the AndroidManifest.xml's default entry point to use the UnityPlayerGameActivity as UnityPlayerActivity was deprecated in 6000.
  - Fixes an issue when the user launched the app with another app but does not have proper access to that module.
 
+
  ### [1.6.6] - 2025-06-17
  - Fix to the file names used for the Setup script.
- 
+
  ### [1.6.7] - 2025-11-03
  - Added more logging.
  - Aligned variable usage to prevent errors.

@@ -25,6 +25,11 @@ namespace PixoVR.Apex
             return null;
         }
 
+        public virtual void CloseCurrentApplication()
+        {
+
+        }
+
         public virtual Dictionary<string, string> ParseURLArguments(string url)
         {
             Debug.Log($"Parsing URL Arguments {url}");

@@ -10,6 +10,8 @@ namespace PixoVR.Apex
         {
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_WSA
             PlatformUtilities = new PixoWindowsPlatformUtilities();
+#elif UNITY_WEBGL
+            PlatformUtilities = new PixoWebPlatformUtilities();
 #elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
             PlatformUtilities = new PixoOSXPlatformUtilities();
 #elif UNITY_ANDROID
@@ -31,6 +33,12 @@ namespace PixoVR.Apex
         {
             UDebug.Log($"PixoPlatformUtilities::OpenApplication {applicationPath}");
             return Instance.PlatformUtilities.OpenApplication(applicationPath, argumentKeys, argumentValues);
+        }
+
+        public static void CloseCurrentApplication()
+        {
+            UDebug.Log($"PixoPlatformUtilities::CloseCurrentApplication");
+            Instance.PlatformUtilities.CloseCurrentApplication();
         }
 
         public static Dictionary<string, string> ParseApplicationArguments()
