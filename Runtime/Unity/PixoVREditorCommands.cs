@@ -87,9 +87,9 @@ public static class PixoVREditorCommands
 
         Debug.Log($"Generated file {generatedUtilsFile}");
 
-        if(File.Exists(generatedPixoUtils))
+        if(File.Exists(generatedUtilsFile))
         {
-            File.Delete(generatedPixoUtils);
+            File.Delete(generatedUtilsFile);
         }
 
         File.WriteAllText(generatedUtilsFile, generatedPixoUtils);
