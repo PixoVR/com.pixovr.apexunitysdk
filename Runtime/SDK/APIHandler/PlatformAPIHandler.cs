@@ -668,7 +668,7 @@ namespace PixoVR.Apex
                 var tokens = array.Children();
                 foreach (JToken selectedToken in tokens)
                 {
-                    OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
+                    OrgModule orgModule = new OrgModule();
                     orgModule.Parse(selectedToken);
                     orgModules.Add(orgModule);
                 }

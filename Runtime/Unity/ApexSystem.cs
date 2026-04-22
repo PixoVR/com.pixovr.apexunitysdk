@@ -279,7 +279,7 @@ namespace PixoVR.Apex
             }
 
             DontDestroyOnLoad(gameObject);
-#if MANAGE_XR && !UNITY_EDITOR
+#if MANAGE_XR && !UNITY_EDITOR && !UNITY_WEBGL
             Debug.unityLogger.Log(LogType.Log, TAG, "Using ManageXR");
             InitMXRSDK();
 #endif
@@ -387,7 +387,7 @@ namespace PixoVR.Apex
                 serverIP = GetEndpointFromTarget(PlatformTargetServer);
             }
 
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL
             apexAPIHandler = new WebGLPlatformAPIHandler(serverIP);
 #else
             apexAPIHandler = new PlatformAPIHandler(serverIP);

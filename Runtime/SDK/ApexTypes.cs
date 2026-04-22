@@ -266,7 +266,8 @@ namespace PixoVR.Apex
 #if UNITY_6000_0_OR_NEWER
     public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
 #else
-    public class OrgModule : ScriptableObject
+    [Serializable]
+    public class OrgModule
 #endif
     {
         public int ID = -1;
