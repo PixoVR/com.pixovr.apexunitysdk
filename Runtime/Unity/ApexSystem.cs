@@ -1004,7 +1004,7 @@ namespace PixoVR.Apex
                 {
                     currentUserInformation.ModuleUserInformation = userInformation.ModuleUserInformation;
                     success?.Invoke(message, currentUserInformation);
-                }, 
+                },
                 failure);
 
             return true;
@@ -1526,6 +1526,8 @@ namespace PixoVR.Apex
                     currentUserInformation.User.MinimumPassingScore = currentUserInformation.ModuleUserInformation.PassingScore.Value;
                 }
             }
+
+            success?.Invoke(response, currentUserInformation);
         }
 
         protected void OnLoginFailed(HttpResponseMessage response, FailureResponse failureResponse)
@@ -1586,7 +1588,7 @@ namespace PixoVR.Apex
                 failure?.Invoke(null, new FailureResponse { Error = "true", Message = "No user logged in to retrieve org devices." });
                 return;
             }
-            
+
             ApexAPIHandler.GetUserMetricsForOrg(CurrentUser.Token, CurrentUser.OrgId, page, filterParams, success, failure);
         }
 
