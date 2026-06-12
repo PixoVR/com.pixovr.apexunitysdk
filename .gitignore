@@ -89,3 +89,7 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
+
+# Web SDK (trailing ~ keeps Unity from importing it)
+!WebSDK~/
+!WebSDK~/**
