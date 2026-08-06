@@ -151,7 +151,7 @@ namespace PixoVR.Apex
 
         public static string APIEndpoint
         {
-            get { return ((APIPlatformServer)Instance.PlatformTargetServer).ToUrlString(); }
+            get { return ((APIPlatformServer)Instance.platformTargetServer).ToUrlString(); }
         }
 
         public static BaseAPIHandler ApexAPIHandler
@@ -167,26 +167,16 @@ namespace PixoVR.Apex
             }
         }
 
-        [SerializeField, EndpointDisplay]
-        protected PlatformServer PlatformTargetServer;
+        protected PlatformServer platformTargetServer;
 
-#if PIXOVR_DEBUG
-        [SerializeField]
-#endif
         protected string serverIP = "";
 
-        [SerializeField]
         protected int moduleID = 0;
 
-        [SerializeField]
         protected string moduleName = "Generic";
 
-#if PIXOVR_DEBUG
-        [SerializeField]
-#endif
         protected string moduleVersion = "";
 
-        [SerializeField]
         protected string scenarioID = "Generic";
 
 #if PIXOVR_DEBUG
@@ -265,6 +255,10 @@ namespace PixoVR.Apex
                 {
                     moduleVersion = projectSettings.ModuleVersion;
                 }
+
+                moduleName = projectSettings.ModuleName;
+                moduleID = projectSettings.ModuleID;
+                platformTargetServer = projectSettings.PlatformTargetServer;
             }
 
             SetupPlatformConfiguration();
@@ -351,25 +345,25 @@ namespace PixoVR.Apex
                         if (configData.Platform.Contains("Production", StringComparison.CurrentCultureIgnoreCase))
                         {
                             Debug.unityLogger.Log(LogType.Log, TAG, "NA Production platform target.");
-                            PlatformTargetServer = PlatformServer.NA_PRODUCTION;
+                            platformTargetServer = PlatformServer.NA_PRODUCTION;
                         }
 
                         if (configData.Platform.Contains("Dev", StringComparison.CurrentCultureIgnoreCase))
                         {
                             Debug.unityLogger.Log(LogType.Log, TAG, "NA Dev platform target.");
-                            PlatformTargetServer = PlatformServer.NA_DEV;
+                            platformTargetServer = PlatformServer.NA_DEV;
                         }
 
                         if (configData.Platform.Contains("Stage", StringComparison.CurrentCultureIgnoreCase))
                         {
                             Debug.unityLogger.Log(LogType.Log, TAG, "NA Stage platform target.");
-                            PlatformTargetServer = PlatformServer.NA_STAGE;
+                            platformTargetServer = PlatformServer.NA_STAGE;
                         }
                     }
                     else if (configData.Platform.Contains("SA", StringComparison.CurrentCultureIgnoreCase))
                     {
                         Debug.unityLogger.Log(LogType.Log, TAG, "SA Production platform target.");
-                        PlatformTargetServer = PlatformServer.SA_PRODUCTION;
+                        platformTargetServer = PlatformServer.SA_PRODUCTION;
                     }
 
                     // TODO (MGruber): Add a custom value, but this requires multiple configuration values to be saved.
@@ -384,7 +378,7 @@ namespace PixoVR.Apex
             Debug.unityLogger.Log(LogType.Log, TAG, "Mac Address: " + ApexUtils.GetMacAddress());
             if (serverIP.Length == 0)
             {
-                serverIP = GetEndpointFromTarget(PlatformTargetServer);
+                serverIP = GetEndpointFromTarget(platformTargetServer);
             }
 
 #if UNITY_WEBGL
@@ -399,13 +393,13 @@ namespace PixoVR.Apex
             }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
             if (apexAPIHandler is WebGLPlatformAPIHandler)
             {
                 ((WebGLPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
             }
 #else
-            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(PlatformTargetServer));
+            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
             if(apexAPIHandler is PlatformAPIHandler)
             {
                 ((PlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
@@ -435,6 +429,11 @@ namespace PixoVR.Apex
                 Debug.unityLogger.Log(LogType.Log, TAG, $"Login Token: {(string.IsNullOrEmpty(PassedLoginToken) ? "<Null>" : PassedLoginToken)}");
                 hasParsedArguments = true;
             }
+        }
+
+        public void SetModuleId(int moduleId)
+        {
+            
         }
 
         void _ExitApplication(string nextExitApplication)
@@ -932,7 +931,7 @@ namespace PixoVR.Apex
 
         protected void _ChangePlatformServer(PlatformServer newServer)
         {
-            PlatformTargetServer = newServer;
+            platformTargetServer = newServer;
 
             SetupAPI();
         }

@@ -1,1 +1,1 @@
-namespace PixoVR.Apex.Utils { public static partial class ApexUtils { public static string SDKVersion => "1.7.0"; } }
+namespace PixoVR.Apex.Utils { public static partial class ApexUtils { public static string SDKVersion => "1.8.1"; } }

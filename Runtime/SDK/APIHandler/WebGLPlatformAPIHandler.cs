@@ -91,7 +91,7 @@ namespace PixoVR.Apex
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
-            Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
+            Debug.Log("[WebGLPlatformAPIHandler] Set Endpoint to " + URL);
         }
 
         public override void SetPlatformEndpoint(string endpointUrl)

@@ -27,11 +27,20 @@ namespace PixoVR.Editor
 
             EditorGUIUtility.labelWidth = 220;
 
+            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.PlatformTargetServer)), new GUIContent("Target Server"));
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleVersion)));
             if(!IsModuleVersionValid(Target.ModuleVersion))
             {
                 EditorGUILayout.LabelField($"Module version {Target.ModuleVersion} is invalid.", LabelStyle);
             }
+            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleName)));
+            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleID)));
+            if (Target.ModuleID <= 0)
+            {
+                EditorGUILayout.LabelField($"Module ID {Target.ModuleID} is invalid. Make sure it is greater than 0.", LabelStyle);
+            }
+
+            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.DefaultScenarioName)));
 
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.CustomURLScheme)));
             EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.SyncVersionsOnBuildPreProcess)));
