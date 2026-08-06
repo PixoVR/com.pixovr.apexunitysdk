@@ -433,7 +433,7 @@ namespace PixoVR.Apex
 
         public void SetModuleId(int moduleId)
         {
-            
+
         }
 
         void _ExitApplication(string nextExitApplication)

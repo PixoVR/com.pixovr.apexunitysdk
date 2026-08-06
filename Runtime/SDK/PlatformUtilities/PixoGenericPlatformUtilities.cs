@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -28,7 +29,14 @@ namespace PixoVR.Apex
 
         public virtual void CloseCurrentApplication()
         {
-
+            #if UNITY_EDITOR
+            if (EditorApplication.isPlaying)
+            {
+                EditorApplication.isPlaying = false;
+            }
+            #else
+            Application.Quit();
+            #endif
         }
 
         public virtual Dictionary<string, string> ParseURLArguments(string url)
