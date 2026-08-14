@@ -445,6 +445,11 @@ namespace PixoVR.Apex
         public string launchProtocol;
         public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
 
+        public PlatformPlayer(int id)
+        {
+            this.id = id;
+        }
+
         public PlatformPlayer(JObject tokenObject)
         {
             id = tokenObject.Value<int>("id");
@@ -606,6 +611,93 @@ namespace PixoVR.Apex
         public bool isAvailable;
         public ModulePlayer modulePlayer;
         public List<ModuleVersion> versions;
+    }
+
+    public static class ModuleExtensions
+    {
+        public static OrgModule ToOrgModule(this Module module)
+        {
+            if (module == null)
+            {
+                return null;
+            }
+
+#if UNITY_6000_0_OR_NEWER
+            var orgModule = ScriptableObject.CreateInstance<OrgModule>();
+#else
+            var orgModule = new OrgModule();
+#endif
+
+            orgModule.Downloads ??= new List<OrgModuleDownload>();
+            orgModule.ID = ParseID(module.id);
+            orgModule.Name = module.description;
+            orgModule.Description = module.description;
+            orgModule.ShortDescription = module.shortDesc;
+            orgModule.LongDescription = module.description;
+            orgModule.IconURL = module.imageLink;
+            orgModule.Distributor = module.developer;
+
+            if (module.modulePlayer != null)
+            {
+                orgModule.player = new PlatformPlayer(ParseID(module.modulePlayer.id));
+            }
+
+            if (module.versions != null)
+            {
+                foreach (ModuleVersion version in module.versions)
+                {
+                    orgModule.Downloads.AddRange(ToOrgModuleDownloads(orgModule.ID, version));
+                }
+            }
+
+            return orgModule;
+        }
+
+        public static List<OrgModule> ToOrgModules(this List<Module> modules)
+        {
+            var orgModules = new List<OrgModule>();
+            if (modules == null)
+            {
+                return orgModules;
+            }
+
+            foreach (Module module in modules)
+            {
+                var orgModule = module.ToOrgModule();
+                if (orgModule != null)
+                {
+                    orgModules.Add(orgModule);
+                }
+            }
+
+            return orgModules;
+        }
+
+        private static List<OrgModuleDownload> ToOrgModuleDownloads(int moduleID, ModuleVersion version)
+        {
+            var downloads = new List<OrgModuleDownload>();
+            if (version?.platforms == null)
+            {
+                return downloads;
+            }
+
+            foreach (Platform platform in version.platforms)
+            {
+                var download = ScriptableObject.CreateInstance<OrgModuleDownload>();
+                download.ID = moduleID;
+                download.VersionID = ParseID(version.id);
+                download.Platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName;
+                download.Status = version.lifecycle?.name;
+                downloads.Add(download);
+            }
+
+            return downloads;
+        }
+
+        private static int ParseID(string id)
+        {
+            return int.TryParse(id, out int parsedID) ? parsedID : -1;
+        }
     }
 
     [Serializable]
