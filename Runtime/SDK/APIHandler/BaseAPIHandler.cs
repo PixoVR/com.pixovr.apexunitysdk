@@ -120,7 +120,7 @@ namespace PixoVR.Apex
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetModuleList(string authToken, string platform)
+        public virtual async void GetModuleList(string authToken, int userID, string platform, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);

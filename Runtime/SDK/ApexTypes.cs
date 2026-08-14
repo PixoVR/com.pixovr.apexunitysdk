@@ -589,6 +589,63 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
+    public class UserModulesResponse
+    {
+        public List<Module> modules;
+    }
+
+    [Serializable]
+    public class Module
+    {
+        public string id;
+        public string abbreviation;
+        public string imageLink;
+        public string developer;
+        public string description;
+        public string shortDesc;
+        public bool isAvailable;
+        public ModulePlayer modulePlayer;
+        public List<ModuleVersion> versions;
+    }
+
+    [Serializable]
+    public class ModulePlayer
+    {
+        public string id;
+    }
+
+    [Serializable]
+    public class ModuleVersion
+    {
+        public string id;
+        public List<Control> controls;
+        public List<Platform> platforms;
+        public Lifecycle lifecycle;
+    }
+
+    [Serializable]
+    public class Control
+    {
+        public string id;
+        public string name;
+    }
+
+    [Serializable]
+    public class Platform
+    {
+        public string id;
+        public string name;
+        public string shortName;
+    }
+
+    [Serializable]
+    public class Lifecycle
+    {
+        public string id;
+        public string name;
+    }
+
+    [Serializable]
     public class UserMetricsResponse : IFailure, IPlatformErrorable
     {
         public List<UserMetric> result;
@@ -741,15 +798,6 @@ namespace PixoVR.Apex
     }
 
     [Serializable]
-    public class Module
-    {
-        public int id;
-        public string abbreviation;
-        public string description;
-    }
-
-
-    [Serializable]
     public class Location
     {
         public string city;
@@ -806,7 +854,7 @@ namespace PixoVR.Apex
             if (online && currentApp != null)
             {
 
-                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
+                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID.ToString())
                 {
                     currentModuleDisplay = "In Hub App";
                 }
@@ -856,7 +904,7 @@ namespace PixoVR.Apex
         public int userId;
         public int moduleId;
         public Module module;
-        
+
         public float? rawScore;
         public float? maxScore;
         public float scaledScore;

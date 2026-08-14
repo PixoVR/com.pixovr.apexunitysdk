@@ -60,12 +60,6 @@ namespace PixoVR.Apex
             set { Instance.scenarioID = value; }
         }
 
-        [System.Obsolete("CurrentUser is deprecated. Please use CurrentUser in its place.", false)]
-        public static LoginResponseContent CurrentActiveLogin
-        {
-            get { return Instance.currentUserInformation.User; }
-        }
-
         public static UserAccessResponseContent CurrentUserModuleInformation
         {
             get { return Instance.currentUserInformation.ModuleUserInformation; }
@@ -381,7 +375,7 @@ namespace PixoVR.Apex
                 serverIP = GetEndpointFromTarget(platformTargetServer);
             }
 
-#if UNITY_WEBGL
+#if TRUE //UNITY_WEBGL
             apexAPIHandler = new WebGLPlatformAPIHandler(serverIP);
 #else
             apexAPIHandler = new PlatformAPIHandler(serverIP);
@@ -392,14 +386,13 @@ namespace PixoVR.Apex
                 Debug.unityLogger.Log(LogType.Log, TAG, "Apex API Handler is not null!");
             }
 
-#if UNITY_WEBGL && !UNITY_EDITOR
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
+#if UNITY_WEBGL && !UNITY_EDITOR
             if (apexAPIHandler is WebGLPlatformAPIHandler)
             {
                 ((WebGLPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
             }
 #else
-            apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
             if(apexAPIHandler is PlatformAPIHandler)
             {
                 ((PlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
@@ -431,9 +424,9 @@ namespace PixoVR.Apex
             }
         }
 
-        public void SetModuleId(int moduleId)
+        public void SetModuleId(int newModuleID)
         {
-
+            moduleID = newModuleID;
         }
 
         void _ExitApplication(string nextExitApplication)
@@ -914,9 +907,9 @@ namespace PixoVR.Apex
             return Instance._GetUserModules(userId);
         }
 
-        public static bool GetModulesList(string platformName)
+        public static bool GetModulesList(string platformName, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._GetModuleList(platformName);
+            return Instance._GetModuleList(platformName, success, failure);
         }
 
         public static bool GetQuickIDAuthUsers(string serialNumber)
@@ -1354,12 +1347,12 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _GetModuleList(string platformName)
+        protected bool _GetModuleList(string platformName, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (CurrentUser == null)
                 return false;
 
-            apexAPIHandler.GetModuleList(CurrentUser.Token, platformName);
+            apexAPIHandler.GetModuleList(CurrentUser.Token, CurrentUser.ID, platformName, success, failure);
             return true;
         }
 

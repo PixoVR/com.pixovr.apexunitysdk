@@ -640,7 +640,80 @@ namespace PixoVR.Apex
             }
         }
 
-        public override async void GetModuleList(string authToken, string platform)
+        public override async void GetModuleList(string authToken, int userID, string platform, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            var graphqlRequest = new
+            {
+                operationName = "user",
+                variables = new { id = userID },
+                query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } } } } }"
+                // TODO: Use this query when lifecycles is added to production - query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } lifecycle { id name } } } } }"
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            using (UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken))
+            {
+                HttpResponseMessage response;
+                try
+                {
+                    await SendAsync(uwr);
+                    response = ToHttpResponse(uwr);
+                    string body = uwr.downloadHandler.text;
+                    Debug.Log("Body: " + body);
+
+                    JObject jsonResponse = JObject.Parse(body);
+                    var failureResponse = GetGQLFailureResponse(jsonResponse, "user");
+                    if (failureResponse != null)
+                    {
+                        failure?.Invoke(response, failureResponse);
+                        return;
+                    }
+
+                    var userModulesJSON = jsonResponse["data"]["user"];
+                    var userModulesResponse =
+                        JsonConvert.DeserializeObject<UserModulesResponse>(userModulesJSON.ToString());
+                    FilterLatestPlatformModules(ref userModulesResponse, platform);
+                    success?.Invoke(response, userModulesResponse);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error retrieving users: {ex.Message}");
+                    response = InternalErrorResponse();
+                    failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
+                }
+            }
+        }
+
+        private void FilterLatestPlatformModules(ref UserModulesResponse modulesResponse, string platform)
+        {
+            List<Module> modules = new List<Module>();
+            foreach (Module module in modulesResponse.modules)
+            {
+                module.versions = GetLatestPlatformModule(module.versions, platform);
+                if (module.versions.Count > 0)
+                {
+                    modules.Add(module);
+                }
+            }
+
+            modulesResponse.modules = modules;
+        }
+
+        private List<ModuleVersion> GetLatestPlatformModule(List<ModuleVersion> moduleVersions, string platform)
+        {
+            List<ModuleVersion> latestModuleVersion = new List<ModuleVersion>();
+            foreach (ModuleVersion version in moduleVersions)
+            {
+                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase)) != null)
+                {
+                    latestModuleVersion.Add(version);
+                }
+            }
+
+            return latestModuleVersion;
+        }
+
+        public async void GetModuleList_Old(string authToken, string platform)
         {
             string path = "/modules";
             if (!string.IsNullOrEmpty(platform))

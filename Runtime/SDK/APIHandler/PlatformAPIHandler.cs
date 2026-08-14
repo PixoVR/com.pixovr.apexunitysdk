@@ -31,7 +31,6 @@ namespace PixoVR.Apex
         protected string URL = "";
         protected HttpClient handlingClient = null;
 
-
         // Need to migrate to this in the future
         protected string apiURL = "";
         protected HttpClient apiHandlingClient = null;
@@ -296,7 +295,7 @@ namespace PixoVR.Apex
                 variables = new
                 {
                     userId = sessionFilters.userIDs[0],
-                    limit = 10,  
+                    limit = 10,
                     page = page,
 
                     @params = paramsInput,
@@ -631,52 +630,82 @@ namespace PixoVR.Apex
             success?.Invoke(response, null);
         }
 
-        public override async void GetModuleList(string authToken, string platform)
+        private static HttpResponseMessage InternalErrorResponse()
+            => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+
+        public override async void GetModuleList(string authToken, int userID, string platform, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            string endpoint = "/modules";
-            if (platform != null && platform.Length > 0)
+            var graphqlRequest = new
             {
-                endpoint += $"?platform={platform}";
-            }
+                operationName = "user",
+                variables = new { id = userID },
+                query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } } } } }"
+                // TODO: Use this query when lifecycles is added to production - query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } lifecycle { id name } } } } }"
+            };
 
-            Debug.Log($"GetModuleList built endpoint: {endpoint}");
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
 
-            HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
-            string body = await response.Content.ReadAsStringAsync();
-
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
             try
             {
-                if (body.Contains("\"Error\":", StringComparison.CurrentCultureIgnoreCase))
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                Debug.Log("Body: " + body);
+
+                JObject jsonResponse = JObject.Parse(body);
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "user");
+                if (failureResponse != null)
                 {
-                    var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
+
+                var userModulesJSON = jsonResponse["data"]["user"];
+                var userModulesResponse =
+                    JsonConvert.DeserializeObject<UserModulesResponse>(userModulesJSON.ToString());
+                FilterLatestPlatformModules(ref userModulesResponse, platform);
+                success?.Invoke(response, userModulesResponse);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning(ex);
+                Debug.LogError($"Error retrieving users: {ex.Message}");
+                response = InternalErrorResponse();
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
             }
+        }
 
-            List<OrgModule> orgModules = new List<OrgModule>();
-            JArray array = JArray.Parse(body);
-            if (array != null)
+        private void FilterLatestPlatformModules(ref UserModulesResponse modulesResponse, string platform)
+        {
+            List<Module> modules = new List<Module>();
+            foreach (Module module in modulesResponse.modules)
             {
-                var tokens = array.Children();
-                foreach (JToken selectedToken in tokens)
+                module.versions = GetLatestPlatformModule(module.versions, platform);
+                if (module.versions.Count > 0)
                 {
-                    OrgModule orgModule = new OrgModule();
-                    orgModule.Parse(selectedToken);
-                    orgModules.Add(orgModule);
+                    modules.Add(module);
                 }
             }
 
-            Debug.Log(orgModules.Count.ToString());
-            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
+            modulesResponse.modules = modules;
+        }
+
+        private List<ModuleVersion> GetLatestPlatformModule(List<ModuleVersion> moduleVersions, string platform)
+        {
+            List<ModuleVersion> latestModuleVersion = new List<ModuleVersion>();
+            foreach (ModuleVersion version in moduleVersions)
+            {
+                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase)) != null)
+                {
+                    latestModuleVersion.Add(version);
+                }
+            }
+
+            return latestModuleVersion;
         }
 
         private FailureResponse GetGQLFailureResponse(JObject jsonResponse, string jsonDataObjectKey)
