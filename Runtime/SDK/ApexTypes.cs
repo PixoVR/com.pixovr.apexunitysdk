@@ -374,7 +374,7 @@ namespace PixoVR.Apex
             var industry = GetValue<string>(token, "Industry");
             if (!string.IsNullOrEmpty(industry) && industry.Length > 0)
             {
-                Industry = char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
+                Industry = ModuleExtensions.CapitalizeIndustry(industry);
             }
 
             var distributor = GetValue<JToken>(token, "distributor");
@@ -445,6 +445,11 @@ namespace PixoVR.Apex
         public string launchProtocol;
         public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
 
+        public PlatformPlayer(int id)
+        {
+            this.id = id;
+        }
+
         public PlatformPlayer(JObject tokenObject)
         {
             id = tokenObject.Value<int>("id");
@@ -476,6 +481,8 @@ namespace PixoVR.Apex
         public string URL;
         public string ApkName;
         public string platform;
+
+        public PlatformPlayerDownload() { }
 
         public PlatformPlayerDownload(JToken token)
         {
@@ -599,25 +606,225 @@ namespace PixoVR.Apex
     {
         public string id;
         public string abbreviation;
+        public string externalId;
         public string imageLink;
         public string developer;
         public string description;
         public string shortDesc;
+        public string longDesc;
+        public string industry;
+        public string details;
+        public string categories;
         public bool isAvailable;
+        public bool isAuthenticatedLaunch;
+        public List<ModuleLanguage> availableLanguages;
         public ModulePlayer modulePlayer;
         public List<ModuleVersion> versions;
+    }
+
+    [Serializable]
+    public class ModuleLanguage
+    {
+        public string displayName;
+    }
+
+    public static class ModuleExtensions
+    {
+        public static OrgModule ToOrgModule(this Module module)
+        {
+            if (module == null)
+            {
+                return null;
+            }
+
+#if UNITY_6000_0_OR_NEWER
+            var orgModule = ScriptableObject.CreateInstance<OrgModule>();
+#else
+            var orgModule = new OrgModule();
+#endif
+
+            orgModule.Downloads ??= new List<OrgModuleDownload>();
+            orgModule.ID = ParseID(module.id);
+            orgModule.Name = module.description;
+            orgModule.Description = module.description;
+            orgModule.ShortDescription = module.shortDesc;
+            orgModule.LongDescription = module.longDesc;
+            orgModule.Industry = CapitalizeIndustry(module.industry) ?? string.Empty;
+            orgModule.Details = module.details;
+            orgModule.Categories = module.categories;
+            orgModule.externalId = module.externalId;
+            orgModule.IconURL = module.imageLink;
+            orgModule.Distributor = module.developer;
+            orgModule.IsAuthenticatedLaunch = module.isAuthenticatedLaunch;
+            orgModule.AvailableLanguages = ToAvailableLanguages(module.availableLanguages);
+
+            if (module.modulePlayer != null)
+            {
+                orgModule.player = new PlatformPlayer(ParseID(module.modulePlayer.id))
+                {
+                    name = module.modulePlayer.name,
+                    launchProtocol = module.modulePlayer.launchProtocol
+                };
+
+                if (module.modulePlayer.versions != null)
+                {
+                    foreach (ModulePlayerVersion version in module.modulePlayer.versions)
+                    {
+                        orgModule.player.versions.AddRange(ToPlatformPlayerDownloads(version));
+                    }
+                }
+            }
+
+            if (module.versions != null)
+            {
+                foreach (ModuleVersion version in module.versions)
+                {
+                    orgModule.Downloads.AddRange(ToOrgModuleDownloads(orgModule.ID, version));
+                }
+            }
+
+            return orgModule;
+        }
+
+        public static List<OrgModule> ToOrgModules(this List<Module> modules)
+        {
+            var orgModules = new List<OrgModule>();
+            if (modules == null)
+            {
+                return orgModules;
+            }
+
+            foreach (Module module in modules)
+            {
+                var orgModule = module.ToOrgModule();
+                if (orgModule != null)
+                {
+                    orgModules.Add(orgModule);
+                }
+            }
+
+            return orgModules;
+        }
+
+        private static List<OrgModuleDownload> ToOrgModuleDownloads(int moduleID, ModuleVersion version)
+        {
+            var downloads = new List<OrgModuleDownload>();
+            if (version?.platforms == null)
+            {
+                return downloads;
+            }
+
+            foreach (Platform platform in version.platforms)
+            {
+                if (platform == null)
+                {
+                    continue;
+                }
+
+                var download = ScriptableObject.CreateInstance<OrgModuleDownload>();
+                download.ID = moduleID;
+                download.VersionID = ParseID(version.id);
+                download.Version = version.version;
+                download.DownloadSize = version.fileSize;
+                download.URL = version.fileLink;
+                download.Platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName;
+                download.Status = version.lifecycle?.name;
+                downloads.Add(download);
+            }
+
+            return downloads;
+        }
+
+        private static List<PlatformPlayerDownload> ToPlatformPlayerDownloads(ModulePlayerVersion version)
+        {
+            var downloads = new List<PlatformPlayerDownload>();
+            if (version?.platforms == null)
+            {
+                return downloads;
+            }
+
+            foreach (Platform platform in version.platforms)
+            {
+                if (platform == null)
+                {
+                    continue;
+                }
+
+                downloads.Add(new PlatformPlayerDownload
+                {
+                    id = ParseID(version.id),
+                    version = version.version,
+                    status = version.status,
+                    URL = version.fileLink,
+                    platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName
+                });
+            }
+
+            return downloads;
+        }
+
+        private static string ToAvailableLanguages(List<ModuleLanguage> languages)
+        {
+            if (languages == null)
+            {
+                return string.Empty;
+            }
+
+            var displayNames = new List<string>();
+            foreach (ModuleLanguage language in languages)
+            {
+                if (!string.IsNullOrEmpty(language?.displayName))
+                {
+                    displayNames.Add(language.displayName);
+                }
+            }
+
+            return string.Join(", ", displayNames);
+        }
+
+        internal static string CapitalizeIndustry(string industry)
+        {
+            if (string.IsNullOrEmpty(industry))
+            {
+                return industry;
+            }
+
+            return char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
+        }
+
+        private static int ParseID(string id)
+        {
+            return int.TryParse(id, out int parsedID) ? parsedID : -1;
+        }
     }
 
     [Serializable]
     public class ModulePlayer
     {
         public string id;
+        public string name;
+        public string launchProtocol;
+        public List<ModulePlayerVersion> versions;
+    }
+
+    [Serializable]
+    public class ModulePlayerVersion
+    {
+        public string id;
+        public string version;
+        public string status;
+        public string fileLink;
+        public long fileSize;
+        public List<Platform> platforms;
     }
 
     [Serializable]
     public class ModuleVersion
     {
         public string id;
+        public string version;
+        public string fileLink;
+        public long fileSize;
         public List<Control> controls;
         public List<Platform> platforms;
         public Lifecycle lifecycle;
