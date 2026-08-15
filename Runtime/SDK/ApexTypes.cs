@@ -649,7 +649,7 @@ namespace PixoVR.Apex
             orgModule.Description = module.description;
             orgModule.ShortDescription = module.shortDesc;
             orgModule.LongDescription = module.longDesc;
-            orgModule.Industry = CapitalizeIndustry(module.industry);
+            orgModule.Industry = CapitalizeIndustry(module.industry) ?? string.Empty;
             orgModule.Details = module.details;
             orgModule.Categories = module.categories;
             orgModule.externalId = module.externalId;
