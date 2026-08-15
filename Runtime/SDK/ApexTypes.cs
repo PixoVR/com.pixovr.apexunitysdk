@@ -616,7 +616,7 @@ namespace PixoVR.Apex
         public string details;
         public string categories;
         public bool isAvailable;
-        public bool isAuthenticatedLaunch;
+        public bool? isAuthenticatedLaunch;
         public List<ModuleLanguage> availableLanguages;
         public ModulePlayer modulePlayer;
         public List<ModuleVersion> versions;
@@ -655,7 +655,7 @@ namespace PixoVR.Apex
             orgModule.externalId = module.externalId;
             orgModule.IconURL = module.imageLink;
             orgModule.Distributor = module.developer;
-            orgModule.IsAuthenticatedLaunch = module.isAuthenticatedLaunch;
+            orgModule.IsAuthenticatedLaunch = module.isAuthenticatedLaunch ?? false;
             orgModule.AvailableLanguages = ToAvailableLanguages(module.availableLanguages);
 
             if (module.modulePlayer != null)
@@ -725,7 +725,7 @@ namespace PixoVR.Apex
                 download.ID = moduleID;
                 download.VersionID = ParseID(version.id);
                 download.Version = version.version;
-                download.DownloadSize = version.fileSize;
+                download.DownloadSize = version.fileSize ?? 0;
                 download.URL = version.fileLink;
                 download.Platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName;
                 download.Status = version.lifecycle?.name;
@@ -814,7 +814,7 @@ namespace PixoVR.Apex
         public string version;
         public string status;
         public string fileLink;
-        public long fileSize;
+        public long? fileSize;
         public List<Platform> platforms;
     }
 
@@ -824,7 +824,7 @@ namespace PixoVR.Apex
         public string id;
         public string version;
         public string fileLink;
-        public long fileSize;
+        public long? fileSize;
         public List<Control> controls;
         public List<Platform> platforms;
         public Lifecycle lifecycle;
