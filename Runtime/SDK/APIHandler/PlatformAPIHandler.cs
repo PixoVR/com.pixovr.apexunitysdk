@@ -643,7 +643,7 @@ namespace PixoVR.Apex
             {
                 operationName = "user",
                 variables = new { id = userID },
-                query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } } } } }"
+                query = "query user($id: ID!) { user(id: $id) { modules { id abbreviation externalId imageLink developer description shortDesc longDesc industry details categories isAvailable isAuthenticatedLaunch availableLanguages { displayName } modulePlayer { id name launchProtocol versions { id version status fileLink fileSize platforms { id name shortName } } } versions { id version createdAt fileLink fileSize controls { id name } platforms { id name shortName } } } } }"
                 // TODO: Use this query when lifecycles is added to production - query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } lifecycle { id name } } } } }"
             };
 
