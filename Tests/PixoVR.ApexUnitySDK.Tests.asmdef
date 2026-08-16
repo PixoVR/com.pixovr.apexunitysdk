@@ -1,0 +1,26 @@
+{
+    "name": "PixoVR.ApexUnitySDK.Tests",
+    "rootNamespace": "PixoVR.Apex.Tests",
+    "references": [
+        "PixoVR.ApexUnitySDK",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "nunit.framework"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

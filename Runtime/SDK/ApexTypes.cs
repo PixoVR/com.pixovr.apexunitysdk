@@ -615,7 +615,8 @@ namespace PixoVR.Apex
         public string industry;
         public string details;
         public string categories;
-        public bool isAvailable;
+        public bool? isAvailable;
+        public bool IsAvailable => isAvailable ?? false;
         public bool? isAuthenticatedLaunch;
         public List<ModuleLanguage> availableLanguages;
         public ModulePlayer modulePlayer;
