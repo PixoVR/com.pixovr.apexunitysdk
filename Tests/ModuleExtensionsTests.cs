@@ -1,8 +1,7 @@
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using PixoVR.Apex;
-using UnityEngine;
 
 namespace PixoVR.Apex.Tests
 {
@@ -204,10 +203,10 @@ namespace PixoVR.Apex.Tests
         [Test]
         public void ToOrgModules_NullInputIsEmptyAndListsMapOneToOne()
         {
-            Assert.That(((System.Collections.Generic.List<Module>)null).ToOrgModules(), Is.Empty);
+            Assert.That(((List<Module>)null).ToOrgModules(), Is.Empty);
 
             UserModulesResponse response = Deserialize(HappyPathJson);
-            var modules = new System.Collections.Generic.List<Module>
+            var modules = new List<Module>
             {
                 response.modules[0],
                 new Module { id = "" }
