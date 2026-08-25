@@ -147,6 +147,12 @@ namespace PixoVR.Apex
         {
             get { return ((APIPlatformServer)Instance.platformTargetServer).ToUrlString(); }
         }
+        
+        public static string HeadsetAPIEndpoint
+        {
+            get { return Instance.platformTargetServer.ToUrlString(); }
+        }
+
 
         public static BaseAPIHandler ApexAPIHandler
         {
@@ -423,7 +429,7 @@ namespace PixoVR.Apex
                 hasParsedArguments = true;
             }
         }
-
+        
         public void SetModuleId(int newModuleID)
         {
             moduleID = newModuleID;
