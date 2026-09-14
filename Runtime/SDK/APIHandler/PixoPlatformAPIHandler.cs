@@ -10,7 +10,7 @@ using UnityEngine.Networking;
 
 namespace PixoVR.Apex
 {
-    public class WebGLPlatformAPIHandler : BaseAPIHandler
+    public class PixoPlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
@@ -80,10 +80,10 @@ namespace PixoVR.Apex
         // Constructor / endpoint setup
         // ---------------------------------------------------------------------------
 
-        public WebGLPlatformAPIHandler()
+        public PixoPlatformAPIHandler()
             : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
-        public WebGLPlatformAPIHandler(string endpointUrl)
+        public PixoPlatformAPIHandler(string endpointUrl)
         {
             SetEndpoint(endpointUrl);
         }
@@ -91,7 +91,7 @@ namespace PixoVR.Apex
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
-            Debug.Log("[WebGLPlatformAPIHandler] Set Endpoint to " + URL);
+            Debug.Log("[PixoPlatformAPIHandler] Set Endpoint to " + URL);
         }
 
         public override void SetPlatformEndpoint(string endpointUrl)
