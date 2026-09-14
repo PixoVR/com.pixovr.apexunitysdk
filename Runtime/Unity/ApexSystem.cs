@@ -381,11 +381,7 @@ namespace PixoVR.Apex
                 serverIP = GetEndpointFromTarget(platformTargetServer);
             }
 
-#if TRUE //UNITY_WEBGL
             apexAPIHandler = new PixoPlatformAPIHandler(serverIP);
-#else
-            apexAPIHandler = new OldPlatformAPIHandler(serverIP);
-#endif
 
             if (apexAPIHandler != null)
             {
@@ -393,17 +389,10 @@ namespace PixoVR.Apex
             }
 
             apexAPIHandler.SetPlatformEndpoint(GetPlatformEndpointFromPlatformTarget(platformTargetServer));
-#if UNITY_WEBGL && !UNITY_EDITOR
             if (apexAPIHandler is PixoPlatformAPIHandler)
             {
                 ((PixoPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
             }
-#else
-            if(apexAPIHandler is OldPlatformAPIHandler)
-            {
-                ((OldPlatformAPIHandler)apexAPIHandler).OnAPIResponse += OnAPIResponse;
-            }
-#endif
 
             if (webSocket != null)
             {
