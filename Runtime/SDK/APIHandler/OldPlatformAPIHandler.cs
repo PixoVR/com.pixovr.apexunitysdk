@@ -23,7 +23,7 @@ namespace PixoVR.Apex
         RT_GET_USER_METRICS_FOR_ORG,
     }
 
-    public class PlatformAPIHandler : BaseAPIHandler
+    public class OldPlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
@@ -35,10 +35,10 @@ namespace PixoVR.Apex
         protected string apiURL = "";
         protected HttpClient apiHandlingClient = null;
 
-        public PlatformAPIHandler()
+        public OldPlatformAPIHandler()
             : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
-        public PlatformAPIHandler(string endpointUrl)
+        public OldPlatformAPIHandler(string endpointUrl)
         {
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);
@@ -57,7 +57,7 @@ namespace PixoVR.Apex
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
-            Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
+            Debug.Log("[OldPlatformAPIHandler] Set Endpoint to " + URL);
             handlingClient.BaseAddress = new Uri(URL);
         }
 
