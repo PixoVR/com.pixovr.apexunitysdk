@@ -53,12 +53,16 @@ namespace PixoVR.Apex.Analytics
                 throw new ArgumentException("Tracked id cannot be null or empty.", nameof(id));
 
             bool wasRegistered = isActiveAndEnabled && IsRegistered();
+            if (wasRegistered)
+            {
+                ApexAnalytics.UnregisterTrackedObject(this);
+            }
+
             trackedId = id;
             EnsureUniqueTrackedId();
 
             if (wasRegistered)
             {
-                ApexAnalytics.UnregisterTrackedObject(this);
                 ApexAnalytics.RegisterTrackedObject(this);
             }
         }
