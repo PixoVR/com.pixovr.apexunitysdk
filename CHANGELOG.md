@@ -122,4 +122,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### [1.9.1] - 2026-09-14
  - Converts remaining event-based ApexSystem APIs to success/failure callbacks.
- - Removes obsolete UnityEvent-based login, user, module, authorization-code, and Quick ID user events.
+ - Removes obsolete UnityEvent-based login, user, module, authorization-code, Quick ID user, and assisted-login events and all unused event classes from ApexEvents.cs.

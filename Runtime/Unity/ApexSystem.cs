@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using PixoVR.Apex.Events;
 using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using System;
@@ -219,9 +218,6 @@ namespace PixoVR.Apex
         protected Task socketDisconnectTask;
 
         public PlatformResponse OnPlatformResponse = null;
-
-        public OnGeneratedAssistedLoginSuccessEvent OnGeneratedAssistedLoginSuccess = new();
-        public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
 
         protected Action<string> pendingAuthCodeReceived;
         protected Action<HttpResponseMessage, ActiveUserInformation> pendingWebSocketLoginSuccess;
