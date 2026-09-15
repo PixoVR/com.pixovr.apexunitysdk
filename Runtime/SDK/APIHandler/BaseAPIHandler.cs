@@ -36,7 +36,7 @@ namespace PixoVR.Apex
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public virtual async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);
@@ -66,19 +66,19 @@ namespace PixoVR.Apex
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetUserData(string authToken, int userId)
+        public virtual async void GetUserData(string authToken, int userId, Action<HttpResponseMessage, GetUserResponseContent> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetUserModules(string authToken, int userId)
+        public virtual async void GetUserModules(string authToken, int userId, Action<HttpResponseMessage, GetUserModulesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetQuickIDAuthenticationUsers(string serialNumber)
+        public virtual async void GetQuickIDAuthenticationUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);

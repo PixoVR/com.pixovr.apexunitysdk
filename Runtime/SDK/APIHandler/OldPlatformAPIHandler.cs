@@ -168,7 +168,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -201,7 +201,6 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
                     failure?.Invoke(response, failureResponse);
                     return;
                 }
@@ -211,7 +210,7 @@ namespace PixoVR.Apex
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = userMetricsResponse;
 
-                success?.Invoke(userMetricsResponse, response);
+                success?.Invoke(response, userMetricsResponse);
             }
             catch (Exception ex)
             {
@@ -385,7 +384,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, userInformation);
         }
 
-        public override async void GetUserData(string authToken, int userId)
+        public override async void GetUserData(string authToken, int userId, Action<HttpResponseMessage, GetUserResponseContent> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -393,17 +392,18 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/user/{0}", userId));
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
-            GetUserResponseContent userInfo = responseContent as GetUserResponseContent;
-            if ((responseContent as GetUserResponseContent).HasErrored())
+            GetUserResponseContent responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserModules(string authToken, int userId)
+        public override async void GetUserModules(string authToken, int userId, Action<HttpResponseMessage, GetUserModulesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -416,20 +416,22 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/access/users", loginRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
-            if ((responseContent as GetUserModulesResponse).HasErrored())
+            GetUserModulesResponse responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
             else
             {
-                (responseContent as GetUserModulesResponse).ParseData();
+                responseContent.ParseData();
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
-        public override async void GetQuickIDAuthenticationUsers(string serialNumber)
+        public override async void GetQuickIDAuthenticationUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -439,13 +441,15 @@ namespace PixoVR.Apex
 
             Debug.Log($"[Platform API] Body returned as {body}");
 
-            object responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
-            if ((responseContent as QuickIDAuthGetUsersResponse).HasErrored())
+            QuickIDAuthGetUsersResponse responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_GET_USERS, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
         public override async void QuickIDLogin(QuickIDLoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)

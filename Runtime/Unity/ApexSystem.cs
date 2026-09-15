@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using PixoVR.Apex.Events;
 using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using System;
@@ -218,27 +217,11 @@ namespace PixoVR.Apex
         protected Task<bool> socketConnectTask;
         protected Task socketDisconnectTask;
 
-        public OnWebSocketLoginSucceededEvent OnWebSocketLoginSucceeded = new OnWebSocketLoginSucceededEvent();
-        public OnWebSocketLoginFailedEvent OnWebSocketLoginFailed = new OnWebSocketLoginFailedEvent();
-
-        public OnGetUserSuccessEvent OnGetUserSuccess = new OnGetUserSuccessEvent();
-        public OnApexFailureEvent OnGetUserFailed = new OnApexFailureEvent();
-
-        public OnGetUserModulesSuccessEvent OnGetUserModulesSuccess = new OnGetUserModulesSuccessEvent();
-        public OnApexFailureEvent OnGetUserModulesFailed = new OnApexFailureEvent();
-
-        public OnGetOrgModulesSuccessEvent OnGetOrganizationModulesSuccess = new OnGetOrgModulesSuccessEvent();
-        public OnApexFailureEvent OnGetOrganizationModulesFailed = new OnApexFailureEvent();
-
         public PlatformResponse OnPlatformResponse = null;
 
-        public OnAuthCodeReceived OnAuthorizationCodeReceived = new OnAuthCodeReceived();
-
-        public OnGeneratedAssistedLoginSuccessEvent OnGeneratedAssistedLoginSuccess = new();
-        public OnApexFailureEvent OnGeneratedAssistedLoginFailed = new();
-
-        public OnGetQuickIDAuthUsersSuccessEvent OnGetQuickIDAuthGetUsersSuccess = new();
-        public OnApexFailureEvent OnGetQuickIDAuthGetUsersFailed = new();
+        protected Action<string> pendingAuthCodeReceived;
+        protected Action<HttpResponseMessage, ActiveUserInformation> pendingWebSocketLoginSuccess;
+        protected Action<HttpResponseMessage, FailureResponse> pendingWebSocketLoginFailure;
 
         void Awake()
         {
@@ -645,7 +628,7 @@ namespace PixoVR.Apex
                 if (data.Contains("auth_code"))
                 {
                     var authCode = JsonConvert.DeserializeObject<AuthorizationCode>(data);
-                    OnAuthorizationCodeReceived.Invoke(authCode.Code);
+                    pendingAuthCodeReceived?.Invoke(authCode.Code);
                 }
 
                 if (data.Contains("Token", StringComparison.OrdinalIgnoreCase))
@@ -676,19 +659,34 @@ namespace PixoVR.Apex
                     CheckModuleAccess(moduleID, (rawResponse, response) =>
                     {
                         currentUserInformation = response;
-                        OnWebSocketLoginSucceeded.Invoke(null, currentUserInformation);
+                        pendingWebSocketLoginSuccess?.Invoke(null, currentUserInformation);
+                        pendingAuthCodeReceived = null;
+                        pendingWebSocketLoginSuccess = null;
+                        pendingWebSocketLoginFailure = null;
+                    }, (rawResponse, response) =>
+                    {
+                        pendingWebSocketLoginFailure?.Invoke(rawResponse, response);
+                        pendingAuthCodeReceived = null;
+                        pendingWebSocketLoginSuccess = null;
+                        pendingWebSocketLoginFailure = null;
                     });
                 }
                 else
                 {
-                    OnWebSocketLoginSucceeded.Invoke(null, currentUserInformation);
+                    pendingWebSocketLoginSuccess?.Invoke(null, currentUserInformation);
+                    pendingAuthCodeReceived = null;
+                    pendingWebSocketLoginSuccess = null;
+                    pendingWebSocketLoginFailure = null;
                 }
             }
             else
             {
                 FailureResponse failureData = responseData as FailureResponse;
                 Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to log in.\nError: {0}", failureData.Message));
-                OnWebSocketLoginFailed.Invoke(null, failureData);
+                pendingWebSocketLoginFailure?.Invoke(null, failureData);
+                pendingAuthCodeReceived = null;
+                pendingWebSocketLoginSuccess = null;
+                pendingWebSocketLoginFailure = null;
             }
         }
 
@@ -753,9 +751,9 @@ namespace PixoVR.Apex
             Instance._ExitApplication(nextExitTarget);
         }
 
-        public static bool RequestAuthorizationCode()
+        public static bool RequestAuthorizationCode(Action<string> codeReceived = null, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._RequestAuthorizationCode();
+            return Instance._RequestAuthorizationCode(codeReceived, success, failure);
         }
 
         public static void ChangePlatformServer(PlatformServer newServer)
@@ -882,24 +880,24 @@ namespace PixoVR.Apex
             Instance._SendSessionEvent(eventStatement, success, failure);
         }
 
-        public static bool GetCurrentUser()
+        public static bool GetCurrentUser(Action<HttpResponseMessage, GetUserResponseContent> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return GetUser();
+            return GetUser(-1, success, failure);
         }
 
-        public static bool GetUser(int userId = -1)
+        public static bool GetUser(int userId = -1, Action<HttpResponseMessage, GetUserResponseContent> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._GetUser(userId);
+            return Instance._GetUser(userId, success, failure);
         }
 
-        public static bool GetCurrentUserModules()
+        public static bool GetCurrentUserModules(Action<HttpResponseMessage, GetUserModulesResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return GetUserModules();
+            return GetUserModules(-1, success, failure);
         }
 
-        public static bool GetUserModules(int userId = -1)
+        public static bool GetUserModules(int userId = -1, Action<HttpResponseMessage, GetUserModulesResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._GetUserModules(userId);
+            return Instance._GetUserModules(userId, success, failure);
         }
 
         public static bool GetModulesList(string platformName, Action<HttpResponseMessage, object> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
@@ -907,9 +905,9 @@ namespace PixoVR.Apex
             return Instance._GetModuleList(platformName, success, failure);
         }
 
-        public static bool GetQuickIDAuthUsers(string serialNumber)
+        public static bool GetQuickIDAuthUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            return Instance._GetQuickIDAuthUsers(serialNumber);
+            return Instance._GetQuickIDAuthUsers(serialNumber, success, failure);
         }
 
         public static bool QuickIDLogin(string serialNumber, string username, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
@@ -1314,31 +1312,37 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _GetUser(int userId = -1)
+        protected bool _GetUser(int userId = -1, Action<HttpResponseMessage, GetUserResponseContent> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (CurrentUser == null)
+            {
+                failure?.Invoke(null, GenerateFailureResponse("No user logged in."));
                 return false;
+            }
 
             if (userId < 0)
             {
                 userId = CurrentUser.ID;
             }
 
-            apexAPIHandler.GetUserData(CurrentUser.Token, userId);
+            apexAPIHandler.GetUserData(CurrentUser.Token, userId, success, failure);
             return true;
         }
 
-        protected bool _GetUserModules(int userId = -1)
+        protected bool _GetUserModules(int userId = -1, Action<HttpResponseMessage, GetUserModulesResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             if (CurrentUser == null)
+            {
+                failure?.Invoke(null, GenerateFailureResponse("No user logged in."));
                 return false;
+            }
 
             if (userId < 0)
             {
                 userId = CurrentUser.ID;
             }
 
-            apexAPIHandler.GetUserModules(CurrentUser.Token, userId);
+            apexAPIHandler.GetUserModules(CurrentUser.Token, userId, success, failure);
             return true;
         }
 
@@ -1351,10 +1355,15 @@ namespace PixoVR.Apex
             return true;
         }
 
-        protected bool _GetQuickIDAuthUsers(string serialNumber)
+        protected bool _GetQuickIDAuthUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
-            if (String.IsNullOrEmpty(serialNumber)) return false;
-            apexAPIHandler.GetQuickIDAuthenticationUsers(serialNumber);
+            if (String.IsNullOrEmpty(serialNumber))
+            {
+                failure?.Invoke(null, GenerateFailureResponse("No serial number provided."));
+                return false;
+            }
+
+            apexAPIHandler.GetQuickIDAuthenticationUsers(serialNumber, success, failure);
             return true;
         }
 
@@ -1425,66 +1434,6 @@ namespace PixoVR.Apex
 
             switch (response)
             {
-                case ResponseType.RT_GET_USER:
-                    {
-                        if (success)
-                        {
-                            OnGetUserSuccess.Invoke(responseData as GetUserResponseContent);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get user.\nError: {0}", failureData.Message));
-                            OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_GET_USER_MODULES:
-                    {
-                        if (success)
-                        {
-                            OnGetUserModulesSuccess.Invoke(responseData as GetUserModulesResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get user.\nError: {0}", failureData.Message));
-                            OnGetUserFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
-                case ResponseType.RT_GET_MODULES_LIST:
-                    {
-                        if (success)
-                        {
-                            OnGetOrganizationModulesSuccess.Invoke(responseData as List<OrgModule>);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG,
-                                string.Format("Failed to get org modules.\nError: {0}", failureData.Message)
-                            );
-
-                            OnGetOrganizationModulesFailed.Invoke(responseData as FailureResponse);
-                        }
-
-                        break;
-                    }
-                case ResponseType.RT_QUICK_ID_AUTH_GET_USERS:
-                    {
-                        if (success)
-                        {
-                            OnGetQuickIDAuthGetUsersSuccess.Invoke(responseData as QuickIDAuthGetUsersResponse);
-                        }
-                        else
-                        {
-                            FailureResponse failureData = responseData as FailureResponse;
-                            Debug.unityLogger.Log(LogType.Log, TAG, string.Format("Failed to get Quick ID Authentication users.\nError: {0}", failureData.Message));
-                            OnGetQuickIDAuthGetUsersFailed.Invoke(responseData as FailureResponse);
-                        }
-                        break;
-                    }
                 default:
                     {
                         break;
@@ -1524,8 +1473,12 @@ namespace PixoVR.Apex
             currentUserInformation.User = null;
         }
 
-        bool _RequestAuthorizationCode()
+        bool _RequestAuthorizationCode(Action<string> codeReceived, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
+            pendingAuthCodeReceived = codeReceived;
+            pendingWebSocketLoginSuccess = success;
+            pendingWebSocketLoginFailure = failure;
+
             if (!webSocket.IsConnected())
             {
                 ConnectWebsocket();
@@ -1565,7 +1518,7 @@ namespace PixoVR.Apex
             ApexAPIHandler.GenerateAssistedLogin(CurrentUser.Token, userId, success, failure);
         }
 
-        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             failure = WrapFailure("GetUserMetricsForCurrentUsersOrg", failure);
 
