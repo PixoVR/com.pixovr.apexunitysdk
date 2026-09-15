@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using PixoVR.Apex.Analytics;
 using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using System;
@@ -83,6 +84,11 @@ namespace PixoVR.Apex
         public static string DeviceSerialNumber
         {
             get { return Instance.deviceSerialNumber; }
+        }
+
+        public static ApexAnalyticsContext AnalyticsContext
+        {
+            get { return Instance.BuildAnalyticsContext(); }
         }
 
         public static string PassedLoginToken
@@ -265,6 +271,15 @@ namespace PixoVR.Apex
         void OnApplicationQuit()
         {
             CompleteSession(null);
+            ApexAnalytics.Dispatch(provider => provider.Flush());
+        }
+
+        void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                ApexAnalytics.Dispatch(provider => provider.Flush());
+            }
         }
 
 #if MANAGE_XR
@@ -653,6 +668,8 @@ namespace PixoVR.Apex
             if (successful)
             {
                 currentUserInformation.User = responseData as LoginResponseContent;
+                ApexAnalytics.Dispatch(provider =>
+                    provider.OnUserIdentified(BuildAnalyticsContext(), currentUserInformation.User));
 
                 if (loginCheckModuleAccess)
                 {
@@ -848,6 +865,8 @@ namespace PixoVR.Apex
                 Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Session Id is {0}.", formattedResponse.SessionId));
                 Instance.heartbeatSessionID = formattedResponse.SessionId;
                 Instance.sessionInProgress = true;
+                ApexAnalytics.Dispatch(provider =>
+                    provider.OnSessionJoined(Instance.BuildAnalyticsContext(), formattedResponse));
                 success?.Invoke(response, formattedResponse);
             }, (response, formattedResponse) =>
             {
@@ -1195,6 +1214,8 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnSessionEvent(BuildAnalyticsContext(), eventStatement));
             apexAPIHandler.SendSessionEvent(CurrentUser.Token, sessionEvent, success, failure);
         }
 
@@ -1295,6 +1316,8 @@ namespace PixoVR.Apex
                 currentSessionData.MaximumScore
             );
 
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnSessionCompleted(BuildAnalyticsContext(), currentSessionData));
             apexAPIHandler.CompleteSession(CurrentUser.Token, sessionData, success, failure);
         }
 
@@ -1446,9 +1469,33 @@ namespace PixoVR.Apex
             }
         }
 
+        protected ApexAnalyticsContext BuildAnalyticsContext()
+        {
+            LoginResponseContent user = currentUserInformation?.User;
+            return new ApexAnalyticsContext
+            {
+                UserId = user?.ID ?? 0,
+                OrgId = user?.OrgId ?? 0,
+                UserEmail = user?.Email,
+                ModuleId = moduleID,
+                ModuleName = moduleName,
+                ModuleVersion = moduleVersion,
+                ScenarioId = scenarioID,
+                SessionId = heartbeatSessionID,
+                SessionRegistration = currentSessionID,
+                DeviceId = deviceID,
+                DeviceModel = deviceModel,
+                DeviceSerial = deviceSerialNumber,
+                Platform = platform,
+                SdkVersion = ApexUtils.SDKVersion,
+            };
+        }
+
         protected void OnLoginSucceeded(HttpResponseMessage response, ActiveUserInformation userInformation, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             currentUserInformation = userInformation;
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnUserIdentified(BuildAnalyticsContext(), currentUserInformation.User));
 
             if(loginCheckModuleAccess && currentUserInformation.ModuleUserInformation == null)
             {
