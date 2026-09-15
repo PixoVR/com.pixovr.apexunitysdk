@@ -20,7 +20,7 @@ public sealed class MyAnalyticsProvider : IApexAnalyticsProvider
 
 public static class MyAnalyticsRegistration
 {
-    [RuntimeInitializeOnLoadMethod]
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
     {
         ApexAnalytics.Register(new MyAnalyticsProvider());
@@ -31,4 +31,6 @@ public static class MyAnalyticsRegistration
 Add `ApexTrackedObject` to objects that an analytics provider should track. Providers receive
 registration, unregistration, and engagement callbacks for those objects. Create an
 `ApexAnalyticsSettings` asset in a `Resources` folder to disable analytics globally or list
-provider names under `disabledProviders`. Providers can implement only the callbacks they need.
+provider names under `disabledProviders`. Providers registered after tracked objects are enabled
+also receive `OnTrackedObjectRegistered` for those existing objects. Providers can implement only
+the callbacks they need.

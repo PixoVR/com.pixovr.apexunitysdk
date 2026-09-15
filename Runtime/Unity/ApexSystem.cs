@@ -1481,7 +1481,7 @@ namespace PixoVR.Apex
                 ModuleName = moduleName,
                 ModuleVersion = moduleVersion,
                 ScenarioId = scenarioID,
-                SessionId = heartbeatSessionID,
+                SessionId = sessionInProgress ? heartbeatSessionID : 0,
                 SessionRegistration = currentSessionID,
                 DeviceId = deviceID,
                 DeviceModel = deviceModel,

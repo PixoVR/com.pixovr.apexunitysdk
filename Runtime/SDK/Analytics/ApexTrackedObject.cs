@@ -16,6 +16,10 @@ namespace PixoVR.Apex.Analytics
         [SerializeField]
         private string meshName;
 
+        /// <summary>
+        /// Gets the per-instance id. Authored scene objects keep their serialized id across runs;
+        /// spawned or duplicated instances get a fresh id when enabled.
+        /// </summary>
         public string TrackedId => trackedId;
         public string DisplayName => string.IsNullOrEmpty(displayName) ? gameObject.name : displayName;
         public string MeshName => meshName;
@@ -34,12 +38,32 @@ namespace PixoVR.Apex.Analytics
 
         void OnEnable()
         {
-            ApexAnalytics.Dispatch(provider => provider.OnTrackedObjectRegistered(this));
+            EnsureUniqueTrackedId();
+            ApexAnalytics.RegisterTrackedObject(this);
         }
 
         void OnDisable()
         {
-            ApexAnalytics.Dispatch(provider => provider.OnTrackedObjectUnregistered(this));
+            ApexAnalytics.UnregisterTrackedObject(this);
+        }
+
+        public void SetTrackedId(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Tracked id cannot be null or empty.", nameof(id));
+
+            bool wasRegistered = isActiveAndEnabled && IsRegistered();
+            if (wasRegistered)
+            {
+                ApexAnalytics.UnregisterTrackedObject(this);
+            }
+
+            trackedId = id;
+
+            if (wasRegistered)
+            {
+                ApexAnalytics.RegisterTrackedObject(this);
+            }
         }
 
         public void BeginEngagement(string engagement)
@@ -70,6 +94,31 @@ namespace PixoVR.Apex.Analytics
             {
                 trackedId = Guid.NewGuid().ToString("N");
             }
+        }
+
+        private void EnsureUniqueTrackedId()
+        {
+            EnsureTrackedId();
+
+            foreach (ApexTrackedObject trackedObject in ApexAnalytics.TrackedObjects)
+            {
+                if (trackedObject != this && trackedObject.TrackedId == trackedId)
+                {
+                    trackedId = Guid.NewGuid().ToString("N");
+                    break;
+                }
+            }
+        }
+
+        private bool IsRegistered()
+        {
+            foreach (ApexTrackedObject trackedObject in ApexAnalytics.TrackedObjects)
+            {
+                if (trackedObject == this)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

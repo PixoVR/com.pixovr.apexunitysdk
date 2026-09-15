@@ -109,6 +109,63 @@ namespace PixoVR.Apex.Tests
             Assert.That(provider.Calls, Does.Contain("begin:grab"));
         }
 
+        [Test]
+        public void LateRegisteredProviderReceivesExistingTrackedObjects()
+        {
+            GameObject gameObject = new GameObject("Tracked Object");
+            gameObjects.Add(gameObject);
+            ApexTrackedObject trackedObject = gameObject.AddComponent<ApexTrackedObject>();
+            RecordingProvider provider = new RecordingProvider("provider");
+
+            ApexAnalytics.Register(provider);
+
+            Assert.That(provider.Calls, Does.Contain("registered"));
+            Assert.That(provider.LastTrackedObject, Is.SameAs(trackedObject));
+        }
+
+        [Test]
+        public void DisabledTrackedObjectIsNotReplayed()
+        {
+            GameObject gameObject = new GameObject("Disabled Tracked Object");
+            gameObjects.Add(gameObject);
+            gameObject.SetActive(false);
+            gameObject.AddComponent<ApexTrackedObject>();
+            RecordingProvider provider = new RecordingProvider("provider");
+
+            ApexAnalytics.Register(provider);
+
+            Assert.That(provider.Calls, Does.Not.Contain("registered"));
+        }
+
+        [Test]
+        public void DuplicateTrackedIdIsRegeneratedOnEnable()
+        {
+            GameObject firstGameObject = new GameObject("First Tracked Object");
+            gameObjects.Add(firstGameObject);
+            ApexTrackedObject firstTrackedObject = firstGameObject.AddComponent<ApexTrackedObject>();
+
+            GameObject secondGameObject = new GameObject("Second Tracked Object");
+            gameObjects.Add(secondGameObject);
+            secondGameObject.SetActive(false);
+            ApexTrackedObject secondTrackedObject = secondGameObject.AddComponent<ApexTrackedObject>();
+            secondTrackedObject.SetTrackedId(firstTrackedObject.TrackedId);
+            secondGameObject.SetActive(true);
+
+            Assert.That(secondTrackedObject.TrackedId, Is.Not.Null.And.Not.Empty);
+            Assert.That(secondTrackedObject.TrackedId, Is.Not.EqualTo(firstTrackedObject.TrackedId));
+        }
+
+        [Test]
+        public void SetTrackedIdRejectsEmpty()
+        {
+            GameObject gameObject = new GameObject("Tracked Object");
+            gameObjects.Add(gameObject);
+            ApexTrackedObject trackedObject = gameObject.AddComponent<ApexTrackedObject>();
+
+            Assert.Throws<ArgumentException>(() => trackedObject.SetTrackedId(string.Empty));
+            Assert.Throws<ArgumentException>(() => trackedObject.SetTrackedId(null));
+        }
+
         private sealed class RecordingProvider : IApexAnalyticsProvider
         {
             public RecordingProvider(string name)
@@ -130,6 +187,12 @@ namespace PixoVR.Apex.Tests
             {
                 LastTrackedObject = trackedObject;
                 Calls.Add("registered");
+            }
+
+            public void OnTrackedObjectUnregistered(ApexTrackedObject trackedObject)
+            {
+                LastTrackedObject = trackedObject;
+                Calls.Add("unregistered");
             }
 
             public void OnEngagementBegin(ApexTrackedObject trackedObject, string engagement)
