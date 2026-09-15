@@ -168,7 +168,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -201,7 +201,6 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
                     failure?.Invoke(response, failureResponse);
                     return;
                 }
@@ -211,7 +210,7 @@ namespace PixoVR.Apex
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = userMetricsResponse;
 
-                success?.Invoke(userMetricsResponse, response);
+                success?.Invoke(response, userMetricsResponse);
             }
             catch (Exception ex)
             {

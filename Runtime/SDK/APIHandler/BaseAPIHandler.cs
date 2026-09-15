@@ -36,7 +36,7 @@ namespace PixoVR.Apex
             await System.Threading.Tasks.Task.FromResult(0);
         }
 
-        public virtual async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public virtual async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);

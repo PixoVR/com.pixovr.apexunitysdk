@@ -1518,7 +1518,7 @@ namespace PixoVR.Apex
             ApexAPIHandler.GenerateAssistedLogin(CurrentUser.Token, userId, success, failure);
         }
 
-        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public static void GetUserMetricsForCurrentUsersOrg(int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             failure = WrapFailure("GetUserMetricsForCurrentUsersOrg", failure);
 
