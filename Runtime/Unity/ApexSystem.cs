@@ -1399,7 +1399,14 @@ namespace PixoVR.Apex
         {
             if (String.IsNullOrEmpty(serialNumber) || string.IsNullOrEmpty(username)) return false;
             var loginData = new QuickIDLoginData(serialNumber, username);
-            apexAPIHandler.QuickIDLogin(loginData, success, failure);
+            apexAPIHandler.QuickIDLogin(loginData, (rawResponse, response) =>
+            {
+                OnLoginSucceeded(rawResponse, response, success, failure);
+            }, (rawResponse, response) =>
+            {
+                OnLoginFailed(rawResponse, response);
+                failure?.Invoke(rawResponse, response);
+            });
             return true;
         }
 

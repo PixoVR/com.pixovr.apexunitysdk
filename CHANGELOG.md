@@ -128,4 +128,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### [2.0.0] - 2026-09-14
  - Adds the vendor-neutral analytics provider abstraction with **IApexAnalyticsProvider**, **ApexAnalytics**, **ApexTrackedObject**, and **ApexAnalyticsSettings**.
  - Adds analytics hooks for ApexSystem login, session, event, completion, pause, and quit lifecycle points.
+ - **QuickIDLogin** now completes like the other login paths: sets `CurrentUser`, runs the module-access check, and fires analytics identification.
  - Rolls the 1.9.1 callback conversion and event removals into the 2.0 breaking release.
