@@ -33,4 +33,5 @@ registration, unregistration, and engagement callbacks for those objects. Create
 `ApexAnalyticsSettings` asset in a `Resources` folder to disable analytics globally or list
 provider names under `disabledProviders`. Providers registered after tracked objects are enabled
 also receive `OnTrackedObjectRegistered` for those existing objects. Providers can implement only
-the callbacks they need.
+the callbacks they need. Providers receive detached copies of payloads, so mutations are not sent
+to Apex.

@@ -166,6 +166,23 @@ namespace PixoVR.Apex.Tests
             Assert.Throws<ArgumentException>(() => trackedObject.SetTrackedId(null));
         }
 
+        [Test]
+        public void SetTrackedIdRegeneratesOnCollisionWithActiveObject()
+        {
+            GameObject firstGameObject = new GameObject("First Tracked Object");
+            gameObjects.Add(firstGameObject);
+            ApexTrackedObject firstTrackedObject = firstGameObject.AddComponent<ApexTrackedObject>();
+
+            GameObject secondGameObject = new GameObject("Second Tracked Object");
+            gameObjects.Add(secondGameObject);
+            ApexTrackedObject secondTrackedObject = secondGameObject.AddComponent<ApexTrackedObject>();
+
+            secondTrackedObject.SetTrackedId(firstTrackedObject.TrackedId);
+
+            Assert.That(secondTrackedObject.TrackedId, Is.Not.Null.And.Not.Empty);
+            Assert.That(secondTrackedObject.TrackedId, Is.Not.EqualTo(firstTrackedObject.TrackedId));
+        }
+
         private sealed class RecordingProvider : IApexAnalyticsProvider
         {
             public RecordingProvider(string name)
