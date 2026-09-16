@@ -689,6 +689,42 @@ namespace PixoVR.Apex
             }
         }
 
+        public override async void SubmitLog(LogSubmissionRequest request, Action<HttpResponseMessage, SubmitLogResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            var form = new List<IMultipartFormSection>();
+            foreach (var field in request.FormFields)
+                form.Add(new MultipartFormDataSection(field.Key, field.Value));
+            form.Add(new MultipartFormFileSection("file", request.FileData, request.FileName, "application/octet-stream"));
+
+            string uri = apiURL.TrimEnd('/') + "/v2/builder/logs/submit";
+            using (UnityWebRequest uwr = UnityWebRequest.Post(uri, form))
+            {
+                uwr.SetRequestHeader("Accept", "application/json");
+                uwr.SetRequestHeader("Authorization", "Bearer " + request.AuthToken);
+
+                try
+                {
+                    await SendAsync(uwr);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error submitting log: {ex.Message}");
+                    failure?.Invoke(InternalErrorResponse(), new FailureResponse { Error = "true", Message = ex.Message });
+                    return;
+                }
+
+                HttpResponseMessage response = ToHttpResponse(uwr);
+                FailureResponse failureResponse = LogSubmission.Interpret(uwr.responseCode, uwr.downloadHandler?.text, out SubmitLogResponse submitLogResponse);
+                if (failureResponse != null)
+                {
+                    failure?.Invoke(response, failureResponse);
+                    return;
+                }
+
+                success?.Invoke(response, submitLogResponse);
+            }
+        }
+
         private void FilterLatestPlatformModules(ref UserModulesResponse modulesResponse, string platform)
         {
             List<Module> modules = new List<Module>();

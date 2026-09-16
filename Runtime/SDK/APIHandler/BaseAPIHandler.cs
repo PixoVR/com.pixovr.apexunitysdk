@@ -125,6 +125,12 @@ namespace PixoVR.Apex
             throw new NotImplementedException();
             await System.Threading.Tasks.Task.FromResult(0);
         }
+
+        public virtual async void SubmitLog(LogSubmissionRequest request, Action<HttpResponseMessage, SubmitLogResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            throw new NotImplementedException();
+            await System.Threading.Tasks.Task.FromResult(0);
+        }
     }
 #pragma warning restore CS0162
 }
