@@ -1560,6 +1560,21 @@ namespace PixoVR.Apex
             ApexAPIHandler.GetSessionHistory(CurrentUser.Token, page, sessionFilters, filterParams, success, failure);
         }
 
+        public static void SubmitLog(string filePath, Action<HttpResponseMessage, SubmitLogResponse> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
+        {
+            failure = WrapFailure("SubmitLog", failure);
+
+            FailureResponse failureResponse = LogSubmission.Prepare(CurrentUser?.Token, ModuleID, filePath, out LogSubmissionRequest request);
+            if (failureResponse != null)
+            {
+                Debug.unityLogger.Log(LogType.Error, TAG, failureResponse.Message);
+                failure?.Invoke(null, failureResponse);
+                return;
+            }
+
+            ApexAPIHandler.SubmitLog(request, success, failure);
+        }
+
         public static Action<HttpResponseMessage, FailureResponse> WrapFailure(string functionName, Action<HttpResponseMessage, FailureResponse> failureAction)
         {
 #if PIXOVR_LOG_VERBOSE

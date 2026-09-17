@@ -124,3 +124,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Converts remaining event-based ApexSystem APIs to success/failure callbacks.
  - Removes obsolete UnityEvent-based login, user, module, authorization-code, Quick ID user, and assisted-login events and all unused event classes from ApexEvents.cs.
  - **GetUserMetricsForCurrentUsersOrg** success callback is now `Action<HttpResponseMessage, UserMetricsResponse>` to match the rest of the SDK.
+
+### [1.10.0] - 2026-09-16
+ - Added **SubmitLog** to upload a log file (.txt, .log or .zip) for the signed-in user. The log is filed under the configured module ID and the user's organization and account.

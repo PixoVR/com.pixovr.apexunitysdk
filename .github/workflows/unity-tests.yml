@@ -1,0 +1,78 @@
+name: Unity tests
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+concurrency:
+  group: unity-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  license:
+    name: Check Unity licensing server
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      # Secrets are not passed to pull requests from forks, so skip instead of failing there.
+      - id: check
+        env:
+          UNITY_LICENSING_SERVER: ${{ secrets.UNITY_LICENSING_SERVER }}
+        run: |
+          if [ -n "$UNITY_LICENSING_SERVER" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::UNITY_LICENSING_SERVER is not available; skipping Unity tests."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    name: EditMode tests (Unity ${{ matrix.unityVersion }})
+    needs: license
+    if: needs.license.outputs.available == 'true'
+    # The licensing server must be reachable from the runner. Set the UNITY_TEST_RUNNER
+    # repository variable to a self-hosted Linux runner label if it is only on the internal network.
+    runs-on: ${{ vars.UNITY_TEST_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Covers both sides of the UNITY_6000_0_OR_NEWER branches.
+        unityVersion:
+          - 2022.3.76f1
+          - 6000.0.84f1
+    steps:
+      # Package mode fails when the package is the repository root, because the runner
+      # creates its temporary project in the workspace. Check out into a subfolder instead.
+      - uses: actions/checkout@v4
+        with:
+          path: package
+
+      # A floating license is borrowed from the server before the tests and returned afterwards.
+      # The URL is a secret so it is masked in the logs of this public repository.
+      - uses: game-ci/unity-test-runner@v4
+        id: tests
+        with:
+          unityLicensingServer: ${{ secrets.UNITY_LICENSING_SERVER }}
+          packageMode: true
+          projectPath: package
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: editmode
+          artifactsPath: artifacts-${{ matrix.unityVersion }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: EditMode test results (Unity ${{ matrix.unityVersion }})
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.unityVersion }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          retention-days: 14
