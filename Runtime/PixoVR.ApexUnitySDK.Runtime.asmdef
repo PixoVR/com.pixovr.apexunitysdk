@@ -1,9 +1,7 @@
 {
     "name": "PixoVR.ApexUnitySDK",
     "rootNamespace": "PixoVR.Apex",
-    "references": [
-		"Unity.Properties"
-	],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
