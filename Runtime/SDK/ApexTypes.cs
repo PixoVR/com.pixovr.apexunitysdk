@@ -4,9 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-#if UNITY_6000_0_OR_NEWER
 using Unity.Properties;
-#endif
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -288,9 +286,7 @@ namespace PixoVR.Apex
 
         private Texture2D _thumbnail;
 
-#if UNITY_6000_0_OR_NEWER
         [CreateProperty]
-#endif
         public Texture2D Thumbnail
         {
             get { return _thumbnail; }
