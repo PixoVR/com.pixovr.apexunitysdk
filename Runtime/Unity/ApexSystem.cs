@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using PixoVR.Apex.Analytics;
 using PixoVR.Apex.Utils;
 using PixoVR.Apex.XAPI;
 using System;
@@ -83,6 +84,11 @@ namespace PixoVR.Apex
         public static string DeviceSerialNumber
         {
             get { return Instance.deviceSerialNumber; }
+        }
+
+        public static ApexAnalyticsContext AnalyticsContext
+        {
+            get { return Instance.BuildAnalyticsContext(); }
         }
 
         public static string PassedLoginToken
@@ -265,6 +271,15 @@ namespace PixoVR.Apex
         void OnApplicationQuit()
         {
             CompleteSession(null);
+            ApexAnalytics.Dispatch(provider => provider.Flush());
+        }
+
+        void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                ApexAnalytics.Dispatch(provider => provider.Flush());
+            }
         }
 
 #if MANAGE_XR
@@ -653,6 +668,9 @@ namespace PixoVR.Apex
             if (successful)
             {
                 currentUserInformation.User = responseData as LoginResponseContent;
+                LoginResponseContent analyticsUser = CloneJson(currentUserInformation.User);
+                ApexAnalytics.Dispatch(provider =>
+                    provider.OnUserIdentified(BuildAnalyticsContext(), analyticsUser));
 
                 if (loginCheckModuleAccess)
                 {
@@ -848,6 +866,9 @@ namespace PixoVR.Apex
                 Debug.unityLogger.Log(LogType.Log, TAG, string.Format("[ApexSystem] Session Id is {0}.", formattedResponse.SessionId));
                 Instance.heartbeatSessionID = formattedResponse.SessionId;
                 Instance.sessionInProgress = true;
+                JoinSessionResponse analyticsSession = CloneJson(formattedResponse);
+                ApexAnalytics.Dispatch(provider =>
+                    provider.OnSessionJoined(Instance.BuildAnalyticsContext(), analyticsSession));
                 success?.Invoke(response, formattedResponse);
             }, (response, formattedResponse) =>
             {
@@ -1195,6 +1216,9 @@ namespace PixoVR.Apex
             sessionEvent.EventType = ApexEventTypes.PIXOVR_SESSION_EVENT;
             sessionEvent.JsonData = eventStatement;
 
+            Statement analyticsStatement = CloneStatement(eventStatement);
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnSessionEvent(BuildAnalyticsContext(), analyticsStatement));
             apexAPIHandler.SendSessionEvent(CurrentUser.Token, sessionEvent, success, failure);
         }
 
@@ -1295,6 +1319,9 @@ namespace PixoVR.Apex
                 currentSessionData.MaximumScore
             );
 
+            SessionData analyticsSessionData = CloneJson(currentSessionData);
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnSessionCompleted(BuildAnalyticsContext(), analyticsSessionData));
             apexAPIHandler.CompleteSession(CurrentUser.Token, sessionData, success, failure);
         }
 
@@ -1372,7 +1399,14 @@ namespace PixoVR.Apex
         {
             if (String.IsNullOrEmpty(serialNumber) || string.IsNullOrEmpty(username)) return false;
             var loginData = new QuickIDLoginData(serialNumber, username);
-            apexAPIHandler.QuickIDLogin(loginData, success, failure);
+            apexAPIHandler.QuickIDLogin(loginData, (rawResponse, response) =>
+            {
+                OnLoginSucceeded(rawResponse, response, success, failure);
+            }, (rawResponse, response) =>
+            {
+                OnLoginFailed(rawResponse, response);
+                failure?.Invoke(rawResponse, response);
+            });
             return true;
         }
 
@@ -1446,9 +1480,42 @@ namespace PixoVR.Apex
             }
         }
 
+        protected ApexAnalyticsContext BuildAnalyticsContext()
+        {
+            LoginResponseContent user = currentUserInformation?.User;
+            return new ApexAnalyticsContext
+            {
+                UserId = user?.ID ?? 0,
+                OrgId = user?.OrgId ?? 0,
+                UserEmail = user?.Email,
+                ModuleId = moduleID,
+                ModuleName = moduleName,
+                ModuleVersion = moduleVersion,
+                ScenarioId = scenarioID,
+                SessionId = sessionInProgress ? heartbeatSessionID : 0,
+                SessionRegistration = currentSessionID,
+                DeviceId = deviceID,
+                DeviceModel = deviceModel,
+                DeviceSerial = deviceSerialNumber,
+                Platform = platform,
+                SdkVersion = ApexUtils.SDKVersion,
+            };
+        }
+
+        private static Statement CloneStatement(Statement statement) =>
+            new Statement(statement.ToJObject(TCAPIVersion.latest()));
+
+        private static T CloneJson<T>(T value) where T : class =>
+            value == null
+                ? null
+                : JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(value));
+
         protected void OnLoginSucceeded(HttpResponseMessage response, ActiveUserInformation userInformation, Action<HttpResponseMessage, ActiveUserInformation> success = null, Action<HttpResponseMessage, FailureResponse> failure = null)
         {
             currentUserInformation = userInformation;
+            LoginResponseContent analyticsUser = CloneJson(currentUserInformation.User);
+            ApexAnalytics.Dispatch(provider =>
+                provider.OnUserIdentified(BuildAnalyticsContext(), analyticsUser));
 
             if(loginCheckModuleAccess && currentUserInformation.ModuleUserInformation == null)
             {

@@ -33,6 +33,9 @@ namespace PixoVR.Editor
 
                 if (allSettings.Length == 0)
                 {
+                    if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                        AssetDatabase.CreateFolder("Assets", "Resources");
+
                     var instance = ScriptableObject.CreateInstance<T>();
                     AssetDatabase.CreateAsset(instance, defaultPath);
                     AssetDatabase.SaveAssets();
