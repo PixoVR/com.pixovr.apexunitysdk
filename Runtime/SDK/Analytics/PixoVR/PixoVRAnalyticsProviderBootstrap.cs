@@ -27,7 +27,11 @@ namespace PixoVR.Apex.Analytics.PixoVR
                 PoseSampleHz = settings == null ? 2f : settings.PoseSampleHz,
                 MaxRecordsPerPacket = settings == null ? 500 : settings.MaxRecordsPerPacket
             };
-            ApexAnalytics.Register(new PixoVRAnalyticsProvider(sink, options));
+            PixoVRAnalyticsProvider provider = new PixoVRAnalyticsProvider(sink, options);
+            if (ApexAnalytics.Register(provider))
+            {
+                PixoVRTelemetryRunner.Start(provider);
+            }
         }
 
         private static IApexTelemetrySink CreateSink(
@@ -47,7 +51,9 @@ namespace PixoVR.Apex.Analytics.PixoVR
 
                     return new HttpTelemetrySink(
                         settings.TelemetryHttpUrl,
-                        () => ApexSystem.CurrentUser?.Token);
+                        () => UnityEngine.Object.FindObjectOfType<ApexSystem>() == null
+                            ? null
+                            : ApexSystem.CurrentUser?.Token);
                 default:
                     return new LogTelemetrySink();
             }
