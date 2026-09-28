@@ -16,6 +16,9 @@ namespace PixoVR.Apex.Analytics
         void OnTrackedObjectUnregistered(ApexTrackedObject trackedObject) { }
         void OnEngagementBegin(ApexTrackedObject trackedObject, string engagement) { }
         void OnEngagementEnd(ApexTrackedObject trackedObject, string engagement) { }
+        void OnInteraction(ApexTrackedObject trackedObject, string action) { }
+        void OnStepBegin(ApexAnalyticsContext context, string step) { }
+        void OnStepEnd(ApexAnalyticsContext context, string step, bool success, float score) { }
         void Flush() { }
     }
 }

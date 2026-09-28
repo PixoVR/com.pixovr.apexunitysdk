@@ -1,0 +1,25 @@
+{
+    "name": "PixoVR.ApexUnitySDK.XRI",
+    "rootNamespace": "PixoVR.Apex",
+    "references": [
+        "PixoVR.ApexUnitySDK",
+        "Unity.XR.Interaction.Toolkit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "APEX_XRI"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.interaction.toolkit",
+            "expression": "2.0.0",
+            "define": "APEX_XRI"
+        }
+    ],
+    "noEngineReferences": false
+}
