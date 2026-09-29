@@ -1,0 +1,26 @@
+{
+    "name": "PixoVR.ApexUnitySDK.OpenXR",
+    "rootNamespace": "PixoVR.Apex",
+    "references": [
+        "PixoVR.ApexUnitySDK",
+        "Unity.XR.OpenXR",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "APEX_OPENXR"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.0.0",
+            "define": "APEX_OPENXR"
+        }
+    ],
+    "noEngineReferences": false
+}
