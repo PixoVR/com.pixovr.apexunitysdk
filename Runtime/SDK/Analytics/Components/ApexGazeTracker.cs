@@ -27,11 +27,6 @@ namespace PixoVR.Apex.Analytics
         private string activeEngagement;
         private string currentEngagement;
 
-        private void Awake()
-        {
-            ResolveSource();
-        }
-
         private void Start()
         {
             ResolveSource();
