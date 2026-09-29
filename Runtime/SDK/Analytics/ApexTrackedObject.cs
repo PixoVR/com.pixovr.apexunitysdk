@@ -16,6 +16,9 @@ namespace PixoVR.Apex.Analytics
         [SerializeField]
         private string meshName;
 
+        [SerializeField]
+        private bool trackPose;
+
         /// <summary>
         /// Gets the per-instance id. Authored scene objects keep their serialized id across runs;
         /// spawned or duplicated instances get a fresh id when enabled.
@@ -23,6 +26,7 @@ namespace PixoVR.Apex.Analytics
         public string TrackedId => trackedId;
         public string DisplayName => string.IsNullOrEmpty(displayName) ? gameObject.name : displayName;
         public string MeshName => meshName;
+        public bool TrackPose => trackPose;
 
         void Awake()
         {
@@ -87,6 +91,17 @@ namespace PixoVR.Apex.Analytics
             }
 
             ApexAnalytics.Dispatch(provider => provider.OnEngagementEnd(this, engagement));
+        }
+
+        public void RecordInteraction(string action)
+        {
+            if (string.IsNullOrEmpty(action))
+            {
+                Debug.unityLogger.Log(LogType.Warning, "ApexAnalytics", "Cannot record an empty interaction.");
+                return;
+            }
+
+            ApexAnalytics.Dispatch(provider => provider.OnInteraction(this, action));
         }
 
         private void EnsureTrackedId()

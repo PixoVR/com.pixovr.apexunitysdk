@@ -35,3 +35,29 @@ provider names under `disabledProviders`. Providers registered after tracked obj
 also receive `OnTrackedObjectRegistered` for those existing objects. Providers can implement only
 the callbacks they need. Providers receive detached copies of payloads, so mutations are not sent
 to Apex.
+
+## PixoVR provider & telemetry packet
+
+The built-in `PixoVR` provider records compact telemetry and sends one JSON
+packet per flush through a pluggable sink. Packets contain short field names:
+
+| Field | Meaning |
+| --- | --- |
+| `v`, `seq`, `t0` | Version, sequence, and Unix-millisecond packet start |
+| `s`, `r`, `u`, `m`, `sc` | Session, registration, user, module, and scenario |
+| `ob` | Object table entries referenced by the packet |
+| `ev` | Relative-time records |
+| `end` | Final session packet marker |
+
+Records use `r`/`u` for object registration, `e`/`x` for engagement,
+`i` for interactions, `sb`/`se` for steps, and `p` for poses. Pose positions
+are centimeters and rotations are whole-degree Euler values. Available sinks
+are `LogTelemetrySink`, `FileTelemetrySink`, and `HttpTelemetrySink`.
+
+Create an `ApexAnalyticsSettings` asset in `Resources` to configure provider
+enablement, sink type, HTTP URL, flush interval, pose sampling rate, and
+maximum records per packet. Without an asset, the provider is enabled with the
+log sink. `ApexInteractable`, `ApexGazeTracker`, `ApexStepTracker`, and
+`ApexSpatialSampler` provide module-facing interaction, gaze, step, and head
+sampling hooks. The optional XRI bridge is in the `PixoVR.ApexUnitySDK.XRI`
+assembly.
