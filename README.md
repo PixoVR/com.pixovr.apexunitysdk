@@ -59,5 +59,8 @@ enablement, sink type, HTTP URL, flush interval, pose sampling rate, and
 maximum records per packet. Without an asset, the provider is enabled with the
 log sink. `ApexInteractable`, `ApexGazeTracker`, `ApexStepTracker`, and
 `ApexSpatialSampler` provide module-facing interaction, gaze, step, and head
-sampling hooks. The optional XRI bridge is in the `PixoVR.ApexUnitySDK.XRI`
-assembly.
+sampling hooks. `ApexGazeTracker` consumes an `ApexGazeSource`; the built-in
+`ApexHeadGazeSource` uses a configured head, `ApexSpatialSampler.Head`, or its
+own transform. The optional `ApexOpenXREyeGazeSource` is isolated in the
+`PixoVR.ApexUnitySDK.OpenXR` assembly and falls back to head gaze when enabled.
+The optional XRI bridge is in the `PixoVR.ApexUnitySDK.XRI` assembly.

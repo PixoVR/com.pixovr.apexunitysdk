@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using PixoVR.Apex.Analytics;
 using PixoVR.Apex.Analytics.PixoVR;
@@ -174,6 +175,36 @@ namespace PixoVR.Apex.Tests
                 Has.Count.EqualTo(1));
         }
 
+        [Test]
+        public void GazeSourceBeginsAndEndsConfiguredEngagement()
+        {
+            RecordingProvider provider = new("gaze");
+            ApexAnalytics.Register(provider);
+
+            GameObject sourceObject = CreateObject("Gaze");
+            FakeGazeSource source = sourceObject.AddComponent<FakeGazeSource>();
+            ApexGazeTracker tracker = sourceObject.AddComponent<ApexGazeTracker>();
+            typeof(ApexGazeTracker).GetField(
+                "dwellSeconds",
+                BindingFlags.Instance | BindingFlags.NonPublic).SetValue(tracker, 0f);
+
+            GameObject targetObject = CreateObject("Target");
+            targetObject.transform.position = new Vector3(0f, 0f, 3f);
+            targetObject.AddComponent<BoxCollider>();
+            ApexTrackedObject target = targetObject.AddComponent<ApexTrackedObject>();
+            source.SetGaze(true, new Ray(Vector3.zero, Vector3.forward), "eye_gaze");
+            Physics.SyncTransforms();
+
+            tracker.Sample();
+            tracker.Sample();
+            Assert.That(provider.Calls, Does.Contain("begin:eye_gaze"));
+
+            source.SetGaze(false, default, null);
+            tracker.Sample();
+            Assert.That(provider.Calls, Does.Contain("end:eye_gaze"));
+            Assert.That(provider.LastTrackedObject, Is.SameAs(target));
+        }
+
         private PixoVRAnalyticsProvider CreateProvider(
             RecordingSink sink,
             PixoVRProviderOptions options = null,
@@ -203,6 +234,56 @@ namespace PixoVR.Apex.Tests
             {
                 Packets.Add(packet);
                 done?.Invoke(true);
+            }
+        }
+
+        private sealed class RecordingProvider : IApexAnalyticsProvider
+        {
+            public RecordingProvider(string name)
+            {
+                Name = name;
+            }
+
+            public string Name { get; }
+            public List<string> Calls { get; } = new();
+            public ApexTrackedObject LastTrackedObject { get; private set; }
+
+            public void OnTrackedObjectRegistered(ApexTrackedObject trackedObject)
+            {
+                LastTrackedObject = trackedObject;
+            }
+
+            public void OnEngagementBegin(ApexTrackedObject trackedObject, string engagement)
+            {
+                LastTrackedObject = trackedObject;
+                Calls.Add("begin:" + engagement);
+            }
+
+            public void OnEngagementEnd(ApexTrackedObject trackedObject, string engagement)
+            {
+                LastTrackedObject = trackedObject;
+                Calls.Add("end:" + engagement);
+            }
+        }
+
+        private sealed class FakeGazeSource : ApexGazeSource
+        {
+            private bool hasGaze;
+            private Ray gazeRay;
+            private string engagement;
+
+            public void SetGaze(bool valid, Ray ray, string gazeEngagement)
+            {
+                hasGaze = valid;
+                gazeRay = ray;
+                engagement = gazeEngagement;
+            }
+
+            public override bool TryGetGaze(out Ray ray, out string gazeEngagement)
+            {
+                ray = gazeRay;
+                gazeEngagement = engagement;
+                return hasGaze;
             }
         }
     }

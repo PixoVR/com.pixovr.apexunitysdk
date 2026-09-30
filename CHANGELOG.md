@@ -131,3 +131,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - **QuickIDLogin** now completes like the other login paths: sets `CurrentUser`, runs the module-access check, and fires analytics identification.
  - Rolls the 1.9.1 callback conversion and event removals into the 2.0 breaking release.
  - Adds the built-in PixoVR compact telemetry provider, configurable sinks, pose sampling, and module-facing analytics components.
+ - Adds pluggable gaze sources, a head gaze source, and an isolated OpenXR eye-gaze source stub.
