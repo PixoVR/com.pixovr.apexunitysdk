@@ -709,7 +709,7 @@ namespace PixoVR.Apex
             List<ModuleVersion> latestModuleVersion = new List<ModuleVersion>();
             foreach (ModuleVersion version in moduleVersions)
             {
-                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase)) != null)
+                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase) || string.Equals(versionPlatform.shortName, platform, StringComparison.OrdinalIgnoreCase)) != null)
                 {
                     latestModuleVersion.Add(version);
                 }
