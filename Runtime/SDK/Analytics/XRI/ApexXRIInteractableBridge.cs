@@ -5,15 +5,15 @@ using UnityEngine.XR.Interaction.Toolkit;
 
 namespace PixoVR.Apex.Analytics.XRI
 {
-    [RequireComponent(typeof(XRBaseInteractable), typeof(ApexInteractable))]
+    [RequireComponent(typeof(UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable), typeof(ApexInteractable))]
     public sealed class ApexXRIInteractableBridge : MonoBehaviour
     {
-        private XRBaseInteractable interactable;
+        private UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable interactable;
         private ApexInteractable apexInteractable;
 
         private void Awake()
         {
-            interactable = GetComponent<XRBaseInteractable>();
+            interactable = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable>();
             apexInteractable = GetComponent<ApexInteractable>();
         }
 
