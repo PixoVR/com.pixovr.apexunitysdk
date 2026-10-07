@@ -824,6 +824,8 @@ namespace PixoVR.Apex
     {
         public string id;
         public string version;
+        /// <summary>Android package name of this version's build.</summary>
+        public string package;
         public string fileLink;
         public long? fileSize;
         public List<Control> controls;
