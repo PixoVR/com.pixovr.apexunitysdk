@@ -1443,6 +1443,7 @@ namespace PixoVR.Apex
             contextExtension.AddSimple("device_id", deviceID);
             contextExtension.AddSimple("device_model", deviceModel);
             contextExtension.AddSimple("sdk_version", "unity-" + ApexUtils.SDKVersion);
+            contextExtension.AddSimple("sdk_source_hash", ApexUtils.SDKSourceHash);
 #if PIXOVR_MODULEACCESS_BYPASS
             contextExtension.AddSimple("module_access_checked", "false");
 #else

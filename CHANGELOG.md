@@ -132,3 +132,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Rolls the 1.9.1 callback conversion and event removals into the 2.0 breaking release.
  - Adds the built-in PixoVR compact telemetry provider, configurable sinks, pose sampling, and module-facing analytics components.
  - Adds pluggable gaze sources, a head gaze source, and an isolated OpenXR eye-gaze source stub.
+
+### [Unreleased]
+ - Added **ApexUtils.SDKSourceHash**, a SHA-256 of the SDK Runtime sources, and sends it as `sdk_source_hash` in the xAPI context extensions alongside `sdk_version`. It changes whenever ApexSystem or any code it compiles against changes, independent of the package version.
+ - The editor regenerates the hash automatically when the package is embedded or local. Outside Unity, run `python3 "Tools~/source_hash.py" --write`. CI fails if the committed hash is stale.

@@ -64,3 +64,9 @@ sampling hooks. `ApexGazeTracker` consumes an `ApexGazeSource`; the built-in
 own transform. The optional `ApexOpenXREyeGazeSource` is isolated in the
 `PixoVR.ApexUnitySDK.OpenXR` assembly and falls back to head gaze when enabled.
 The optional XRI bridge is in the `PixoVR.ApexUnitySDK.XRI` assembly.
+
+## SDK source hash
+
+`ApexUtils.SDKSourceHash` is a SHA-256 of every `.cs` and `.asmdef` file under `Runtime/` (excluding the generated files). It is sent as `sdk_source_hash` with every xAPI statement, so you can tell whether two builds contain identical SDK code regardless of the version number.
+
+The value lives in `Runtime/SDK/ApexSourceHashGenerated.cs`. When the package is embedded or local, the Unity editor regenerates it after every script reload. When editing outside Unity, run `python3 "Tools~/source_hash.py" --write` before committing; the `Validate SDK source hash` workflow fails if it is stale.

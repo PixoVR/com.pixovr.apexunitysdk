@@ -20,6 +20,8 @@ Sessionx.vim
 # Temporary
 .netrwhist
 *~
+# Unity ignores folders ending in ~; this one holds repository tooling.
+!Tools~/
 # Auto-generated tag files
 tags
 # Persistent undo
