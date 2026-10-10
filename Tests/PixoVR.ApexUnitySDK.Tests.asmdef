@@ -3,6 +3,7 @@
     "rootNamespace": "PixoVR.Apex.Tests",
     "references": [
         "PixoVR.ApexUnitySDK",
+        "PixoVR.ApexUnitySDK.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "nunit.framework"
