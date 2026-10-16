@@ -1,18 +1,10 @@
-using System;
-using UnityEngine;
-
 namespace PixoVR.Apex
 {
-    public class PixoSingleton<T> where T : class, new()
-    {
-        private readonly static T instance = new T();
+	/// <summary>A lazily created, process-wide instance of a plain C# class.</summary>
+	public class PixoSingleton<TInstance> where TInstance : class, new()
+	{
+		private static readonly TInstance kInstance = new TInstance();
 
-        public static T Instance
-        {
-            get
-            {
-                return instance;
-            }
-        }
-    }
+		public static TInstance Instance => kInstance;
+	}
 }

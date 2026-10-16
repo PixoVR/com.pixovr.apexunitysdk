@@ -2,161 +2,157 @@ using UnityEngine;
 
 namespace PixoVR.Apex
 {
-    public static partial class PixoAndroidUtils
-    {
-        #region JAVA OBJECTS
-        /// <summary>
-        /// JNI to call com.unity.player.UnityPlayer.currentActivity()
-        /// </summary>
-        public static AndroidJavaObject CurrentActivity
-        {
-            get
-            {
-                if (currentActivity == null)
-                {
-                    AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                    currentActivity = unityPlayer.SafeGetStatic<AndroidJavaObject>("currentActivity");
-                }
-                return currentActivity;
-            }
-        }
-        static AndroidJavaObject currentActivity;
+	/// <summary>Android helpers over the Unity activity and the SDK's PixoUtils.java.</summary>
+	public static partial class PixoAndroidUtils
+	{
+		private static AndroidJavaObject m_currentActivity;
+		private static AndroidJavaObject m_packageManager;
+		private static AndroidJavaObject m_applicationContext;
+		private static AndroidJavaObject m_applicationInfo;
+		private static AndroidJavaObject m_nativeUtils;
 
-        public static AndroidJavaObject PackageManager
-        {
-            get
-            {
-                if (packageManager == null)
-                    packageManager = CurrentActivity.SafeCall<AndroidJavaObject>("getPackageManager");
-                return packageManager;
-            }
-        }
-        static AndroidJavaObject packageManager;
+		/// <summary>com.unity3d.player.UnityPlayer.currentActivity</summary>
+		public static AndroidJavaObject CurrentActivity
+		{
+			get
+			{
+				if (m_currentActivity == null)
+				{
+					using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+					{
+						m_currentActivity = unityPlayer.SafeGetStatic<AndroidJavaObject>("currentActivity");
+					}
+				}
 
-        /// <summary>
-        /// JNI to call <see cref="CurrentActivity"/>.getApplicationContext()
-        /// </summary>
-        public static AndroidJavaObject ApplicationContext
-        {
-            get
-            {
-                if (applicationContext == null)
-                    applicationContext = CurrentActivity.SafeCall<AndroidJavaObject>("getApplicationContext");
-                return applicationContext;
-            }
-        }
-        static AndroidJavaObject applicationContext;
+				return m_currentActivity;
+			}
+		}
 
-        /// <summary>
-        /// JNI to call <see cref="ApplicationContext"/>.getApplicationInfo()
-        /// </summary>
-        public static AndroidJavaObject ApplicationInfo
-        {
-            get
-            {
-                if (applicationInfo == null)
-                    applicationInfo = ApplicationContext.SafeCall<AndroidJavaObject>("getApplicationInfo");
-                return applicationInfo;
-            }
-        }
-        static AndroidJavaObject applicationInfo;
+		public static AndroidJavaObject PackageManager
+		{
+			get
+			{
+				if (m_packageManager == null)
+				{
+					m_packageManager = CurrentActivity.SafeCall<AndroidJavaObject>("getPackageManager");
+				}
 
-        /// <summary>
-        /// Returns an instance of the PixoUtils.java class in the Apex SDK
-        /// </summary>
-        public static AndroidJavaObject NativeUtils
-        {
-            get
-            {
-                if (nativeUtils == null)
-                    nativeUtils = new AndroidJavaObject("com.pixovr.pixosdk.PixoUtils", ApplicationContext);
-                return nativeUtils;
-            }
-        }
-        static AndroidJavaObject nativeUtils;
-        #endregion
+				return m_packageManager;
+			}
+		}
 
-        /// <summary>
-        /// Returns if the Android intent extras bundle has a key with the given name
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public static bool HasIntentExtra(string key)
-        {
-            var intent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
-            var bundle = intent.SafeCall<AndroidJavaObject>("getExtras");
-            if (bundle == null) return false;
-            return bundle.SafeCall<bool>("containsKey", key);
-        }
+		/// <summary><see cref="CurrentActivity"/>.getApplicationContext()</summary>
+		public static AndroidJavaObject ApplicationContext
+		{
+			get
+			{
+				if (m_applicationContext == null)
+				{
+					m_applicationContext = CurrentActivity.SafeCall<AndroidJavaObject>("getApplicationContext");
+				}
 
-        /// <summary>
-        /// Returns a boolean from the Android intent extras 
-        /// </summary>
-        /// <param name="key">The key to read the boolean from</param>
-        /// <param name="defaultValue">The default value in case the key doesn't exist</param>
-        /// <returns></returns>
-        public static bool GetIntentBooleanExtra(string key, bool defaultValue)
-        {
-            var intent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
-            return intent.SafeCall<bool>("getBooleanExtra", key, defaultValue);
-        }
+				return m_applicationContext;
+			}
+		}
 
-        /// <summary>
-        /// Returns a string from the Android intent extras
-        /// </summary>
-        /// <param name="key">The key to read the string from</param>
-        /// <returns></returns>
-        public static string GetIntentStringExtra(string key)
-        {
-            var intent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
-            return intent.SafeCall<string>("getStringExtra", key);
-        }
+		/// <summary><see cref="ApplicationContext"/>.getApplicationInfo()</summary>
+		public static AndroidJavaObject ApplicationInfo
+		{
+			get
+			{
+				if (m_applicationInfo == null)
+				{
+					m_applicationInfo = ApplicationContext.SafeCall<AndroidJavaObject>("getApplicationInfo");
+				}
 
-        public static bool IsAppInstalled(string packageName)
-        {
-            if (NativeUtils != null)
-                return NativeUtils.SafeCall<bool>("isAppInstalled", packageName);
-            return false;
-        }
+				return m_applicationInfo;
+			}
+		}
 
-        public static void Quit()
-        {
-            NativeUtils.SafeCall("forceQuit");
-        }
+		/// <summary>An instance of the SDK's com.pixovr.pixosdk.PixoUtils Java class.</summary>
+		public static AndroidJavaObject NativeUtils
+		{
+			get
+			{
+				if (m_nativeUtils == null)
+				{
+					m_nativeUtils = new AndroidJavaObject("com.pixovr.pixosdk.PixoUtils", ApplicationContext);
+				}
 
-        public static bool LaunchApp(string packageName, string[] extraKeys, string[] extraValues)
-        {
-            return NativeUtils.SafeCall<bool>("launchApp", packageName, extraKeys, extraValues);
-        }
+				return m_nativeUtils;
+			}
+		}
 
-        public static bool LaunchUrl(string url)
-        {
-            return NativeUtils.SafeCall("openURL", url);
-        }
+		/// <summary>True when the launching intent's extras contain the key.</summary>
+		public static bool HasIntentExtra(string extraName)
+		{
+			AndroidJavaObject launchIntent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
+			AndroidJavaObject extrasBundle = launchIntent.SafeCall<AndroidJavaObject>("getExtras");
+			if (extrasBundle == null)
+			{
+				return false;
+			}
 
-        public static string GetPackageLocation(string packageName)
-        {
-            return NativeUtils.SafeCall<string>("getAppFileLocation", packageName);
-        }
+			return extrasBundle.SafeCall<bool>("containsKey", extraName);
+		}
 
-        public static string WriteFileToSharedLocation(string fileName, string content)
-        {
-            return NativeUtils.SafeCall<string>("writeFileToSharedStorage", fileName, content);
-        }
+		/// <summary>A boolean from the launching intent's extras, or defaultValue when it is missing.</summary>
+		public static bool GetIntentBooleanExtra(string extraName, bool defaultValue)
+		{
+			AndroidJavaObject launchIntent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
+			return launchIntent.SafeCall<bool>("getBooleanExtra", extraName, defaultValue);
+		}
 
-        public static string ReadFileFromSharedStorage(string fileName)
-        {
-            return NativeUtils.SafeCall<string>("readFileFromSharedStorage", fileName);
-        }
+		/// <summary>A string from the launching intent's extras, or null.</summary>
+		public static string GetIntentStringExtra(string extraName)
+		{
+			AndroidJavaObject launchIntent = CurrentActivity.SafeCall<AndroidJavaObject>("getIntent");
+			return launchIntent.SafeCall<string>("getStringExtra", extraName);
+		}
 
-        public static bool DeleteFileFromSharedStorage(string fileName)
-        {
-            return NativeUtils.SafeCall<bool>("deleteFileFromSharedStorage", fileName);
-        }
+		public static bool IsAppInstalled(string packageName)
+		{
+			return NativeUtils != null && NativeUtils.SafeCall<bool>("isAppInstalled", packageName);
+		}
 
-        public static bool DoesFileExistInSharedLocation(string fileName)
-        {
-            return NativeUtils.SafeCall<bool>("fileExists", fileName);
-        }
-    }
+		public static void Quit()
+		{
+			NativeUtils.SafeCall("forceQuit");
+		}
+
+		public static bool LaunchApp(string packageName, string[] extraNames, string[] extraValues)
+		{
+			return NativeUtils.SafeCall<bool>("launchApp", packageName, extraNames, extraValues);
+		}
+
+		public static bool LaunchUrl(string launchUrl)
+		{
+			return NativeUtils.SafeCall("openURL", launchUrl);
+		}
+
+		public static string GetPackageLocation(string packageName)
+		{
+			return NativeUtils.SafeCall<string>("getAppFileLocation", packageName);
+		}
+
+		public static string WriteFileToSharedLocation(string fileName, string fileContent)
+		{
+			return NativeUtils.SafeCall<string>("writeFileToSharedStorage", fileName, fileContent);
+		}
+
+		public static string ReadFileFromSharedStorage(string fileName)
+		{
+			return NativeUtils.SafeCall<string>("readFileFromSharedStorage", fileName);
+		}
+
+		public static bool DeleteFileFromSharedStorage(string fileName)
+		{
+			return NativeUtils.SafeCall<bool>("deleteFileFromSharedStorage", fileName);
+		}
+
+		public static bool DoesFileExistInSharedLocation(string fileName)
+		{
+			return NativeUtils.SafeCall<bool>("fileExists", fileName);
+		}
+	}
 }

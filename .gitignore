@@ -62,6 +62,8 @@ tags
 ExportedObj/
 .consulo/
 *.csproj
+# The style checker in Tools~ is a .NET project.
+!Tools~/**/*.csproj
 *.unityproj
 *.sln
 *.suo

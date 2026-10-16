@@ -1,21 +1,17 @@
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using Newtonsoft.Json;
 
 namespace PixoVR.Apex
 {
-    [Serializable]
-    public class ConfigurationTypes
-    {
-        public string Platform;
-        public string ConfigTarget;
+	/// <summary>The contents of pixoconfig.cnf, which can select the environment on Android devices.</summary>
+	[Serializable]
+	public class ConfigurationTypes
+	{
+		/// <summary>For example "NA Production", "NA Stage", "NA Dev" or "SA Production".</summary>
+		[JsonProperty("platform")]
+		public string Platform { get; set; }
 
-        public ConfigurationTypes(JObject tokenObject)
-        {
-            Platform = tokenObject.Value<string>("platform");
-            ConfigTarget = tokenObject.Value<string>("configTarget");
-        }
-    }
+		[JsonProperty("configTarget")]
+		public string ConfigTarget { get; set; }
+	}
 }

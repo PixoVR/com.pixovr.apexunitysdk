@@ -12,136 +12,168 @@ using UnityEngine;
 
 namespace PixoVR.Editor
 {
-    /// <summary>
-    /// Computes a SHA-256 over the SDK Runtime sources (ApexSystem and everything it compiles against)
-    /// and keeps Runtime/SDK/ApexSourceHashGenerated.cs in sync with it, so a build can report exactly
-    /// which SDK code it contains through <see cref="ApexUtils.SDKSourceHash"/>.
-    ///
-    /// The algorithm must stay in sync with Tools~/source_hash.py, which CI uses to check the committed value.
-    /// </summary>
-    [InitializeOnLoad]
-    public static class ApexSourceHash
-    {
-        internal const string SourceDirectory = "Runtime";
-        internal const string GeneratedFile = "Runtime/SDK/ApexSourceHashGenerated.cs";
-        static readonly string[] Extensions = { ".cs", ".asmdef" };
-        static readonly string[] ExcludedFiles = { GeneratedFile, "Runtime/SDK/ApexUtilsGenerated.cs" };
+	/// <summary>
+	/// Computes a SHA-256 over the SDK Runtime sources (ApexSystem and everything it compiles against)
+	/// and keeps Runtime/SDK/ApexSourceHashGenerated.cs in sync with it, so a build can report exactly
+	/// which SDK code it contains through <see cref="ApexUtils.SDKSourceHash"/>.
+	///
+	/// The algorithm must stay in sync with Tools~/source_hash.py, which CI uses to check the committed value.
+	/// </summary>
+	[InitializeOnLoad]
+	public static class ApexSourceHash
+	{
+		internal const string kSourceDirectory = "Runtime";
+		internal const string kGeneratedFile = "Runtime/SDK/ApexSourceHashGenerated.cs";
+		private static readonly string[] kHashedExtensions = { ".cs", ".asmdef" };
+		private static readonly string[] kExcludedFiles = { kGeneratedFile, "Runtime/SDK/ApexUtilsGenerated.cs" };
 
-        static ApexSourceHash()
-        {
-            // Never rewrite sources in batch mode, so CI tests compare against the committed value.
-            if (Application.isBatchMode)
-                return;
+		static ApexSourceHash()
+		{
+			// Never rewrite sources in batch mode, so CI tests compare against the committed value.
+			if (Application.isBatchMode)
+			{
+				return;
+			}
 
-            EditorApplication.delayCall += UpdateGeneratedFileIfWritable;
-        }
+			EditorApplication.delayCall += UpdateGeneratedFileIfWritable;
+		}
 
-        /// <summary>The root folder of the SDK package on disk, or null if it cannot be found.</summary>
-        public static string FindPackageRoot()
-        {
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ApexSystem).Assembly);
-            if (packageInfo != null)
-                return packageInfo.resolvedPath;
+		/// <summary>The root folder of the SDK package on disk, or null if it cannot be found.</summary>
+		public static string FindPackageRoot()
+		{
+			UnityEditor.PackageManager.PackageInfo packageInfo =
+				UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ApexSystem).Assembly);
+			if (packageInfo != null)
+			{
+				return packageInfo.resolvedPath;
+			}
 
-            // The SDK was copied into Assets instead of being installed as a package.
-            string[] guids = AssetDatabase.FindAssets("ApexSourceHashGenerated t:Script");
-            if (guids.Length == 0)
-                return null;
+			// The SDK was copied into Assets instead of being installed as a package.
+			string[] scriptGuids = AssetDatabase.FindAssets("ApexSourceHashGenerated t:Script");
+			if (scriptGuids.Length == 0)
+			{
+				return null;
+			}
 
-            string generatedPath = Path.GetFullPath(AssetDatabase.GUIDToAssetPath(guids[0]));
-            return Directory.GetParent(generatedPath)?.Parent?.Parent?.FullName;
-        }
+			string generatedPath = Path.GetFullPath(AssetDatabase.GUIDToAssetPath(scriptGuids[0]));
+			return Directory.GetParent(generatedPath)?.Parent?.Parent?.FullName;
+		}
 
-        public static string Compute(string packageRoot)
-        {
-            packageRoot = Path.GetFullPath(packageRoot).TrimEnd('/', '\\');
-            string sourceRoot = Path.Combine(packageRoot, SourceDirectory);
-            var files = Directory.GetFiles(sourceRoot, "*", SearchOption.AllDirectories)
-                .Where(file => Extensions.Contains(Path.GetExtension(file), StringComparer.Ordinal))
-                .Select(file => Path.GetFullPath(file).Substring(packageRoot.Length + 1).Replace('\\', '/'))
-                .Where(file => !ExcludedFiles.Contains(file))
-                .OrderBy(file => file, StringComparer.Ordinal);
+		public static string Compute(string packageRoot)
+		{
+			string normalizedRoot = Path.GetFullPath(packageRoot).TrimEnd('/', '\\');
+			string sourceRoot = Path.Combine(normalizedRoot, kSourceDirectory);
+			IOrderedEnumerable<string> hashedFiles = Directory.GetFiles(sourceRoot, "*", SearchOption.AllDirectories)
+				.Where(filePath => kHashedExtensions.Contains(Path.GetExtension(filePath), StringComparer.Ordinal))
+				.Select(filePath => Path.GetFullPath(filePath).Substring(normalizedRoot.Length + 1).Replace('\\', '/'))
+				.Where(relativePath => !kExcludedFiles.Contains(relativePath))
+				.OrderBy(relativePath => relativePath, StringComparer.Ordinal);
 
-            using (var sha = SHA256.Create())
-            {
-                var separator = new byte[] { 0 };
-                foreach (string file in files)
-                {
-                    byte[] path = Encoding.UTF8.GetBytes(file);
-                    byte[] content = Normalize(File.ReadAllBytes(Path.Combine(packageRoot, file)));
-                    sha.TransformBlock(path, 0, path.Length, null, 0);
-                    sha.TransformBlock(separator, 0, 1, null, 0);
-                    sha.TransformBlock(content, 0, content.Length, null, 0);
-                    sha.TransformBlock(separator, 0, 1, null, 0);
-                }
-                sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-                return string.Concat(sha.Hash.Select(b => b.ToString("x2")));
-            }
-        }
+			using (SHA256 hashAlgorithm = SHA256.Create())
+			{
+				byte[] separator = { 0 };
+				foreach (string relativePath in hashedFiles)
+				{
+					byte[] pathBytes = Encoding.UTF8.GetBytes(relativePath);
+					byte[] contentBytes = Normalize(File.ReadAllBytes(Path.Combine(normalizedRoot, relativePath)));
+					hashAlgorithm.TransformBlock(pathBytes, 0, pathBytes.Length, null, 0);
+					hashAlgorithm.TransformBlock(separator, 0, 1, null, 0);
+					hashAlgorithm.TransformBlock(contentBytes, 0, contentBytes.Length, null, 0);
+					hashAlgorithm.TransformBlock(separator, 0, 1, null, 0);
+				}
 
-        public static string GeneratedSource(string sourceHash)
-        {
-            return "// <auto-generated>\n"
-                + "// SHA-256 of the SDK Runtime source files. Do not edit by hand: it is regenerated by the\n"
-                + "// Unity editor when the package is embedded or local, or by running Tools~/source_hash.py --write.\n"
-                + "// </auto-generated>\n"
-                + "namespace PixoVR.Apex.Utils { public static partial class ApexUtils { public static string SDKSourceHash => \""
-                + sourceHash
-                + "\"; } }\n";
-        }
+				hashAlgorithm.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+				return string.Concat(hashAlgorithm.Hash.Select(hashByte => hashByte.ToString("x2")));
+			}
+		}
 
-        /// <summary>True if the compiled <see cref="ApexUtils.SDKSourceHash"/> matches the sources on disk.</summary>
-        public static bool IsUpToDate(out string currentHash)
-        {
-            currentHash = null;
-            string packageRoot = FindPackageRoot();
-            if (packageRoot == null)
-                return true;
+		public static string GeneratedSource(string sourceHash)
+		{
+			return "// <auto-generated>\n"
+				+ "// SHA-256 of the SDK Runtime sources. Do not edit: the Unity editor regenerates it when\n"
+				+ "// the package is embedded or local, as does Tools~/source_hash.py --write.\n"
+				+ "// </auto-generated>\n"
+				+ "namespace PixoVR.Apex.Utils\n"
+				+ "{\n"
+				+ "\tpublic static partial class ApexUtils\n"
+				+ "\t{\n"
+				+ "\t\tpublic static string SDKSourceHash => \"" + sourceHash + "\";\n"
+				+ "\t}\n"
+				+ "}\n";
+		}
 
-            currentHash = Compute(packageRoot);
-            return currentHash == ApexUtils.SDKSourceHash;
-        }
+		/// <summary>True if the compiled <see cref="ApexUtils.SDKSourceHash"/> matches the sources on disk.</summary>
+		public static bool IsUpToDate(out string currentHash)
+		{
+			currentHash = null;
+			string packageRoot = FindPackageRoot();
+			if (packageRoot == null)
+			{
+				return true;
+			}
 
-        static void UpdateGeneratedFileIfWritable()
-        {
-            string packageRoot = FindPackageRoot();
-            if (packageRoot == null)
-                return;
+			currentHash = Compute(packageRoot);
+			return currentHash == ApexUtils.SDKSourceHash;
+		}
 
-            // Git and registry packages live in the read-only package cache.
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ApexSystem).Assembly);
-            if (packageInfo != null && packageInfo.source != PackageSource.Embedded && packageInfo.source != PackageSource.Local)
-                return;
+		private static void UpdateGeneratedFileIfWritable()
+		{
+			string packageRoot = FindPackageRoot();
+			if (packageRoot == null)
+			{
+				return;
+			}
 
-            string expected = GeneratedSource(Compute(packageRoot));
-            string generatedPath = Path.Combine(packageRoot, GeneratedFile);
-            string current = File.Exists(generatedPath)
-                ? Encoding.UTF8.GetString(Normalize(File.ReadAllBytes(generatedPath)))
-                : null;
+			// Git and registry packages live in the read-only package cache.
+			UnityEditor.PackageManager.PackageInfo packageInfo =
+				UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ApexSystem).Assembly);
+			bool isWritable = packageInfo == null || packageInfo.source == PackageSource.Embedded
+				|| packageInfo.source == PackageSource.Local;
+			if (!isWritable)
+			{
+				return;
+			}
 
-            if (current == expected)
-                return;
+			string expectedSource = GeneratedSource(Compute(packageRoot));
+			string generatedPath = Path.Combine(packageRoot, kGeneratedFile);
+			string currentSource = File.Exists(generatedPath)
+				? Encoding.UTF8.GetString(Normalize(File.ReadAllBytes(generatedPath)))
+				: null;
+			if (currentSource == expectedSource)
+			{
+				return;
+			}
 
-            File.WriteAllText(generatedPath, expected, new UTF8Encoding(false));
-            Debug.Log($"[ApexSourceHash] SDK sources changed, updated {GeneratedFile}.");
-            AssetDatabase.Refresh();
-        }
+			File.WriteAllText(generatedPath, expectedSource, new UTF8Encoding(false));
+			Debug.Log($"[ApexSourceHash] SDK sources changed, updated {kGeneratedFile}.");
+			AssetDatabase.Refresh();
+		}
 
-        /// <summary>Removes a UTF-8 BOM and converts CRLF to LF so the hash does not depend on git's line ending conversion.</summary>
-        static byte[] Normalize(byte[] content)
-        {
-            int start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
-            var normalized = new byte[content.Length - start];
-            int length = 0;
-            for (int i = start; i < content.Length; i++)
-            {
-                if (content[i] == '\r' && i + 1 < content.Length && content[i + 1] == '\n')
-                    continue;
-                normalized[length++] = content[i];
-            }
-            Array.Resize(ref normalized, length);
-            return normalized;
-        }
-    }
+		/// <summary>
+		/// Removes a UTF-8 BOM and converts CRLF to LF, so the hash does not depend on git's line endings.
+		/// </summary>
+		private static byte[] Normalize(byte[] fileContent)
+		{
+			bool hasByteOrderMark = fileContent.Length >= 3 && fileContent[0] == 0xEF && fileContent[1] == 0xBB
+				&& fileContent[2] == 0xBF;
+			int contentStart = hasByteOrderMark ? 3 : 0;
+			byte[] normalizedContent = new byte[fileContent.Length - contentStart];
+			int normalizedLength = 0;
+			for (int byteIndex = contentStart; byteIndex < fileContent.Length; byteIndex++)
+			{
+				bool isCarriageReturnBeforeNewline = fileContent[byteIndex] == '\r'
+					&& byteIndex + 1 < fileContent.Length && fileContent[byteIndex + 1] == '\n';
+				if (isCarriageReturnBeforeNewline)
+				{
+					continue;
+				}
+
+				normalizedContent[normalizedLength++] = fileContent[byteIndex];
+			}
+
+			Array.Resize(ref normalizedContent, normalizedLength);
+			return normalizedContent;
+		}
+	}
 }
 #endif

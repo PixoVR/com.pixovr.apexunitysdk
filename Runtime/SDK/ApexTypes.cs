@@ -1,1208 +1,772 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.Globalization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Unity.Properties;
 using UnityEngine;
+#if UNITY_6000_0_OR_NEWER
+using System.Runtime.CompilerServices;
 using UnityEngine.UIElements;
+#endif
 
+// The models below are what ApexSystem hands to callbacks. Each is built from the JSON the
+// core returns (apex-sdk-core spec/schema), with FromJson methods that tolerate missing and
+// null values the way the platform sends them.
 namespace PixoVR.Apex
 {
-    public interface IPlatformErrorable
-    {
-        public abstract bool HasErrored();
-    }
+	/// <summary>A failed call, in the shape the 1.x callbacks used. See <see cref="ApexResponse"/>.</summary>
+	[Serializable]
+	public class FailureResponse
+	{
+		public string Error { get; set; }
+		public string HttpCode { get; set; }
+		public string Message { get; set; }
 
-    public interface IFailure
-    {
-        // Empty so we can check all failure types against this
-    }
+		public bool HasErrored()
+		{
+			if (string.IsNullOrEmpty(Error))
+			{
+				return false;
+			}
 
-    [Serializable]
-    public class FailureResponse : IFailure, IPlatformErrorable
-    {
-        public string Error;
-        public string HttpCode;
-        public string Message;
+			return !Error.Equals("false", StringComparison.OrdinalIgnoreCase);
+		}
 
-        public bool HasErrored()
-        {
-            bool hasErrored = false;
-            bool hasErrorSetup = !(Error == null && Message == null && HttpCode == null);
+		internal static FailureResponse FromMessage(string message)
+		{
+			FailureResponse failureResponse = new FailureResponse();
+			failureResponse.Error = "true";
+			failureResponse.HttpCode = string.Empty;
+			failureResponse.Message = message;
+			return failureResponse;
+		}
+	}
 
-            if (hasErrorSetup == false)
-            {
-                if (Error != null)
-                {
-                    if (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        hasErrored = true;
-                    }
-                    else
-                    {
-                        hasErrored = !string.IsNullOrEmpty(Error);
-                    }
-                }
-            }
+	/// <summary>The platform's reply to joining a session.</summary>
+	[Serializable]
+	public class JoinSessionResponse
+	{
+		/// <summary>The platform's session ID, which the heartbeat and telemetry use.</summary>
+		public long SessionId { get; set; }
 
-            return hasErrored;
-        }
-    }
+		/// <summary>The session's UUID, sent with every event of the session.</summary>
+		public Guid SessionUuid { get; set; }
+	}
 
-    [Serializable]
-    public class JoinSessionResponse : FailureResponse
-    {
-        public JObject Data;
-        public int SessionId;
+	/// <summary>The modules each requested user can access.</summary>
+	[Serializable]
+	public class GetUserModulesResponse
+	{
+		public List<UserModulesData> ParsedData { get; set; } = new List<UserModulesData>();
 
-        public void ParseData()
-        {
-            IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
-            foreach (JProperty property in dataPropertyEnumerator)
-            {
-                if (property.Name.Equals("SessionId", StringComparison.OrdinalIgnoreCase))
-                {
-                    SessionId = JsonConvert.DeserializeObject<int>(property.Value.ToString());
-                }
-            }
-        }
-    }
+		internal static GetUserModulesResponse FromJson(JObject payload)
+		{
+			GetUserModulesResponse userModulesResponse = new GetUserModulesResponse();
+			foreach (JObject userEntry in JsonReading.GetObjects(payload, "users"))
+			{
+				UserModulesData userModules = new UserModulesData();
+				userModules.UserId = JsonReading.GetInteger(userEntry, "userId") ?? -1;
+				foreach (JToken moduleIdToken in JsonReading.GetArray(userEntry, "moduleIds"))
+				{
+					int? moduleId = JsonReading.ToInteger(moduleIdToken);
+					if (moduleId.HasValue)
+					{
+						userModules.AvailableModules.Add(moduleId.Value);
+					}
+				}
 
-    [Serializable]
-    public class GetUserModulesResponse : IFailure, IPlatformErrorable
-    {
-        public string Error;
-        public string HttpCode;
-        public string Message;
-        public JObject Data;
-        public List<UserModulesData> ParsedData;
+				userModulesResponse.ParsedData.Add(userModules);
+			}
 
-        public bool HasErrored()
-        {
-            return (Error.Equals("true", StringComparison.CurrentCultureIgnoreCase));
-        }
+			return userModulesResponse;
+		}
+	}
 
-        public void ParseData()
-        {
-            ParsedData = new List<UserModulesData>();
-            IEnumerable<JProperty> dataPropertyEnumerator = Data.Properties();
-            UserModulesData currentUser;
-            foreach (JProperty currentProperty in dataPropertyEnumerator)
-            {
-                currentUser = new UserModulesData();
+	[Serializable]
+	public class UserModulesData
+	{
+		public int UserId { get; set; } = -1;
+		public List<int> AvailableModules { get; set; } = new List<int>();
+	}
 
-                currentUser.UserId = currentProperty.Name;
-                currentUser.AvailableModules = JsonConvert.DeserializeObject<List<int>>(
-                    currentProperty.Value.ToString()
-                );
+	[Serializable]
+	public class LoginData
+	{
+		public LoginData(string username, string password)
+		{
+			Login = username;
+			Password = password;
+		}
 
-                ParsedData.Add(currentUser);
-            }
-        }
-    }
+		public string Login { get; set; }
+		public string Password { get; set; }
+	}
 
-    [Serializable]
-    public class UserModulesData
-    {
-        public string UserId;
-        public List<int> AvailableModules;
+	/// <summary>The logged-in user (spec/schema/user.json).</summary>
+	[Serializable]
+	public class LoginResponseContent
+	{
+		public int ID { get; set; }
+		public int OrgId { get; set; }
+		public string First { get; set; }
+		public string Last { get; set; }
+		/// <summary>Only Quick ID logins return it.</summary>
+		public string Username { get; set; }
+		public string Email { get; set; }
+		/// <summary>Bearer token for later calls, and for handing the login on to the next app.</summary>
+		public string Token { get; set; }
+		public string Role { get; set; }
+		public Organization Org { get; set; }
+		public int MinimumPassingScore { get; set; }
 
-        public UserModulesData()
-        {
-            AvailableModules = new List<int>();
-        }
-    }
+		public bool HasErrored()
+		{
+			return string.IsNullOrEmpty(Token);
+		}
 
-    [Serializable]
-    public class UserModulesRequestData
-    {
-        [JsonProperty(PropertyName = "userIds")]
-        public List<int> UserIds = new List<int>();
-    }
+		public bool IsPlatformSuperadmin()
+		{
+			bool isSuperAdmin = !string.IsNullOrEmpty(Role)
+				&& Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase);
+			bool isPlatformOrg = Org != null && !string.IsNullOrEmpty(Org.Type)
+				&& Org.Type.Equals("platform", StringComparison.OrdinalIgnoreCase);
+			return isPlatformOrg && isSuperAdmin;
+		}
 
-    [Serializable]
-    public class LoginData
-    {
-        public string Login;
-        public string Password;
+		internal static LoginResponseContent FromJson(JObject payload)
+		{
+			LoginResponseContent user = new LoginResponseContent();
+			user.ID = JsonReading.GetInteger(payload, "id") ?? 0;
+			user.OrgId = JsonReading.GetInteger(payload, "orgId") ?? 0;
+			user.First = JsonReading.GetString(payload, "firstName");
+			user.Last = JsonReading.GetString(payload, "lastName");
+			user.Username = JsonReading.GetString(payload, "username");
+			user.Email = JsonReading.GetString(payload, "email");
+			user.Role = JsonReading.GetString(payload, "role");
+			user.Token = JsonReading.GetString(payload, "token");
+			user.MinimumPassingScore = (int)Math.Round(JsonReading.GetNumber(payload, "minimumPassingScore") ?? 0.0);
+			JObject organizationObject = JsonReading.GetObject(payload, "org");
+			user.Org = organizationObject == null ? null : Organization.FromJson(organizationObject);
+			return user;
+		}
+	}
 
-        public LoginData(string username, string password)
-        {
-            Login = username;
-            Password = password;
-        }
-    }
+	/// <summary>Whether a user may run a module on this device.</summary>
+	[Serializable]
+	public class UserAccessResponseContent
+	{
+		public int UserId { get; set; } = -1;
+		public int ModuleId { get; set; } = -1;
+		public bool Access { get; set; }
+		public int? PassingScore { get; set; }
 
-    [Serializable]
-    public class LoginResponseContent : IPlatformErrorable
-    {
-        public int ID;
-        public int OrgId;
-        public string First;
-        public string Last;
-        public string Email;
-        public string Token;
-        public string Role;
-        public Organization Org;
-        public int MinimumPassingScore;
+		public bool HasErrored()
+		{
+			return UserId == -1 || ModuleId == -1;
+		}
 
-        public bool HasErrored()
-        {
-            return (Email == null || Token == null);
-        }
+		internal static UserAccessResponseContent FromJson(JObject payload)
+		{
+			UserAccessResponseContent userAccess = new UserAccessResponseContent();
+			userAccess.UserId = JsonReading.GetInteger(payload, "userId") ?? -1;
+			userAccess.ModuleId = JsonReading.GetInteger(payload, "moduleId") ?? -1;
+			userAccess.Access = JsonReading.GetBoolean(payload, "access") ?? false;
+			double? passingScore = JsonReading.GetNumber(payload, "passingScore");
+			userAccess.PassingScore = passingScore.HasValue ? (int?)Math.Round(passingScore.Value) : null;
+			return userAccess;
+		}
+	}
 
-        public bool IsPlatformSuperadmin()
-        {
-            var isSuperAdmin = !String.IsNullOrEmpty(Role) && Role.Equals("superadmin", StringComparison.CurrentCultureIgnoreCase);
-            var isPlatformOrg = Org != null && !String.IsNullOrEmpty(Org.Type) && Org.Type.Equals("platform", StringComparison.CurrentCultureIgnoreCase);
-            return isPlatformOrg && isSuperAdmin;
-        }
-    }
+	[Serializable]
+	public class ActiveUserInformation
+	{
+		public LoginResponseContent User { get; set; }
+		public UserAccessResponseContent ModuleUserInformation { get; set; }
+	}
 
-    [Serializable]
-    public class UserLoginResponseContent : IPlatformErrorable
-    {
-        public LoginResponseContent User;
+	[Serializable]
+	public class Organization
+	{
+		public int ID { get; set; }
+		public string Name { get; set; }
+		public string Status { get; set; }
+		public string DownloadRegion { get; set; }
+		public string Type { get; set; }
+		public string HubLogoLink { get; set; }
+		public string PrimaryColor { get; set; }
+		public string SecondaryColor { get; set; }
 
-        public bool HasErrored()
-        {
-            return User == null;
-        }
-    }
+		internal static Organization FromJson(JObject payload)
+		{
+			Organization organization = new Organization();
+			organization.ID = JsonReading.GetInteger(payload, "id") ?? 0;
+			organization.Name = JsonReading.GetString(payload, "name");
+			organization.Status = JsonReading.GetString(payload, "status");
+			organization.DownloadRegion = JsonReading.GetString(payload, "downloadRegion");
+			organization.Type = JsonReading.GetString(payload, "type");
+			organization.HubLogoLink = JsonReading.GetString(payload, "hubLogoLink");
+			organization.PrimaryColor = JsonReading.GetString(payload, "primaryColor");
+			organization.SecondaryColor = JsonReading.GetString(payload, "secondaryColor");
+			return organization;
+		}
+	}
 
-    [Serializable]
-    public class UserAccessResponseContent : IPlatformErrorable
-    {
-        public int UserId = -1;
-        public int ModuleId = -1;
-        public bool Access;
-        public int? PassingScore;
+	/// <summary>A one-time login code, for signing in on another device.</summary>
+	[Serializable]
+	public class GeneratedAssistedLogin
+	{
+		public AssistedLoginCode AssistedLogin { get; set; }
 
-        public bool HasErrored()
-        {
-            return (UserId == -1 || ModuleId == -1);
-        }
-    }
+		public bool HasErrored()
+		{
+			return AssistedLogin == null;
+		}
 
-    [Serializable]
-    public class ActiveUserInformation
-    {
-        public LoginResponseContent User = null;
-        public UserAccessResponseContent ModuleUserInformation = null;
-    }
+		internal static GeneratedAssistedLogin FromJson(JObject payload)
+		{
+			GeneratedAssistedLogin assistedLogin = new GeneratedAssistedLogin();
+			assistedLogin.AssistedLogin = new AssistedLoginCode();
+			assistedLogin.AssistedLogin.AuthCode = JsonReading.GetString(payload, "code");
+			assistedLogin.AssistedLogin.Expires = JsonReading.GetString(payload, "expiresAt");
+			return assistedLogin;
+		}
+	}
 
-    [Serializable]
-    public class Organization
-    {
-        public int ID;
-        public string Name;
-        public string Status;
-        public string DownloadRegion;
-        public string Type;
-        public string HubLogoLink;
-        public string PrimaryColor;
-        public string SecondaryColor;
-    }
+	[Serializable]
+	public class AssistedLoginCode
+	{
+		public string AuthCode { get; set; }
+		public string Expires { get; set; }
+	}
 
-    [Serializable]
-    public class GetUserResponseContent : IPlatformErrorable
-    {
-        public int ID;
-        public string First;
-        public string Last;
-        public string Email;
-        public string Username;
+	/// <summary>A session's result, sent when the session completes.</summary>
+	[Serializable]
+	public class SessionData
+	{
+		public SessionData()
+		{
+		}
 
-        public bool HasErrored()
-        {
-            return (Email == null);
-        }
-    }
+		public SessionData(float score, float scaledScore, float minimumScore, float maximumScore, int durationSeconds,
+			bool complete, bool success)
+		{
+			Score = score;
+			ScaledScore = scaledScore;
+			MinimumScore = minimumScore;
+			MaximumScore = maximumScore;
+			Duration = durationSeconds;
+			Complete = complete;
+			Success = success;
+		}
 
-    [Serializable]
-    public class GeneratedAssistedLogin : IPlatformErrorable
-    {
-        public AssistedLoginCode AssistedLogin;
-
-        public bool HasErrored()
-        {
-            return (AssistedLogin == null);
-        }
-    }
-
-    public class AssistedLoginCode
-    {
-        public string AuthCode;
-        public string Expires;
-    }
-
-    [Serializable]
-    public class SessionData
-    {
-        public float Score;
-        public float ScaledScore;
-        public float MinimumScore;
-        public float MaximumScore;
-        public int Duration;
-        public bool Complete;
-        public bool Success;
-
-        public SessionData() { }
-
-        public SessionData(float score, float scaled, float min, float max, int duration, bool completed, bool success)
-        {
-            Score = score;
-            ScaledScore = scaled;
-            MinimumScore = min;
-            MaximumScore = max;
-            Duration = duration;
-            Complete = completed;
-            Success = success;
-        }
-    }
+		public float Score { get; set; }
+		/// <summary>0 to 100. Left at 0, it is computed from Score and MaximumScore.</summary>
+		public float ScaledScore { get; set; }
+		public float MinimumScore { get; set; }
+		public float MaximumScore { get; set; }
+		/// <summary>Session length in seconds.</summary>
+		public int Duration { get; set; }
+		public bool Complete { get; set; }
+		public bool Success { get; set; }
+	}
 
 #if UNITY_6000_0_OR_NEWER
-    public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
+	public class OrgModule : ScriptableObject, INotifyBindablePropertyChanged
 #else
-    [Serializable]
-    public class OrgModule
+	[Serializable]
+	public class OrgModule
 #endif
-    {
-        public int ID = -1;
-        public string Name = "";
-        public string Description = "";
-        public string ShortDescription = "";
-        public string LongDescription = "";
-        public string Industry = "";
-        public string Details = "";
-        public string IconURL = "";
-        public string AvailableLanguages = "";
-        public string Distributor = "";
-        public string UserGuideLink = "";
-        public bool IsAuthenticatedLaunch = false;
-        public bool EnableDebug = false;
-
-        private Texture2D _thumbnail;
-
-        [CreateProperty]
-        public Texture2D Thumbnail
-        {
-            get { return _thumbnail; }
-            set
-            {
-                _thumbnail = value;
-#if UNITY_6000_0_OR_NEWER
-                Notify();
-#endif
-            }
-        }
-
-        public List<OrgModuleDownload> Downloads = new List<OrgModuleDownload>();
-        public int? PassingScore = null;
-        public string Categories = "";
-        public string externalId = "";
-        public PlatformPlayer player = null;
+	{
+		private Texture2D m_thumbnail;
 
 #if UNITY_6000_0_OR_NEWER
-        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+		public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged; // StyleCheck: external name
 #endif
 
-        public OrgModule()
-        {
-            Downloads = new List<OrgModuleDownload>();
-        }
+		[CreateProperty]
+		public int ID { get; set; } = -1;
+		[CreateProperty]
+		public string Name { get; set; } = string.Empty;
+		[CreateProperty]
+		public string Description { get; set; } = string.Empty;
+		[CreateProperty]
+		public string ShortDescription { get; set; } = string.Empty;
+		[CreateProperty]
+		public string LongDescription { get; set; } = string.Empty;
+		[CreateProperty]
+		public string Industry { get; set; } = string.Empty;
+		[CreateProperty]
+		public string Details { get; set; } = string.Empty;
+		[CreateProperty]
+		public string IconURL { get; set; } = string.Empty;
+		[CreateProperty]
+		public string AvailableLanguages { get; set; } = string.Empty;
+		[CreateProperty]
+		public string Distributor { get; set; } = string.Empty;
+		[CreateProperty]
+		public string UserGuideLink { get; set; } = string.Empty;
+		[CreateProperty]
+		public bool IsAuthenticatedLaunch { get; set; }
+		[CreateProperty]
+		public bool EnableDebug { get; set; }
+		[CreateProperty]
+		public List<OrgModuleDownload> Downloads { get; set; } = new List<OrgModuleDownload>();
+		[CreateProperty]
+		public int? PassingScore { get; set; }
+		[CreateProperty]
+		public string Categories { get; set; } = string.Empty;
+		[CreateProperty]
+		public string ExternalId { get; set; } = string.Empty;
+		[CreateProperty]
+		public PlatformPlayer Player { get; set; }
 
-        public OrgModule(JToken token)
-        {
-            Downloads = new List<OrgModuleDownload>();
-            Parse(token);
-        }
-
-        public void Parse(JToken token)
-        {
-            ID = token.Value<int>("ID");
-            Name = token.Value<string>("Name");
-            Description = token.Value<string>("Description");
-            ShortDescription = token.Value<string>("ShortDescription");
-            LongDescription = token.Value<string>("LongDescription");
-            Details = token.Value<string>("Details");
-            IconURL = token.Value<string>("IconURL");
-            PassingScore = token.Value<int?>("PassingScore");
-            Categories = token.Value<string>("Categories");
-            externalId = token.Value<string>("externalId");
-            UserGuideLink = token.Value<string>("UserGuideLink");
-
-            var PlayerToken = token.Value<JObject>("player");
-
-            if (PlayerToken != null)
-            {
-                player = new PlatformPlayer(PlayerToken);
-            }
-
-            var DownloadTokens = token.Value<JArray>("Downloads");
-
-            if (DownloadTokens != null)
-            {
-                foreach (JToken DownloadToken in DownloadTokens)
-                {
-                    var downloadData = ScriptableObject.CreateInstance<OrgModuleDownload>();
-                    downloadData.Parse(DownloadToken);
-                    Downloads.Add(downloadData);
-                }
-            }
-
-            var availableLanguages = GetValue<JArray>(token, "availableLanguages");
-
-            if (availableLanguages != null)
-            {
-                var availableLanguagesList = new List<string>();
-
-                foreach (JToken languageToken in availableLanguages)
-                {
-                    string displayName = GetValue<string>(languageToken, "displayName");
-                    if (!string.IsNullOrEmpty(displayName))
-                    {
-                        availableLanguagesList.Add(displayName);
-                    }
-                }
-
-                AvailableLanguages = string.Join(", ", availableLanguagesList);
-            }
-
-            var industry = GetValue<string>(token, "Industry");
-            if (!string.IsNullOrEmpty(industry) && industry.Length > 0)
-            {
-                Industry = ModuleExtensions.CapitalizeIndustry(industry);
-            }
-
-            var distributor = GetValue<JToken>(token, "distributor");
-            if (distributor != null)
-            {
-                Distributor = GetValue<string>(distributor, "name");
-            }
-
-            EnableDebug = token.Value<bool>("enableDebug");
-            IsAuthenticatedLaunch = token.Value<bool>("isAuthenticatedLaunch");
-        }
-
-        private T GetValue<T>(JToken token, string propertyName, T defaultValue = default)
-        {
-            return token[propertyName] != null ? token.Value<T>(propertyName) : defaultValue;
-        }
-
+		[CreateProperty]
+		public Texture2D Thumbnail
+		{
+			get
+			{
+				return m_thumbnail;
+			}
+			set
+			{
+				m_thumbnail = value;
 #if UNITY_6000_0_OR_NEWER
-        void Notify([CallerMemberName] string property = "")
-        {
-            propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
-        }
+				Notify();
 #endif
-    }
-
-    [Serializable]
-    public class OrgModuleDownload : ScriptableObject
-    {
-        public int ID;
-        public int VersionID;
-        public string FileLocation;
-        public string Version;
-        public string Platform;
-        public long DownloadSize;
-        public string ApkName;
-        public string URL;
-        public string Status;
-        public string externalId;
-
-        public OrgModuleDownload(JToken token)
-        {
-            Parse(token);
-        }
-
-        public void Parse(JToken token)
-        {
-            ID = token.Value<int>("ID");
-            VersionID = token.Value<int>("VersionID");
-            DownloadSize = token.Value<long>("DownloadSize");
-            externalId = token.Value<string>("externalId");
-            FileLocation = token.Value<string>("FileLocation");
-            Version = token.Value<string>("Version");
-            Platform = token.Value<string>("Platform");
-            ApkName = token.Value<string>("ApkName");
-            URL = token.Value<string>("URL");
-            Status = token.Value<string>("Status");
-        }
-    }
-
-    #region Platform Models
-    [Serializable]
-    public class PlatformPlayer
-    {
-        public int id;
-        public string name;
-        public string description;
-        public int distributorId;
-        public string launchProtocol;
-        public List<PlatformPlayerDownload> versions = new List<PlatformPlayerDownload>();
-
-        public PlatformPlayer(int id)
-        {
-            this.id = id;
-        }
-
-        public PlatformPlayer(JObject tokenObject)
-        {
-            id = tokenObject.Value<int>("id");
-            distributorId = tokenObject.Value<int>("distributorId");
-            name = tokenObject.Value<string>("name");
-            description = tokenObject.Value<string>("description");
-            launchProtocol = tokenObject.Value<string>("launchProtocol");
-
-            var versionTokens = tokenObject.Value<JArray>("versions");
-            if (versionTokens == null)
-            {
-                versionTokens = new JArray();
-            }
-
-            foreach (JToken Version in versionTokens)
-            {
-                versions.Add(new PlatformPlayerDownload(Version));
-            }
-        }
-    }
-
-    [Serializable]
-    public class PlatformPlayerDownload
-    {
-        public int id;
-        public string version;
-        public int modulePlayerId;
-        public string status;
-        public string URL;
-        public string ApkName;
-        public string platform;
-
-        public PlatformPlayerDownload() { }
-
-        public PlatformPlayerDownload(JToken token)
-        {
-            id = token.Value<int>("id");
-            modulePlayerId = token.Value<int>("modulePlayerId");
-            version = token.Value<string>("version");
-            status = token.Value<string>("status");
-            URL = token.Value<string>("URL");
-            ApkName = token.Value<string>("ApkName");
-            platform = token.Value<string>("platform");
-        }
-    }
-
-
-    [Serializable]
-    public class PlatformLoginResponse : IPlatformErrorable
-    {
-        public string Token { get; set; }
-        public string Msg { get; set; }
-        public User User { get; set; }
-
-        public bool HasErrored()
-        {
-            return (User == null || string.IsNullOrEmpty(Token));
-        }
-    }
-
-    [Serializable]
-    public class User
-    {
-        public int Id { get; set; }
-        public string CreatedBy { get; set; }
-        public string UpdatedBy { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public string Role { get; set; }
-        public string[] Permissions { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Username { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
-        public string Status { get; set; }
-        public string ExternalId { get; set; }
-        public DateTime PasswordExpDate { get; set; }
-        public Organization Org { get; set; }
-        public int OrgId { get; set; }
-        public DateTime? DeletedAt { get; set; }
-        public string AuthToken { get; set; }
-    }
-
-
-    [Serializable]
-    public class QuickIDAuthGetUsersResponse : IPlatformErrorable
-    {
-        public OrgProperties OrgProperties;
-        public List<QuickIDUser> QuickIDUsers;
-
-        public bool HasErrored()
-        {
-            return QuickIDUsers == null || OrgProperties == null;
-        }
-    }
-
-    public class OrgProperties
-    {
-        public string PrimaryColor;
-        public string SecondaryColor;
-        public string HubLogoURL;
-        public string OrgName;
-
-        public OrgProperties() { }
-        public OrgProperties(string primaryColor, string secondaryColor, string hubLogoURL, string orgName)
-        {
-            PrimaryColor = primaryColor;
-            SecondaryColor = secondaryColor;
-            HubLogoURL = hubLogoURL;
-            OrgName = orgName;
-        }
-    }
-
-    public class QuickIDUser
-    {
-        public string FirstName;
-        public string LastName;
-        public string Username;
-        public string Email;
-
-        public QuickIDUser() { }
-
-        public QuickIDUser(string firstName, string lastName, string username, string email)
-        {
-            FirstName = firstName;
-            LastName = lastName;
-            Username = username;
-            Email = email;
-        }
-    }
-
-    [Serializable]
-    public class QuickIDLoginData
-    {
-        public string Username;
-        public string SerialNumber;
-
-        public QuickIDLoginData(string serialNumber, string username)
-        {
-            SerialNumber = serialNumber;
-            Username = username;
-        }
-    }
-
-    [Serializable]
-    public class UserModulesResponse
-    {
-        public List<Module> modules;
-    }
-
-    [Serializable]
-    public class Module
-    {
-        public string id;
-        public string abbreviation;
-        public string externalId;
-        public string imageLink;
-        public string developer;
-        public string description;
-        public string shortDesc;
-        public string longDesc;
-        public string industry;
-        public string details;
-        public string categories;
-        public bool? isAvailable;
-        public bool IsAvailable => isAvailable ?? false;
-        public bool? isAuthenticatedLaunch;
-        public List<ModuleLanguage> availableLanguages;
-        public ModulePlayer modulePlayer;
-        public List<ModuleVersion> versions;
-    }
-
-    [Serializable]
-    public class ModuleLanguage
-    {
-        public string displayName;
-    }
-
-    public static class ModuleExtensions
-    {
-        public static OrgModule ToOrgModule(this Module module)
-        {
-            if (module == null)
-            {
-                return null;
-            }
+			}
+		}
 
 #if UNITY_6000_0_OR_NEWER
-            var orgModule = ScriptableObject.CreateInstance<OrgModule>();
+		private void Notify([CallerMemberName] string propertyName = "")
+		{
+			propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(propertyName));
+		}
+#endif
+	}
+
+	/// <summary>One downloadable build of a module for one platform.</summary>
+	[Serializable]
+	public class OrgModuleDownload : ScriptableObject
+	{
+		public int ID { get; set; }
+		public int VersionID { get; set; }
+		public string FileLocation { get; set; }
+		public string Version { get; set; }
+		public string Platform { get; set; }
+		public long DownloadSize { get; set; }
+		/// <summary>Android package name of this build.</summary>
+		public string ApkName { get; set; }
+		public string URL { get; set; }
+		public string Status { get; set; }
+		public string ExternalId { get; set; }
+	}
+
+	/// <summary>The player app a module runs in, with its builds.</summary>
+	[Serializable]
+	public class PlatformPlayer
+	{
+		public PlatformPlayer(int playerId)
+		{
+			Id = playerId;
+		}
+
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public string Description { get; set; }
+		public int DistributorId { get; set; }
+		public string LaunchProtocol { get; set; }
+		public List<PlatformPlayerDownload> Versions { get; set; } = new List<PlatformPlayerDownload>();
+	}
+
+	[Serializable]
+	public class PlatformPlayerDownload
+	{
+		public int Id { get; set; }
+		public string Version { get; set; }
+		public int ModulePlayerId { get; set; }
+		public string Status { get; set; }
+		public string URL { get; set; }
+		/// <summary>Android package name of this build.</summary>
+		public string ApkName { get; set; }
+		public string Platform { get; set; }
+	}
+
+	/// <summary>Users enrolled for Quick ID on a device, and their organization's branding.</summary>
+	[Serializable]
+	public class QuickIDAuthGetUsersResponse
+	{
+		public OrgProperties OrgProperties { get; set; }
+		public List<QuickIDUser> QuickIDUsers { get; set; } = new List<QuickIDUser>();
+
+		public bool HasErrored()
+		{
+			return QuickIDUsers == null || OrgProperties == null;
+		}
+
+		internal static QuickIDAuthGetUsersResponse FromJson(JObject payload)
+		{
+			QuickIDAuthGetUsersResponse quickIdResponse = new QuickIDAuthGetUsersResponse();
+			JObject organizationObject = JsonReading.GetObject(payload, "org") ?? new JObject();
+			quickIdResponse.OrgProperties = new OrgProperties(JsonReading.GetString(organizationObject, "primaryColor"),
+				JsonReading.GetString(organizationObject, "secondaryColor"),
+				JsonReading.GetString(organizationObject, "hubLogoUrl"),
+				JsonReading.GetString(organizationObject, "name"));
+			foreach (JObject userObject in JsonReading.GetObjects(payload, "users"))
+			{
+				quickIdResponse.QuickIDUsers.Add(new QuickIDUser(JsonReading.GetString(userObject, "firstName"),
+					JsonReading.GetString(userObject, "lastName"), JsonReading.GetString(userObject, "username"),
+					JsonReading.GetString(userObject, "email")));
+			}
+
+			return quickIdResponse;
+		}
+	}
+
+	[Serializable]
+	public class OrgProperties
+	{
+		public OrgProperties()
+		{
+		}
+
+		public OrgProperties(string primaryColor, string secondaryColor, string hubLogoUrl, string orgName)
+		{
+			PrimaryColor = primaryColor;
+			SecondaryColor = secondaryColor;
+			HubLogoURL = hubLogoUrl;
+			OrgName = orgName;
+		}
+
+		public string PrimaryColor { get; set; }
+		public string SecondaryColor { get; set; }
+		public string HubLogoURL { get; set; }
+		public string OrgName { get; set; }
+	}
+
+	[Serializable]
+	public class QuickIDUser
+	{
+		public QuickIDUser()
+		{
+		}
+
+		public QuickIDUser(string firstName, string lastName, string username, string email)
+		{
+			FirstName = firstName;
+			LastName = lastName;
+			Username = username;
+			Email = email;
+		}
+
+		public string FirstName { get; set; }
+		public string LastName { get; set; }
+		public string Username { get; set; }
+		public string Email { get; set; }
+	}
+
+	/// <summary>The modules available to the current user (spec/schema/module_list.json).</summary>
+	[Serializable]
+	public class UserModulesResponse
+	{
+		public List<Module> Modules { get; set; } = new List<Module>();
+
+		internal static UserModulesResponse FromJson(string payloadJson)
+		{
+			UserModulesResponse modulesResponse = JsonConvert.DeserializeObject<UserModulesResponse>(payloadJson);
+			if (modulesResponse == null)
+			{
+				return new UserModulesResponse();
+			}
+
+			modulesResponse.Modules ??= new List<Module>();
+			return modulesResponse;
+		}
+	}
+
+	/// <summary>A module as the core returns it, with versions already filtered to one platform.</summary>
+	[Serializable]
+	public class Module
+	{
+		/// <summary>-1 when the platform sent an ID that is not a number.</summary>
+		public int Id { get; set; } = -1;
+		public string Name { get; set; }
+		public string Abbreviation { get; set; }
+		public string ExternalId { get; set; }
+		public string IconUrl { get; set; }
+		public string Distributor { get; set; }
+		public string ShortDescription { get; set; }
+		public string LongDescription { get; set; }
+		/// <summary>First letter capitalized.</summary>
+		public string Industry { get; set; }
+		public string Details { get; set; }
+		public string Categories { get; set; }
+		public bool IsAvailable { get; set; }
+		public bool IsAuthenticatedLaunch { get; set; }
+		public List<string> Languages { get; set; } = new List<string>();
+		public ModulePlayer Player { get; set; }
+		public List<ModuleVersion> Versions { get; set; } = new List<ModuleVersion>();
+	}
+
+	[Serializable]
+	public class ModulePlayer
+	{
+		public int? Id { get; set; }
+		public string Name { get; set; }
+		public string LaunchProtocol { get; set; }
+		public List<ModulePlayerVersion> Versions { get; set; } = new List<ModulePlayerVersion>();
+	}
+
+	[Serializable]
+	public class ModulePlayerVersion
+	{
+		public int? Id { get; set; }
+		public string Version { get; set; }
+		public string Status { get; set; }
+		/// <summary>Android package name of this player version's build.</summary>
+		public string Package { get; set; }
+		public List<string> Platforms { get; set; } = new List<string>();
+	}
+
+	[Serializable]
+	public class ModuleVersion
+	{
+		public int? Id { get; set; }
+		public string Version { get; set; }
+		/// <summary>Android package name of this version's build.</summary>
+		public string Package { get; set; }
+		public string CreatedAt { get; set; }
+		public List<string> Controls { get; set; } = new List<string>();
+		/// <summary>Short name, or name when the short name is empty.</summary>
+		public List<string> Platforms { get; set; } = new List<string>();
+	}
+
+	public static class ModuleExtensions
+	{
+		public static OrgModule ToOrgModule(this Module module)
+		{
+			if (module == null)
+			{
+				return null;
+			}
+
+#if UNITY_6000_0_OR_NEWER
+			OrgModule orgModule = ScriptableObject.CreateInstance<OrgModule>();
 #else
-            var orgModule = new OrgModule();
+			OrgModule orgModule = new OrgModule();
 #endif
-
-            orgModule.Downloads ??= new List<OrgModuleDownload>();
-            orgModule.ID = ParseID(module.id);
-            orgModule.Name = module.description;
-            orgModule.Description = module.description;
-            orgModule.ShortDescription = module.shortDesc;
-            orgModule.LongDescription = module.longDesc;
-            orgModule.Industry = CapitalizeIndustry(module.industry) ?? string.Empty;
-            orgModule.Details = module.details;
-            orgModule.Categories = module.categories;
-            orgModule.externalId = module.externalId;
-            orgModule.IconURL = module.imageLink;
-            orgModule.Distributor = module.developer;
-            orgModule.IsAuthenticatedLaunch = module.isAuthenticatedLaunch ?? false;
-            orgModule.AvailableLanguages = ToAvailableLanguages(module.availableLanguages);
-
-            if (module.modulePlayer != null)
-            {
-                orgModule.player = new PlatformPlayer(ParseID(module.modulePlayer.id))
-                {
-                    name = module.modulePlayer.name,
-                    launchProtocol = module.modulePlayer.launchProtocol
-                };
-
-                if (module.modulePlayer.versions != null)
-                {
-                    foreach (ModulePlayerVersion version in module.modulePlayer.versions)
-                    {
-                        orgModule.player.versions.AddRange(ToPlatformPlayerDownloads(version));
-                    }
-                }
-            }
-
-            if (module.versions != null)
-            {
-                foreach (ModuleVersion version in module.versions)
-                {
-                    orgModule.Downloads.AddRange(ToOrgModuleDownloads(orgModule.ID, version));
-                }
-            }
-
-            return orgModule;
-        }
-
-        public static List<OrgModule> ToOrgModules(this List<Module> modules)
-        {
-            var orgModules = new List<OrgModule>();
-            if (modules == null)
-            {
-                return orgModules;
-            }
-
-            foreach (Module module in modules)
-            {
-                var orgModule = module.ToOrgModule();
-                if (orgModule != null)
-                {
-                    orgModules.Add(orgModule);
-                }
-            }
-
-            return orgModules;
-        }
-
-        private static List<OrgModuleDownload> ToOrgModuleDownloads(int moduleID, ModuleVersion version)
-        {
-            var downloads = new List<OrgModuleDownload>();
-            if (version?.platforms == null)
-            {
-                return downloads;
-            }
-
-            foreach (Platform platform in version.platforms)
-            {
-                if (platform == null)
-                {
-                    continue;
-                }
-
-                var download = ScriptableObject.CreateInstance<OrgModuleDownload>();
-                download.ID = moduleID;
-                download.VersionID = ParseID(version.id);
-                download.Version = version.version;
-                download.DownloadSize = version.fileSize ?? 0;
-                download.URL = version.fileLink;
-                download.Platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName;
-                download.Status = version.lifecycle?.name;
-                downloads.Add(download);
-            }
-
-            return downloads;
-        }
-
-        private static List<PlatformPlayerDownload> ToPlatformPlayerDownloads(ModulePlayerVersion version)
-        {
-            var downloads = new List<PlatformPlayerDownload>();
-            if (version?.platforms == null)
-            {
-                return downloads;
-            }
-
-            foreach (Platform platform in version.platforms)
-            {
-                if (platform == null)
-                {
-                    continue;
-                }
-
-                downloads.Add(new PlatformPlayerDownload
-                {
-                    id = ParseID(version.id),
-                    version = version.version,
-                    status = version.status,
-                    URL = version.fileLink,
-                    platform = string.IsNullOrEmpty(platform.shortName) ? platform.name : platform.shortName
-                });
-            }
-
-            return downloads;
-        }
-
-        private static string ToAvailableLanguages(List<ModuleLanguage> languages)
-        {
-            if (languages == null)
-            {
-                return string.Empty;
-            }
-
-            var displayNames = new List<string>();
-            foreach (ModuleLanguage language in languages)
-            {
-                if (!string.IsNullOrEmpty(language?.displayName))
-                {
-                    displayNames.Add(language.displayName);
-                }
-            }
-
-            return string.Join(", ", displayNames);
-        }
-
-        internal static string CapitalizeIndustry(string industry)
-        {
-            if (string.IsNullOrEmpty(industry))
-            {
-                return industry;
-            }
-
-            return char.ToUpper(industry[0]) + (industry.Length > 1 ? industry[1..] : string.Empty);
-        }
-
-        private static int ParseID(string id)
-        {
-            return int.TryParse(id, out int parsedID) ? parsedID : -1;
-        }
-    }
-
-    [Serializable]
-    public class ModulePlayer
-    {
-        public string id;
-        public string name;
-        public string launchProtocol;
-        public List<ModulePlayerVersion> versions;
-    }
-
-    [Serializable]
-    public class ModulePlayerVersion
-    {
-        public string id;
-        public string version;
-        public string status;
-        /// <summary>Android package name of this player version's build.</summary>
-        public string package;
-        public string fileLink;
-        public long? fileSize;
-        public List<Platform> platforms;
-    }
-
-    [Serializable]
-    public class ModuleVersion
-    {
-        public string id;
-        public string version;
-        /// <summary>Android package name of this version's build.</summary>
-        public string package;
-        public string fileLink;
-        public long? fileSize;
-        public List<Control> controls;
-        public List<Platform> platforms;
-        public Lifecycle lifecycle;
-    }
-
-    [Serializable]
-    public class Control
-    {
-        public string id;
-        public string name;
-    }
-
-    [Serializable]
-    public class Platform
-    {
-        public string id;
-        public string name;
-        public string shortName;
-    }
-
-    [Serializable]
-    public class Lifecycle
-    {
-        public string id;
-        public string name;
-    }
-
-    [Serializable]
-    public class UserMetricsResponse : IFailure, IPlatformErrorable
-    {
-        public List<UserMetric> result;
-        public PageInfo pageInfo;
-
-        public bool HasErrored()
-        {
-            return (result == null || result.Count <= 0);
-        }
-    }
-
-
-    [Serializable]
-    public class PageInfo
-    {
-        public int totalCount;
-        public int page;
-        public int offset;
-        public int pageSize;
-        public int? previousPage;
-        public int? nextPage;
-
-        public int GetLastPageNumber()
-        {
-            var lastPage = 1;
-            if (pageSize > 0)
-            {
-                lastPage = (int)Math.Ceiling((double)totalCount / pageSize);
-            }
-            return lastPage;
-        }
-    }
-
-    public enum UserRoles
-    {
-        [Description("superadmin")]
-        Superadmin = 0,
-        [Description("admin")]
-        Admin = 1,
-        [Description("manager")]
-        Manager = 2,
-        [Description("developer")]
-        Developer = 3,
-        [Description("user")]
-        User = 4,
-        [Description("student")]
-        Student = 5,
-        [Description("trial")]
-        Trial = 6
-    }
-
-    [Serializable]
-    public class UserMetric
-    {
-        public int id;
-        public string firstName;
-        public string lastName;
-        public string username;
-        public string email;
-        public string role;
-        public Organization org;
-
-        public DateTime createdAt;
-        public int? orgUnitId;
-        public OrgUnit orgUnit;
-        public int? lastModuleId;
-        public Module lastModule;
-        public int sessionCount;
-        public DateTime? lastActiveAt;
-        public bool isInModule;
-        public string passcode;
-
-        // =============================
-        // UI Toolkit bindable fields
-        // =============================
-
-        [SerializeField] private string displayName;
-        [SerializeField] private string usernameEmail;
-        [SerializeField] private string lastActiveDisplay;
-        [SerializeField] private string lastSessionDisplay;
-        [SerializeField] private string createdAtDisplay;
-
-        // =============================
-        // Read-only public accessors
-        // =============================
-
-        public string DisplayName => displayName;
-        public string UsernameEmail => usernameEmail;
-        public string LastActiveDisplay => lastActiveDisplay;
-        public string LastSessionDisplay => lastSessionDisplay;
-        public string CreatedAtDisplay => createdAtDisplay;
-
-
-        // =============================
-        // Call when data changes
-        // =============================
-
-        public void RefreshDisplayFields()
-        {
-            // Display name
-            displayName = $"{firstName} {lastName}";
-
-            // Username / email
-            usernameEmail = string.IsNullOrWhiteSpace(email)
-                ? username
-                : $"{username} ({email})";
-
-            // Last active
-            lastActiveDisplay = lastActiveAt.GetLocalFormattedDateTime();
-
-            // Last session
-            if (isInModule)
-            {
-                if (lastModule == null)
-                {
-                    lastSessionDisplay = "In module...";
-                }
-                else if (lastModuleId == PixoPlatformModuleIDs.HUBAPP_MODULE_ID)
-                {
-                    lastSessionDisplay = "In Hub App";
-                }
-                else
-                {
-                    lastSessionDisplay =
-                        $"In module {lastModule.description} ({lastModule.abbreviation}) - {lastActiveAt.GetLocalFormattedDateTime()}";
-                }
-            }
-            else if (lastActiveAt != null)
-            {
-                lastSessionDisplay =
-                    $"Session Completed - {lastActiveAt.GetLocalFormattedDateTime()}";
-            }
-            else
-            {
-                lastSessionDisplay = "No session";
-            }
-
-
-            // Created at
-            createdAtDisplay = createdAt.GetLocalFormattedDateTime();
-        }
-    }
-
-    [Serializable]
-    public class OrgUnit
-    {
-        public int id;
-        public string name;
-        public string externalId;
-    }
-
-    [Serializable]
-    public class Location
-    {
-        public string city;
-        public string region;
-        public string country;
-    }
-
-    [Serializable]
-    public class Device
-    {
-        public int id;
-        public string name;
-        public string serial;
-        public Location location;
-        public int? batteryLevel;
-        public bool online;
-        public string model;
-        public Module currentApp;
-        public DeviceUser user;
-
-
-
-        // =============================
-        // UI Toolkit bindable fields
-        // =============================
-
-        [SerializeField] private string currentUserDisplay;
-        [SerializeField] private string batteryLevelDisplay;
-        [SerializeField] private string currentModuleDisplay;
-        [SerializeField] private string locationDisplay;
-        [SerializeField] private string currentUsernameEmailDisplay;
-
-
-        public void RefreshDisplayFields()
-        {
-            // Display name
-            if (!online)
-            {
-                currentUserDisplay = "Offline";
-            }
-            else
-            {
-                currentUserDisplay = "Available";
-                if (user != null)
-                {
-                    currentUserDisplay = user.fullName;
-                    currentUsernameEmailDisplay = String.IsNullOrWhiteSpace(user.email)
-                        ? user.username
-                        : $"{user.username} ({user.email})";
-
-                }
-            }
-
-            if (online && currentApp != null)
-            {
-
-                if (currentApp.id == PixoPlatformModuleIDs.HUBAPP_MODULE_ID.ToString())
-                {
-                    currentModuleDisplay = "In Hub App";
-                }
-                else
-                {
-                    currentModuleDisplay =
-                        $"In module - ({currentApp.abbreviation}) {currentApp.description}";
-                }
-            }
-
-            batteryLevelDisplay = $"{(batteryLevel.HasValue ? batteryLevel.Value.ToString() + "%" : "N/A")}";
-
-            locationDisplay = "Location Unknown";
-            if (location != null)
-            {
-                locationDisplay = $"{location.city}, {location.region}, {location.country}";
-            }
-        }
-
-    }
-
-
-    [Serializable]
-    public class DeviceUser
-    {
-        public string fullName;
-        public string email;
-        public string username;
-    }
-
-    [Serializable]
-    public class OrgDevicesResponse : IFailure, IPlatformErrorable
-    {
-        public List<Device> result;
-        public PageInfo pageInfo;
-
-        public bool HasErrored()
-        {
-            return (result == null || result.Count <= 0);
-        }
-    }
-
-
-    public class Session
-    {
-        public int id;
-        public int userId;
-        public int moduleId;
-        public Module module;
-
-        public float? rawScore;
-        public float? maxScore;
-        public float scaledScore;
-        public string status;
-        public string result;
-        public DateTime startedAt;
-        public DateTime? completedAt;
-
-
-        // =============================
-        // UI Toolkit bindable fields
-        // =============================
-
-        [SerializeField] private string sessionModuleDisplay;
-        [SerializeField] private string sessionActiveStatusDisplay;
-
-
-        public void RefreshDisplayFields()
-        {
-            var durationFormatted = GetDurationFormatted();
-            sessionActiveStatusDisplay = String.Format("In Session For {0}", durationFormatted);
-            if (isComplete())
-            {
-                sessionActiveStatusDisplay = String.Format("Completed Session - {0}", durationFormatted);
-            }
-
-            sessionModuleDisplay = module == null ? "Unknown Module" : String.Format("({0}) {1}", module.abbreviation, module.description);
-            if (isComplete())
-            {
-                sessionModuleDisplay = String.Format(
-                    "{0} - {1}",
-                    sessionModuleDisplay,
-                    completedAt.GetLocalFormattedDateTime()
-                );
-            }
-        }
-
-        public bool isComplete()
-        {
-            return completedAt.HasValue;
-        }
-
-        private string GetDurationFormatted()
-        {
-            var endTime = isComplete() ? completedAt.Value : DateTime.UtcNow;
-            var timeSpan = endTime.Subtract(startedAt);
-
-            var totalHours = (int)timeSpan.TotalHours;
-            if (totalHours > 0)
-            {
-                return $"{totalHours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
-            }
-            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
-        }
-    }
-
-    public class SessionHistoryResponse : IFailure, IPlatformErrorable
-    {
-        public List<Session> result;
-        public PageInfo pageInfo;
-        public bool HasErrored()
-        {
-            return (result == null || result.Count <= 0);
-        }
-    }
-
-    public class SessionFilters
-    {
-        public List<int> orgIDs;
-        public List<int> userIDs;
-    }
-    #endregion
-
-
-    public class FilterParams
-    {
-        public string searchText = "";
-        public string sortField;
-        public SortOrder sortOrder = SortOrder.Ascending;
-        public enum SortOrder
-        {
-            Ascending,
-            Descending
-        }
-    }
-
-
-
+			orgModule.ID = module.Id;
+			orgModule.Name = module.Name ?? string.Empty;
+			orgModule.Description = module.Name ?? string.Empty;
+			orgModule.ShortDescription = module.ShortDescription;
+			orgModule.LongDescription = module.LongDescription;
+			orgModule.Industry = CapitalizeIndustry(module.Industry) ?? string.Empty;
+			orgModule.Details = module.Details;
+			orgModule.Categories = module.Categories;
+			orgModule.ExternalId = module.ExternalId;
+			orgModule.IconURL = module.IconUrl;
+			orgModule.Distributor = module.Distributor;
+			orgModule.IsAuthenticatedLaunch = module.IsAuthenticatedLaunch;
+			orgModule.AvailableLanguages = module.Languages == null
+				? string.Empty
+				: string.Join(", ", module.Languages);
+			orgModule.Downloads = new List<OrgModuleDownload>();
+
+			if (module.Player != null)
+			{
+				orgModule.Player = new PlatformPlayer(module.Player.Id ?? -1);
+				orgModule.Player.Name = module.Player.Name;
+				orgModule.Player.LaunchProtocol = module.Player.LaunchProtocol;
+				foreach (ModulePlayerVersion playerVersion in module.Player.Versions ?? new List<ModulePlayerVersion>())
+				{
+					orgModule.Player.Versions.AddRange(ToPlatformPlayerDownloads(playerVersion));
+				}
+			}
+
+			foreach (ModuleVersion moduleVersion in module.Versions ?? new List<ModuleVersion>())
+			{
+				orgModule.Downloads.AddRange(ToOrgModuleDownloads(orgModule.ID, moduleVersion));
+			}
+
+			return orgModule;
+		}
+
+		public static List<OrgModule> ToOrgModules(this List<Module> modules)
+		{
+			List<OrgModule> orgModules = new List<OrgModule>();
+			if (modules == null)
+			{
+				return orgModules;
+			}
+
+			foreach (Module module in modules)
+			{
+				OrgModule orgModule = module.ToOrgModule();
+				if (orgModule != null)
+				{
+					orgModules.Add(orgModule);
+				}
+			}
+
+			return orgModules;
+		}
+
+		private static List<OrgModuleDownload> ToOrgModuleDownloads(int moduleId, ModuleVersion moduleVersion)
+		{
+			List<OrgModuleDownload> downloads = new List<OrgModuleDownload>();
+			if (moduleVersion?.Platforms == null)
+			{
+				return downloads;
+			}
+
+			foreach (string platformName in moduleVersion.Platforms)
+			{
+				if (string.IsNullOrEmpty(platformName))
+				{
+					continue;
+				}
+
+				OrgModuleDownload download = ScriptableObject.CreateInstance<OrgModuleDownload>();
+				download.ID = moduleId;
+				download.VersionID = moduleVersion.Id ?? -1;
+				download.Version = moduleVersion.Version;
+				download.ApkName = moduleVersion.Package;
+				download.Platform = platformName;
+				downloads.Add(download);
+			}
+
+			return downloads;
+		}
+
+		private static List<PlatformPlayerDownload> ToPlatformPlayerDownloads(ModulePlayerVersion playerVersion)
+		{
+			List<PlatformPlayerDownload> downloads = new List<PlatformPlayerDownload>();
+			if (playerVersion?.Platforms == null)
+			{
+				return downloads;
+			}
+
+			foreach (string platformName in playerVersion.Platforms)
+			{
+				if (string.IsNullOrEmpty(platformName))
+				{
+					continue;
+				}
+
+				PlatformPlayerDownload download = new PlatformPlayerDownload();
+				download.Id = playerVersion.Id ?? -1;
+				download.Version = playerVersion.Version;
+				download.Status = playerVersion.Status;
+				download.ApkName = playerVersion.Package;
+				download.Platform = platformName;
+				downloads.Add(download);
+			}
+
+			return downloads;
+		}
+
+		internal static string CapitalizeIndustry(string industry)
+		{
+			if (string.IsNullOrEmpty(industry))
+			{
+				return industry;
+			}
+
+			return char.ToUpper(industry[0], CultureInfo.InvariantCulture) + industry.Substring(1);
+		}
+	}
+
+	/// <summary>Lenient readers for the core's JSON payloads: wrong types read as missing.</summary>
+	internal static class JsonReading
+	{
+		public static JObject ParseObject(string jsonText)
+		{
+			if (string.IsNullOrEmpty(jsonText))
+			{
+				return new JObject();
+			}
+
+			try
+			{
+				return JObject.Parse(jsonText);
+			}
+			catch (JsonException)
+			{
+				return new JObject();
+			}
+		}
+
+		public static string GetString(JObject container, string memberName)
+		{
+			JToken memberToken = container?[memberName];
+			return memberToken != null && memberToken.Type == JTokenType.String ? memberToken.Value<string>() : null;
+		}
+
+		public static int? GetInteger(JObject container, string memberName)
+		{
+			return ToInteger(container?[memberName]);
+		}
+
+		public static int? ToInteger(JToken memberToken)
+		{
+			if (memberToken == null)
+			{
+				return null;
+			}
+
+			switch (memberToken.Type)
+			{
+				case JTokenType.Integer:
+					return memberToken.Value<int>();
+				case JTokenType.Float:
+					return (int)Math.Round(memberToken.Value<double>());
+				case JTokenType.String:
+					bool parsed = int.TryParse(memberToken.Value<string>(), NumberStyles.Integer,
+						CultureInfo.InvariantCulture, out int parsedValue);
+					return parsed ? parsedValue : (int?)null;
+				default:
+					return null;
+			}
+		}
+
+		public static double? GetNumber(JObject container, string memberName)
+		{
+			JToken memberToken = container?[memberName];
+			if (memberToken == null)
+			{
+				return null;
+			}
+
+			bool isNumber = memberToken.Type == JTokenType.Integer || memberToken.Type == JTokenType.Float;
+			return isNumber ? memberToken.Value<double>() : (double?)null;
+		}
+
+		public static bool? GetBoolean(JObject container, string memberName)
+		{
+			JToken memberToken = container?[memberName];
+			bool isBoolean = memberToken != null && memberToken.Type == JTokenType.Boolean;
+			return isBoolean ? memberToken.Value<bool>() : (bool?)null;
+		}
+
+		public static JObject GetObject(JObject container, string memberName)
+		{
+			return container?[memberName] as JObject;
+		}
+
+		public static JArray GetArray(JObject container, string memberName)
+		{
+			return container?[memberName] as JArray ?? new JArray();
+		}
+
+		public static IEnumerable<JObject> GetObjects(JObject container, string memberName)
+		{
+			foreach (JToken elementToken in GetArray(container, memberName))
+			{
+				if (elementToken is JObject elementObject)
+				{
+					yield return elementObject;
+				}
+			}
+		}
+	}
 }

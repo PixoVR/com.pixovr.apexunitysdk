@@ -8,75 +8,96 @@ using UnityEngine;
 
 namespace PixoVR.Editor
 {
-    public class PixoVRPreBuilder : IPreprocessBuildWithReport
-    {
-        internal const string CoreName = "Settings";
-        internal const string CorePath = "PixoVR/" + CoreName + "/";
+	public class PixoVRPreBuilder : IPreprocessBuildWithReport
+	{
+		private static PixoVRProjectSettings m_projectSettings;
 
-        public static PixoVRProjectSettings ProjectSettings =>
-            m_projectSettings == null ? m_projectSettings = EditorUtilities.GetProjectSettings<PixoVRProjectSettings>(false) : m_projectSettings;
-        private static PixoVRProjectSettings m_projectSettings;
+		public static PixoVRProjectSettings ProjectSettings
+		{
+			get
+			{
+				if (m_projectSettings == null)
+				{
+					m_projectSettings = EditorUtilities.GetProjectSettings<PixoVRProjectSettings>(false);
+				}
 
-        public int callbackOrder => ProjectSettings.BuildPreProcessCallbackOrder;
+				return m_projectSettings;
+			}
+		}
 
+		public int callbackOrder => ProjectSettings.BuildPreProcessCallbackOrder; // StyleCheck: external name
 
-        public void OnPreprocessBuild(BuildReport report)
-        {
-            string pluginRootPath = FindPluginPath();
-            if (pluginRootPath == null)
-            {
-                throw new BuildFailedException("Build aborted: PixoVR Plugin path was not valid.");
-            }
+		public void OnPreprocessBuild(BuildReport buildReport)
+		{
+			string pluginRootPath = EditorUtilities.FindPluginPath();
+			if (pluginRootPath == null)
+			{
+				throw new BuildFailedException("Build aborted: PixoVR Plugin path was not valid.");
+			}
 
-            if (report.summary.result is BuildResult.Failed or BuildResult.Cancelled)
-                return;
+			if (buildReport.summary.result is BuildResult.Failed or BuildResult.Cancelled)
+			{
+				return;
+			}
 
-            if(report.summary.platformGroup == BuildTargetGroup.Android)
-            {
-                string androidManifestPath = Path.Combine(pluginRootPath, "Plugins/Android/AndroidManifest.xml");
-                string androidJavaUtilsPath = Path.Combine(pluginRootPath, "Plugins/Android/PixoUtils.java");
+			if (buildReport.summary.platformGroup == BuildTargetGroup.Android)
+			{
+				string androidManifestPath = Path.Combine(pluginRootPath, "Plugins/Android/AndroidManifest.xml");
+				string androidJavaUtilsPath = Path.Combine(pluginRootPath, "Plugins/Android/PixoUtils.java");
+				bool foundAndroidFiles = File.Exists(androidManifestPath) && File.Exists(androidJavaUtilsPath);
+				if (!foundAndroidFiles)
+				{
+					throw new BuildFailedException(
+						"Build aborted: Please run the PixoVR Setup. Look in the PixoVR menu in the toolbar.");
+				}
+			}
 
-                bool foundAndroidFiles = File.Exists(androidManifestPath) && File.Exists(androidJavaUtilsPath);
+			CheckNativeLibrary(pluginRootPath, buildReport.summary.platform);
+			if (ApexSourceHash.IsUpToDate(out string currentSourceHash))
+			{
+				Debug.Log($"Apex SDK source hash is {ApexUtils.SDKSourceHash}.");
+			}
+			else
+			{
+				Debug.LogWarning($"Apex SDK source hash {ApexUtils.SDKSourceHash} does not match the SDK sources "
+					+ $"({currentSourceHash}). The SDK was modified without regenerating "
+					+ "Runtime/SDK/ApexSourceHashGenerated.cs.");
+			}
 
-                if (!foundAndroidFiles)
-                {
-                    throw new BuildFailedException("Build aborted: Please run the PixoVR Setup. Look in the PixoVR menu in the toolbar.");
-                }
-            }
+			if (!ProjectSettings.SyncVersionsOnBuildPreProcess)
+			{
+				return;
+			}
 
-            if (ApexSourceHash.IsUpToDate(out string currentSourceHash))
-            {
-                Debug.Log($"Apex SDK source hash is {ApexUtils.SDKSourceHash}.");
-            }
-            else
-            {
-                Debug.LogWarning($"Apex SDK source hash {ApexUtils.SDKSourceHash} does not match the SDK sources ({currentSourceHash}). " +
-                    "The SDK was modified without regenerating Runtime/SDK/ApexSourceHashGenerated.cs.");
-            }
+			Debug.Log($"Module version is {ProjectSettings.ModuleVersion}.");
+			PlayerSettings.bundleVersion = ProjectSettings.ModuleVersion;
+			Debug.Log($"Player version is {PlayerSettings.bundleVersion}.");
+		}
 
-            if (!ProjectSettings.SyncVersionsOnBuildPreProcess)
-                return;
+		/// <summary>Warns when the build target has no apex_core library: every platform call would fail.</summary>
+		private static void CheckNativeLibrary(string pluginRootPath, BuildTarget buildTarget)
+		{
+			string libraryPath;
+			switch (buildTarget)
+			{
+				case BuildTarget.Android:
+					libraryPath = "Plugins/Android/arm64-v8a/libapex_core.so";
+					break;
+				case BuildTarget.StandaloneWindows64:
+					libraryPath = "Plugins/Windows/x86_64/apex_core.dll";
+					break;
+				default:
+					Debug.LogWarning($"The Apex core has no native library for {buildTarget} yet; "
+						+ "platform calls will fail in this build.");
+					return;
+			}
 
-            Debug.Log("PixoVR Build Preprocess Ran!");
-            Debug.Log($"Module version is {ProjectSettings.ModuleVersion}.");
-            PlayerSettings.bundleVersion = ProjectSettings.ModuleVersion;
-            Debug.Log($"Player version is {PlayerSettings.bundleVersion}.");
-        }
-
-        string FindPluginPath()
-        {
-            string[] guids = AssetDatabase.FindAssets("PixoVRPreBuilder t:Script");
-            if (guids.Length > 0)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                string[] pathParts = path.Split("/");
-                path = Path.Combine(pathParts[0], pathParts[1]);
-                Debug.Log("Prebuild Script path: " + path);
-                return path;
-            }
-
-            return null;
-        }
-    }
+			if (!File.Exists(Path.Combine(pluginRootPath, libraryPath)))
+			{
+				throw new BuildFailedException($"Build aborted: {libraryPath} is missing from the Apex SDK. "
+					+ "Run Tools~/update_core.py in the package.");
+			}
+		}
+	}
 }
 #endif

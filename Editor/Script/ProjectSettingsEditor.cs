@@ -4,63 +4,66 @@ using UnityEngine;
 
 namespace PixoVR.Editor
 {
-    internal abstract class ProjectSettingsEditor<TAsset> : UnityEditor.Editor where TAsset : ScriptableObject
-    {
-        protected TAsset Target { get; private set; }
+	internal abstract class ProjectSettingsEditor<TAsset> : UnityEditor.Editor where TAsset : ScriptableObject
+	{
+		protected TAsset Target { get; private set; }
 
+		protected virtual void OnEnable()
+		{
+			Target = target as TAsset;
+		}
 
-        protected virtual void OnEnable()
-        {
-            Target = target as TAsset;
-        }
+		protected virtual void OnDisable()
+		{
+		}
 
-        protected virtual void OnDisable()
-        {
+		public override void OnInspectorGUI()
+		{
+			DrawInspectorWithoutScriptProperty();
+		}
 
-        }
+		protected static string GetSettingsPath(string settingsName)
+		{
+			return $"Project/Resources/{EditorUtilities.kEditorRootPath}{settingsName}";
+		}
 
-        public override void OnInspectorGUI()
-        {
-            DrawInspectorWithoutScriptProperty();
-        }
+		protected virtual void DrawInspectorWithoutScriptProperty()
+		{
+			if (Target == null)
+			{
+				return;
+			}
 
+			serializedObject.Update();
+			SerializedProperty visibleProperty = serializedObject.GetIterator();
+			if (visibleProperty.NextVisible(true))
+			{
+				do
+				{
+					if (visibleProperty.name == "m_Script")
+					{
+						continue;
+					}
 
-        protected static string GetSettingsPath(string name) => $"Project/Resources/{EditorUtilities.EditorRootPath}{name}";
+					EditorGUILayout.PropertyField(serializedObject.FindProperty(visibleProperty.name), true);
+				}
+				while (visibleProperty.NextVisible(false));
+			}
 
+			serializedObject.ApplyModifiedProperties();
+		}
 
-        protected virtual void DrawInspectorWithoutScriptProperty()
-        {
-            if (Target == null)
-                return;
-
-            serializedObject.Update();
-            SerializedProperty property = serializedObject.GetIterator();
-            if (property.NextVisible(true))
-            {
-                do
-                {
-                    if (property.name == "m_Script")
-                        continue;
-
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty(property.name), true);
-                }
-                while (property.NextVisible(false));
-            }
-            serializedObject.ApplyModifiedProperties();
-        }
-
-        protected static SettingsProvider GetSettingsProvider(TAsset asset, string settingsPath, System.Type customEditorType)
-        {
-            var provider = new SettingsProvider(settingsPath, SettingsScope.Project);
-            var editor = CreateEditor(asset, customEditorType);
-
-            provider.guiHandler += s =>
-            {
-                editor.OnInspectorGUI();
-            };
-
-            return provider;
-        }
-    }
+		protected static SettingsProvider GetSettingsProvider(TAsset asset, string settingsPath,
+			System.Type customEditorType)
+		{
+			SettingsProvider settingsProvider = new SettingsProvider(settingsPath, SettingsScope.Project);
+			UnityEditor.Editor settingsEditor = CreateEditor(asset, customEditorType);
+			settingsProvider.guiHandler += searchContext =>
+			{
+				settingsEditor.OnInspectorGUI();
+			};
+			return settingsProvider;
+		}
+	}
 }
 #endif

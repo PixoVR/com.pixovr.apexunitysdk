@@ -1,113 +1,124 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace PixoVR.Apex.Analytics
 {
-    public sealed class ApexGazeTracker : MonoBehaviour
-    {
-        [SerializeField]
-        private ApexGazeSource source;
+	public sealed class ApexGazeTracker : MonoBehaviour
+	{
+		[SerializeField, FormerlySerializedAs("source")]
+		private ApexGazeSource m_source;
 
-        [SerializeField]
-        private float maxDistance = 10f;
+		[SerializeField, FormerlySerializedAs("maxDistance")]
+		private float m_maximumDistance = 10f;
 
-        [SerializeField]
-        private float dwellSeconds = 0.5f;
+		[SerializeField, FormerlySerializedAs("dwellSeconds")]
+		private float m_dwellSeconds = 0.5f;
 
-        [SerializeField]
-        private float sampleInterval = 0.1f;
+		[SerializeField, FormerlySerializedAs("sampleInterval")]
+		private float m_sampleIntervalSeconds = 0.1f;
 
-        [SerializeField]
-        private LayerMask layerMask = ~0;
+		[SerializeField, FormerlySerializedAs("layerMask")]
+		private LayerMask m_layerMask = ~0;
 
-        private ApexTrackedObject currentTarget;
-        private float targetSince;
-        private float nextSample;
-        private bool gazeActive;
-        private string activeEngagement;
-        private string currentEngagement;
+		private ApexTrackedObject m_currentTarget;
+		private float m_targetSinceSeconds;
+		private float m_nextSampleSeconds;
+		private bool m_gazeActive;
+		private string m_activeEngagement;
+		private string m_currentEngagement;
 
-        private void Start()
-        {
-            ResolveSource();
-        }
+		private void Start()
+		{
+			ResolveSource();
+		}
 
-        private void Update()
-        {
-            if (Time.time < nextSample)
-                return;
-            nextSample = Time.time + Mathf.Max(0.01f, sampleInterval);
-            Sample();
-        }
+		private void Update()
+		{
+			if (Time.time < m_nextSampleSeconds)
+			{
+				return;
+			}
 
-        internal void Sample()
-        {
-            ResolveSource();
-            if (source == null)
-            {
-                EndCurrent();
-                currentTarget = null;
-                currentEngagement = null;
-                return;
-            }
+			m_nextSampleSeconds = Time.time + Mathf.Max(0.01f, m_sampleIntervalSeconds);
+			Sample();
+		}
 
-            Ray ray;
-            string engagement;
-            if (!source.TryGetGaze(out ray, out engagement) ||
-                string.IsNullOrEmpty(engagement))
-            {
-                EndCurrent();
-                currentTarget = null;
-                currentEngagement = null;
-                return;
-            }
+		internal void Sample()
+		{
+			ResolveSource();
+			if (m_source == null)
+			{
+				EndCurrent();
+				m_currentTarget = null;
+				m_currentEngagement = null;
+				return;
+			}
 
-            RaycastHit hit;
-            ApexTrackedObject target = Physics.Raycast(ray, out hit, maxDistance, layerMask)
-                ? hit.collider.GetComponentInParent<ApexTrackedObject>()
-                : null;
+			Ray ray;
+			string engagement;
+			if (!m_source.TryGetGaze(out ray, out engagement) ||
+				string.IsNullOrEmpty(engagement))
+			{
+				EndCurrent();
+				m_currentTarget = null;
+				m_currentEngagement = null;
+				return;
+			}
 
-            if (target != currentTarget ||
-                !string.Equals(engagement, currentEngagement, StringComparison.Ordinal))
-            {
-                EndCurrent();
-                currentTarget = target;
-                currentEngagement = engagement;
-                targetSince = Time.time;
-                return;
-            }
+			RaycastHit hit;
+			ApexTrackedObject target = Physics.Raycast(ray, out hit, m_maximumDistance, m_layerMask)
+				? hit.collider.GetComponentInParent<ApexTrackedObject>()
+				: null;
 
-            if (currentTarget != null && !gazeActive &&
-                Time.time - targetSince >= Mathf.Max(0f, dwellSeconds))
-            {
-                currentTarget.BeginEngagement(engagement);
-                gazeActive = true;
-                activeEngagement = engagement;
-            }
-        }
+			if (target != m_currentTarget ||
+				!string.Equals(engagement, m_currentEngagement, StringComparison.Ordinal))
+			{
+				EndCurrent();
+				m_currentTarget = target;
+				m_currentEngagement = engagement;
+				m_targetSinceSeconds = Time.time;
+				return;
+			}
 
-        private void OnDisable()
-        {
-            EndCurrent();
-            currentTarget = null;
-            currentEngagement = null;
-        }
+			if (m_currentTarget != null && !m_gazeActive &&
+				Time.time - m_targetSinceSeconds >= Mathf.Max(0f, m_dwellSeconds))
+			{
+				m_currentTarget.BeginEngagement(engagement);
+				m_gazeActive = true;
+				m_activeEngagement = engagement;
+			}
+		}
 
-        private void EndCurrent()
-        {
-            if (currentTarget != null && gazeActive)
-                currentTarget.EndEngagement(activeEngagement);
+		private void OnDisable()
+		{
+			EndCurrent();
+			m_currentTarget = null;
+			m_currentEngagement = null;
+		}
 
-            gazeActive = false;
-            activeEngagement = null;
-        }
+		private void EndCurrent()
+		{
+			if (m_currentTarget != null && m_gazeActive)
+			{
+				m_currentTarget.EndEngagement(m_activeEngagement);
+			}
 
-        private void ResolveSource()
-        {
-            if (source == null)
-                source = GetComponent<ApexGazeSource>();
-            if (source == null)
-                source = gameObject.AddComponent<ApexHeadGazeSource>();
-        }
-    }
+			m_gazeActive = false;
+			m_activeEngagement = null;
+		}
+
+		private void ResolveSource()
+		{
+			if (m_source == null)
+			{
+				m_source = GetComponent<ApexGazeSource>();
+			}
+
+			if (m_source == null)
+			{
+				m_source = gameObject.AddComponent<ApexHeadGazeSource>();
+			}
+		}
+	}
 }

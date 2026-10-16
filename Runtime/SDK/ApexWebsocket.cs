@@ -1,272 +1,238 @@
-using UnityEngine;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.WebSockets;
-using System.Threading.Tasks;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using PixoVR.Apex.Events;
+using UnityEngine;
 
 namespace PixoVR.Apex
 {
-    public enum ApexWebsocketRequestType : uint
-    {
-        AuthorizationCode = 0
-    }
+	public enum EApexWebsocketRequestType
+	{
+		AUTHORIZATION_CODE = 0,
+	}
 
-    public class ApexWebsocket
-    {
-        public OnWebSocketConnectSuccessful OnConnectSuccess = new OnWebSocketConnectSuccessful();
-        public OnWebSocketConnectFailed OnConnectFailed = new OnWebSocketConnectFailed();
-        public OnWebSocketReceive OnReceive = new OnWebSocketReceive();
-        public OnWebSocketClosed OnClosed = new OnWebSocketClosed();
+	/// <summary>
+	/// The Headset API's WebSocket (wss://host/ws), used to log in with an authorization code
+	/// shown on the headset. Messages are received on a background task and handed to
+	/// <see cref="OnReceive"/> from <see cref="Update"/>, on the main thread.
+	/// </summary>
+	public class ApexWebsocket
+	{
+		private const int kConnectTimeoutMilliseconds = 10000;
+		private const int kSendTimeoutMilliseconds = 10000;
+		private const int kRetryDelayMilliseconds = 5000;
+		private const int kReceiveChunkSize = 2048;
 
-        ClientWebSocket WebSocket;
-        Uri ServerEndpoint;
-        Queue<ApexWebsocketRequestType> PendingWebsocketRequests = new Queue<ApexWebsocketRequestType>();
-        Queue<string> PendingReceiveResults = new Queue<string>();
+		private readonly Queue<EApexWebsocketRequestType> m_pendingRequests = new Queue<EApexWebsocketRequestType>();
+		private readonly ConcurrentQueue<string> m_receivedMessages = new ConcurrentQueue<string>();
+		private ClientWebSocket m_webSocket;
+		private Uri m_serverEndpoint;
 
-        public bool IsConnected()
-        {
-            if (WebSocket == null)
-                return false;
+		public OnWebSocketConnectSuccessful OnConnectSuccess { get; } = new OnWebSocketConnectSuccessful();
+		public OnWebSocketConnectFailed OnConnectFailed { get; } = new OnWebSocketConnectFailed();
+		public OnWebSocketReceive OnReceive { get; } = new OnWebSocketReceive();
+		public OnWebSocketClosed OnClosed { get; } = new OnWebSocketClosed();
 
-            return WebSocket.State == WebSocketState.Open;
-        }
+		public bool IsConnected()
+		{
+			return m_webSocket != null && m_webSocket.State == WebSocketState.Open;
+		}
 
-        public void Update()
-        {
-            while(PendingReceiveResults.Count > 0)
-            {
-                OnReceive.Invoke(PendingReceiveResults.Dequeue());
-            }
-        }
+		/// <summary>Delivers received messages. Call from the main thread every frame.</summary>
+		public void Update()
+		{
+			while (m_receivedMessages.TryDequeue(out string receivedMessage))
+			{
+				OnReceive.Invoke(receivedMessage);
+			}
+		}
 
-        public async Task<bool> Connect(Uri endpoint, int attemptTries = 3)
-        {
-            Debug.Log("Connecting websocket to endpoint " + endpoint.ToString());
-            if (WebSocket == null)
-            {
-                WebSocket = new ClientWebSocket();
-                WebSocket.Options.AddSubProtocol("wss");
-            }
+		public async Task<bool> Connect(Uri serverEndpoint, int attemptCount = 3)
+		{
+			Debug.Log("Connecting websocket to endpoint " + serverEndpoint);
+			m_serverEndpoint = serverEndpoint;
+			string failureReason = string.Empty;
+			for (int attemptIndex = 0; attemptIndex < attemptCount; attemptIndex++)
+			{
+				m_webSocket = new ClientWebSocket();
+				m_webSocket.Options.AddSubProtocol("wss");
+				try
+				{
+					using (CancellationTokenSource timeoutSource =
+						new CancellationTokenSource(kConnectTimeoutMilliseconds))
+					{
+						await m_webSocket.ConnectAsync(m_serverEndpoint, timeoutSource.Token);
+					}
+				}
+				catch (Exception exception)
+				{
+					failureReason = exception.Message;
+					if (!(exception is WebSocketException) && !(exception is OperationCanceledException))
+					{
+						Debug.LogError(exception);
+						break;
+					}
+				}
 
-            ServerEndpoint = endpoint;
-            
-            var tokenSource = new System.Threading.CancellationTokenSource();
-            tokenSource.CancelAfter(10000);
+				if (m_webSocket.State == WebSocketState.Open)
+				{
+					break;
+				}
 
-            string connectionMessage = "";
+				Debug.LogWarning("Failed to connect on attempt " + (attemptIndex + 1) + ".");
+				await Task.Delay(kRetryDelayMilliseconds);
+			}
 
-            int currentAttempt = 0;
-            while(currentAttempt < attemptTries)
-            {
-                try
-                {
-                    await WebSocket.ConnectAsync(ServerEndpoint, tokenSource.Token);
-                }
-                catch(Exception ex)
-                {
-                    if(!(ex is WebSocketException))
-                    {
-                        // Silently give up here because of an awful exception happening.
-                        Debug.LogError(ex);
-                        currentAttempt = attemptTries;
-                    }
+			if (m_webSocket == null || m_webSocket.State != WebSocketState.Open)
+			{
+				OnConnectFailed.Invoke(failureReason);
+				return false;
+			}
 
-                    connectionMessage = ex.Message;
-                    WebSocket = new ClientWebSocket();
-                }
+			Debug.Log("Web socket connection was successful.");
+			OnConnectSuccess.Invoke();
+			StartReceiving(m_webSocket);
+			ProcessNextRequest();
+			return m_webSocket.State == WebSocketState.Open;
+		}
 
-                if (WebSocket.State == WebSocketState.Open)
-                {
-                    break;
-                }
+		/// <summary>Asks the platform for an authorization code; sent once the socket is open.</summary>
+		public bool RequestAuthorizationCode()
+		{
+			m_pendingRequests.Enqueue(EApexWebsocketRequestType.AUTHORIZATION_CODE);
+			if (IsConnected())
+			{
+				ProcessNextRequest();
+				return true;
+			}
 
-                currentAttempt++;
-                Debug.LogWarning("Failed to connect on attempt " + currentAttempt + ".");
-                await Task.Delay(5000);
-            }
+			return false;
+		}
 
-            Debug.Log("Web socket connection attempt has occured.");
-            if (WebSocket.State != WebSocketState.Open)
-            {
-                OnConnectFailed.Invoke(connectionMessage);
-                return false;
-            }
+		public async Task CloseSocket()
+		{
+			if (m_webSocket == null)
+			{
+				return;
+			}
 
-            Debug.Log("Web socket connection was successful.");
-            OnConnectSuccess.Invoke();
+			m_pendingRequests.Clear();
+			ClientWebSocket closingSocket = m_webSocket;
+			m_webSocket = null;
+			try
+			{
+				if (closingSocket.State == WebSocketState.Open)
+				{
+					await closingSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Shutting down the websocket.",
+						CancellationToken.None);
+				}
+			}
+			catch (Exception exception)
+			{
+				Debug.LogWarning("Websocket close failed: " + exception.Message);
+			}
+			finally
+			{
+				closingSocket.Dispose();
+			}
 
-            StartReceiving();
-            ProcessNextRequest();
+			OnClosed.Invoke(WebSocketCloseStatus.NormalClosure);
+		}
 
-            // Return based on websocket state because ReceiveAsync can trigger a WebSocket to abort in a weird scenario.
-            return WebSocket.State == WebSocketState.Open;
-        }
+		private void ProcessNextRequest()
+		{
+			if (m_pendingRequests.Count == 0)
+			{
+				return;
+			}
 
-        void HandleOnMessageSent()
-        {
-            Debug.Log("Message Sent");
-            ProcessNextRequest();
-        }
+			EApexWebsocketRequestType nextRequestType = m_pendingRequests.Dequeue();
+			switch (nextRequestType)
+			{
+				case EApexWebsocketRequestType.AUTHORIZATION_CODE:
+					Debug.Log("Sending Auth Code Request");
+					SendText("{\"action\": \"authcode\" }");
+					break;
+				default:
+					Debug.LogError("Invalid request type submitted of type " + nextRequestType);
+					break;
+			}
+		}
 
-        public bool RequestAuthorizationCode()
-        {
-            PendingWebsocketRequests.Enqueue(ApexWebsocketRequestType.AuthorizationCode);
-            
-            if (WebSocket != null && WebSocket.State == WebSocketState.Open)
-            {
-                ProcessNextRequest();
-                return true;
-            }
+		private void SendText(string messageText)
+		{
+			byte[] messageBytes = Encoding.UTF8.GetBytes(messageText);
+			ClientWebSocket sendingSocket = m_webSocket;
+			Task.Run(() => Send(sendingSocket, messageBytes));
+		}
 
-            return false;
-        }
+		private async Task Send(ClientWebSocket sendingSocket, byte[] messageBytes)
+		{
+			if (sendingSocket == null || sendingSocket.State != WebSocketState.Open)
+			{
+				return;
+			}
 
-        void ProcessNextRequest()
-        {
-            if (PendingWebsocketRequests.Count > 0)
-            {
-                var NextRequestType = PendingWebsocketRequests.Dequeue();
+			try
+			{
+				using (CancellationTokenSource timeoutSource = new CancellationTokenSource(kSendTimeoutMilliseconds))
+				{
+					await sendingSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true,
+						timeoutSource.Token);
+				}
+			}
+			catch (Exception exception)
+			{
+				Debug.LogWarning("Websocket send stopped: " + exception.Message);
+				return;
+			}
 
-                switch (NextRequestType)
-                {
-                    case ApexWebsocketRequestType.AuthorizationCode:
-                        {
-                            Debug.Log("Sending Auth Code Request");
-                            SendString("{\"action\": \"authcode\" }");
-                        }
-                        break;
-                    default:
-                        {
-                            Debug.LogError("Invalid request type submitted of type " + NextRequestType);
-                        }
-                        break;
-                }
-            }
-        }
+			ProcessNextRequest();
+		}
 
-        void StartReceiving()
-        {
-            Task.Run(() => Receive());
-        }
+		private void StartReceiving(ClientWebSocket receivingSocket)
+		{
+			Task.Run(() => Receive(receivingSocket));
+		}
 
-        void SendString(string message)
-        {
-            Debug.Log("Sending string: " + message);
-            byte[] messageArray = Encoding.UTF8.GetBytes(message);
-            Task.Run(() => Send(messageArray));
-        }
+		private async Task Receive(ClientWebSocket receivingSocket)
+		{
+			byte[] receiveChunk = new byte[kReceiveChunkSize];
+			using (MemoryStream messageBytes = new MemoryStream())
+			{
+				while (receivingSocket.State == WebSocketState.Open)
+				{
+					WebSocketReceiveResult receiveResult;
+					try
+					{
+						// No cancellation token: cancelling a receive aborts the socket.
+						receiveResult = await receivingSocket.ReceiveAsync(new ArraySegment<byte>(receiveChunk),
+							CancellationToken.None);
+					}
+					catch (Exception exception)
+					{
+						Debug.LogWarning("Websocket receive stopped: " + exception.Message);
+						return;
+					}
 
-        async void Send(byte[] message)
-        {
-            Debug.Log("Sending data of length " + message.Length);
-            bool socketClosed = (WebSocket.State != WebSocketState.Open);
-            bool messageSent = true;
+					if (receiveResult.MessageType == WebSocketMessageType.Close)
+					{
+						return;
+					}
 
-            if(!socketClosed)
-            {
-                try
-                {
-                    var buffer = new ArraySegment<Byte>(message, 0, message.Length);
-                    var cancelTokenSource = new System.Threading.CancellationTokenSource();
-                    cancelTokenSource.CancelAfter(10000);
-                    await WebSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancelTokenSource.Token);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning("Websocket send stopped with exception of type " + ex.GetType().Name);
-                    // WebSocketException means likely that the socket was aborted.
-                    if (ex is OperationCanceledException || WebSocket.CloseStatus.HasValue)
-                    {
-                        Debug.LogWarning("Websocket closed because " + ex.Message);
-                    }
-                    else if (ex is WebSocketException)
-                    {
-                        await CloseSocket();
-                    }
-
-                    messageSent = false;
-                }
-            }
-
-            if(messageSent)
-            {
-                HandleOnMessageSent();
-            }
-        }
-
-        async void Receive()
-        {
-            bool socketClosed = (WebSocket.State != WebSocketState.Open);
-
-            byte[] receiveBuffer = new byte[2048];
-            int bufferOffset = 0;
-            int maxPacketSize = 256;
-            while (!socketClosed)
-            {
-                bool finishedReceiving = false;
-                while (!finishedReceiving)
-                {
-                    try
-                    {
-                        ArraySegment<byte> bytesReceived = new ArraySegment<byte>(receiveBuffer, bufferOffset, maxPacketSize);
-
-                        // No cancellation token because cancelling destroys the socket.
-                        WebSocketReceiveResult result = await WebSocket.ReceiveAsync(bytesReceived, System.Threading.CancellationToken.None);
-
-                        //Partial data received
-                        Debug.Log("Data: " + Encoding.UTF8.GetString(receiveBuffer, bufferOffset, result.Count));
-
-                        bufferOffset += result.Count;
-                        if (result.EndOfMessage)
-                        {
-                            finishedReceiving = true;
-                            PendingReceiveResults.Enqueue(Encoding.UTF8.GetString(receiveBuffer, 0, bufferOffset));
-                            Array.Clear(receiveBuffer, 0, 2048);
-                            bufferOffset = 0;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogWarning("Websocket receive stopped with exception of type " + ex.GetType().Name);
-                        // WebSocketException means likely that the socket was aborted.
-                        if (ex is OperationCanceledException || WebSocket.CloseStatus.HasValue)
-                        {
-                            Debug.LogWarning("Websocket closed.");
-                            finishedReceiving = socketClosed = true;
-                        }
-                        else if(ex is WebSocketException)
-                        {
-                            Debug.LogWarning("Websocket closed because " + ex.Message);
-                            await CloseSocket();
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                socketClosed = WebSocket.CloseStatus.HasValue;
-            }
-        }
-
-        public async Task CloseSocket()
-        {
-            if(WebSocket != null)
-            {
-                PendingWebsocketRequests.Clear();
-                var oldWebSocket = WebSocket;
-                WebSocket = null;
-                await oldWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Shutting down the websocket.", System.Threading.CancellationToken.None);
-                OnClosed.Invoke(WebSocketCloseStatus.NormalClosure);
-            }
-        }
-
-        ~ApexWebsocket()
-        {
-            var socketClose = CloseSocket();
-        }
-    }
+					messageBytes.Write(receiveChunk, 0, receiveResult.Count);
+					if (receiveResult.EndOfMessage)
+					{
+						m_receivedMessages.Enqueue(Encoding.UTF8.GetString(messageBytes.ToArray()));
+						messageBytes.SetLength(0);
+					}
+				}
+			}
+		}
+	}
 }

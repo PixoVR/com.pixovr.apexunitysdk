@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -8,283 +7,274 @@ using UnityEngine;
 
 namespace PixoVR.Apex.Tests
 {
-    public class PixoVRAnalyticsProviderTests
-    {
-        private readonly List<GameObject> gameObjects = new();
+	/// <summary>
+	/// The PixoVR provider forwards to the core; these tests check what it forwards. The core's own
+	/// tests cover how records become packets.
+	/// </summary>
+	public class PixoVRAnalyticsProviderTests
+	{
+		private readonly List<GameObject> m_createdObjects = new List<GameObject>();
 
-        [SetUp]
-        public void SetUp()
-        {
-            ApexAnalytics.Clear();
-        }
+		[SetUp]
+		public void SetUp()
+		{
+			ApexAnalytics.Clear();
+		}
 
-        [TearDown]
-        public void TearDown()
-        {
-            foreach (GameObject gameObject in gameObjects)
-            {
-                if (gameObject != null)
-                    UnityEngine.Object.DestroyImmediate(gameObject);
-            }
+		[TearDown]
+		public void TearDown()
+		{
+			foreach (GameObject createdObject in m_createdObjects)
+			{
+				if (createdObject != null)
+				{
+					Object.DestroyImmediate(createdObject);
+				}
+			}
 
-            ApexAnalytics.Clear();
-        }
+			ApexAnalytics.Clear();
+		}
 
-        [Test]
-        public void RegisterEmitsObjectAndCentimeterPose()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(sink);
-            GameObject gameObject = CreateObject("Tracked");
-            gameObject.transform.position = new Vector3(1.234f, 0f, -2.01f);
-            ApexTrackedObject trackedObject = gameObject.AddComponent<ApexTrackedObject>();
+		[Test]
+		public void RegistrationForwardsIdNameMeshAndPose()
+		{
+			RecordingRecorder recorder = new RecordingRecorder();
+			PixoVRAnalyticsProvider provider = new PixoVRAnalyticsProvider(() => recorder);
+			GameObject trackedGameObject = CreateObject("Lever");
+			trackedGameObject.transform.position = new Vector3(1.234f, 0f, -2.01f);
+			ApexTrackedObject trackedObject = trackedGameObject.AddComponent<ApexTrackedObject>();
 
-            provider.OnTrackedObjectRegistered(trackedObject);
+			provider.OnTrackedObjectRegistered(trackedObject);
 
-            Assert.That(sink.Packets, Has.Count.EqualTo(0));
-            provider.Flush();
-            TelemetryPacket packet = sink.Last;
-            Assert.That(packet.Objects[0].TrackedId, Is.EqualTo(trackedObject.TrackedId));
-            Assert.That(packet.Records[0].Kind, Is.EqualTo("r"));
-            Assert.That(packet.Records[0].Position, Is.EqualTo(new[] { 123, 0, -201 }));
-        }
+			Assert.That(recorder.Calls, Is.EqualTo(new[] { "registered:" + trackedObject.TrackedId + ":Lever" }));
+			Assert.That(recorder.LastPosition, Is.EqualTo(new Vector3(1.234f, 0f, -2.01f)));
+		}
 
-        [Test]
-        public void EngagementInteractionAndStepsAreRecorded()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(sink);
-            GameObject gameObject = CreateObject("Tracked");
-            ApexTrackedObject trackedObject = gameObject.AddComponent<ApexTrackedObject>();
+		[Test]
+		public void EngagementInteractionAndStepsAreForwarded()
+		{
+			RecordingRecorder recorder = new RecordingRecorder();
+			PixoVRAnalyticsProvider provider = new PixoVRAnalyticsProvider(() => recorder);
+			ApexTrackedObject trackedObject = CreateObject("Tracked").AddComponent<ApexTrackedObject>();
+			string trackedId = trackedObject.TrackedId;
 
-            provider.OnEngagementBegin(trackedObject, "grab");
-            provider.OnEngagementEnd(trackedObject, "grab");
-            provider.OnInteraction(trackedObject, "use");
-            provider.OnStepBegin(null, "step");
-            provider.OnStepEnd(null, "step", true, 0.75f);
-            provider.Flush();
+			provider.OnEngagementBegin(trackedObject, "grab");
+			provider.OnEngagementEnd(trackedObject, "grab");
+			provider.OnInteraction(trackedObject, "use");
+			provider.OnStepBegin(null, "step");
+			provider.OnStepEnd(null, "step", true, 0.75f);
+			provider.Flush();
 
-            Assert.That(sink.Last.Records.FindAll(record => record.Kind == "e"), Has.Count.EqualTo(1));
-            Assert.That(sink.Last.Records.FindAll(record => record.Kind == "x"), Has.Count.EqualTo(1));
-            Assert.That(sink.Last.Records.FindAll(record => record.Kind == "i"), Has.Count.EqualTo(1));
-            TelemetryRecord stepEnd = sink.Last.Records.Find(record => record.Kind == "se");
-            Assert.That(stepEnd.Success, Is.True);
-            Assert.That(stepEnd.Score, Is.EqualTo(0.75f));
-        }
+			Assert.That(recorder.Calls, Is.EqualTo(new[]
+			{
+				"engagement-begin:" + trackedId + ":grab",
+				"engagement-end:" + trackedId + ":grab",
+				"interaction:" + trackedId + ":use",
+				"step-begin:step",
+				"step-end:step:True:0.75",
+				"flush",
+			}));
+		}
 
-        [Test]
-        public void TickFlushesAfterInterval()
-        {
-            RecordingSink sink = new();
-            double now = 0d;
-            PixoVRAnalyticsProvider provider = CreateProvider(
-                sink,
-                new PixoVRProviderOptions { FlushIntervalSeconds = 1f },
-                () => now);
+		[Test]
+		public void NothingIsForwardedWithoutARecorder()
+		{
+			PixoVRAnalyticsProvider provider = new PixoVRAnalyticsProvider(() => null);
+			ApexTrackedObject trackedObject = CreateObject("Tracked").AddComponent<ApexTrackedObject>();
 
-            provider.OnStepBegin(null, "step");
-            now = 0.5d;
-            provider.Tick(now);
-            Assert.That(sink.Packets, Is.Empty);
-            now = 1.1d;
-            provider.Tick(now);
-            Assert.That(sink.Packets, Has.Count.EqualTo(1));
-        }
+			Assert.DoesNotThrow(() =>
+			{
+				provider.OnTrackedObjectRegistered(trackedObject);
+				provider.OnInteraction(trackedObject, "use");
+				provider.OnStepBegin(null, "step");
+				provider.SamplePoses();
+				provider.Flush();
+			});
+		}
 
-        [Test]
-        public void MaximumRecordsFlushesImmediately()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(
-                sink,
-                new PixoVRProviderOptions { MaxRecordsPerPacket = 2 });
+		[Test]
+		public void PosesAreSampledOnlyWhenTheCoreAsks()
+		{
+			RecordingRecorder recorder = new RecordingRecorder();
+			PixoVRAnalyticsProvider provider = new PixoVRAnalyticsProvider(() => recorder);
+			GameObject headObject = CreateObject("Head");
+			headObject.AddComponent<ApexSpatialSampler>();
+			GameObject posedObject = CreateObject("Posed");
+			ApexTrackedObject posedTrackedObject = posedObject.AddComponent<ApexTrackedObject>();
+			SetPrivateField(posedTrackedObject, "m_trackPose", true);
+			CreateObject("Unposed").AddComponent<ApexTrackedObject>();
 
-            provider.OnStepBegin(null, "one");
-            provider.OnStepBegin(null, "two");
+			recorder.PoseDue = false;
+			provider.SamplePoses();
+			Assert.That(recorder.Calls, Is.Empty);
 
-            Assert.That(sink.Packets, Has.Count.EqualTo(1));
-            Assert.That(sink.Last.Records, Has.Count.EqualTo(2));
-        }
+			recorder.PoseDue = true;
+			provider.SamplePoses();
+			Assert.That(recorder.Calls, Is.EqualTo(new[] { "pose:", "pose:" + posedTrackedObject.TrackedId }));
+		}
 
-        [Test]
-        public void UnchangedPoseIsDeduplicated()
-        {
-            RecordingSink sink = new();
-            double now = 0d;
-            PixoVRAnalyticsProvider provider = CreateProvider(sink, new PixoVRProviderOptions { PoseSampleHz = 2f }, () => now);
-            GameObject headObject = CreateObject("Head");
-            headObject.AddComponent<ApexSpatialSampler>();
+		[Test]
+		public void ApexInteractableIgnoresDoubleGrab()
+		{
+			RecordingRecorder recorder = new RecordingRecorder();
+			ApexAnalytics.Register(new PixoVRAnalyticsProvider(() => recorder));
+			ApexInteractable interactable = CreateObject("Interactable").AddComponent<ApexInteractable>();
+			recorder.Calls.Clear();
 
-            provider.Tick(now);
-            now = 0.5d;
-            provider.Tick(now);
-            provider.Flush();
+			interactable.Grab();
+			interactable.Grab();
 
-            Assert.That(sink.Last.Records, Has.Count.EqualTo(1));
-            Assert.That(sink.Last.Records[0].Kind, Is.EqualTo("p"));
-            Assert.That(sink.Last.Records[0].Object, Is.Null);
-        }
+			Assert.That(recorder.Calls.FindAll(call => call.StartsWith("engagement-begin:")), Has.Count.EqualTo(1));
+		}
 
-        [Test]
-        public void SessionCompletionSendsEmptyEndingPacket()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(sink);
+		[Test]
+		public void GazeSourceBeginsAndEndsConfiguredEngagement()
+		{
+			RecordingProvider provider = new RecordingProvider("gaze");
+			ApexAnalytics.Register(provider);
+			GameObject sourceObject = CreateObject("Gaze");
+			FakeGazeSource gazeSource = sourceObject.AddComponent<FakeGazeSource>();
+			ApexGazeTracker gazeTracker = sourceObject.AddComponent<ApexGazeTracker>();
+			SetPrivateField(gazeTracker, "m_dwellSeconds", 0f);
 
-            provider.OnSessionCompleted(null, null);
+			GameObject targetObject = CreateObject("Target");
+			targetObject.transform.position = new Vector3(0f, 0f, 3f);
+			targetObject.AddComponent<BoxCollider>();
+			ApexTrackedObject target = targetObject.AddComponent<ApexTrackedObject>();
+			gazeSource.SetGaze(true, new Ray(Vector3.zero, Vector3.forward), "eye_gaze");
+			Physics.SyncTransforms();
 
-            Assert.That(sink.Packets, Has.Count.EqualTo(1));
-            Assert.That(sink.Last.SessionEnded, Is.True);
-            Assert.That(sink.Last.Records, Is.Empty);
-        }
+			gazeTracker.Sample();
+			gazeTracker.Sample();
+			Assert.That(provider.Calls, Does.Contain("begin:eye_gaze"));
 
-        [Test]
-        public void ObjectIndexesRestartForEachPacket()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(sink);
-            GameObject gameObject = CreateObject("Tracked");
-            ApexTrackedObject trackedObject = gameObject.AddComponent<ApexTrackedObject>();
+			gazeSource.SetGaze(false, default, null);
+			gazeTracker.Sample();
+			Assert.That(provider.Calls, Does.Contain("end:eye_gaze"));
+			Assert.That(provider.LastTrackedObject, Is.SameAs(target));
+		}
 
-            provider.OnInteraction(trackedObject, "first");
-            provider.Flush();
-            provider.OnInteraction(trackedObject, "second");
-            provider.Flush();
+		private GameObject CreateObject(string objectName)
+		{
+			GameObject createdObject = new GameObject(objectName);
+			m_createdObjects.Add(createdObject);
+			return createdObject;
+		}
 
-            Assert.That(sink.Packets[0].Records[0].Object, Is.EqualTo(0));
-            Assert.That(sink.Packets[1].Records[0].Object, Is.EqualTo(0));
-            Assert.That(sink.Packets[0].Objects[0].Index, Is.EqualTo(0));
-            Assert.That(sink.Packets[1].Objects[0].Index, Is.EqualTo(0));
-        }
+		private static void SetPrivateField(object target, string fieldName, object fieldValue)
+		{
+			FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+			field.SetValue(target, fieldValue);
+		}
 
-        [Test]
-        public void ApexInteractableIgnoresDoubleGrab()
-        {
-            RecordingSink sink = new();
-            PixoVRAnalyticsProvider provider = CreateProvider(sink);
-            ApexAnalytics.Register(provider);
-            GameObject gameObject = CreateObject("Interactable");
-            ApexInteractable interactable = gameObject.AddComponent<ApexInteractable>();
+		private sealed class RecordingRecorder : IApexTelemetryRecorder
+		{
+			public List<string> Calls { get; } = new List<string>();
+			public Vector3 LastPosition { get; private set; }
+			public bool PoseDue { get; set; }
 
-            interactable.Grab();
-            interactable.Grab();
-            provider.Flush();
+			public void TelemetryObjectRegistered(string trackedId, string objectName, string meshName,
+				Vector3 position, Vector3 rotation)
+			{
+				LastPosition = position;
+				Calls.Add("registered:" + trackedId + ":" + objectName);
+			}
 
-            Assert.That(
-                sink.Last.Records.FindAll(record => record.Kind == "e" && record.Name == "grab"),
-                Has.Count.EqualTo(1));
-        }
+			public void TelemetryObjectUnregistered(string trackedId, Vector3 position, Vector3 rotation)
+			{
+				Calls.Add("unregistered:" + trackedId);
+			}
 
-        [Test]
-        public void GazeSourceBeginsAndEndsConfiguredEngagement()
-        {
-            RecordingProvider provider = new("gaze");
-            ApexAnalytics.Register(provider);
+			public void TelemetryEngagementBegin(string trackedId, string engagementName)
+			{
+				Calls.Add("engagement-begin:" + trackedId + ":" + engagementName);
+			}
 
-            GameObject sourceObject = CreateObject("Gaze");
-            FakeGazeSource source = sourceObject.AddComponent<FakeGazeSource>();
-            ApexGazeTracker tracker = sourceObject.AddComponent<ApexGazeTracker>();
-            typeof(ApexGazeTracker).GetField(
-                "dwellSeconds",
-                BindingFlags.Instance | BindingFlags.NonPublic).SetValue(tracker, 0f);
+			public void TelemetryEngagementEnd(string trackedId, string engagementName)
+			{
+				Calls.Add("engagement-end:" + trackedId + ":" + engagementName);
+			}
 
-            GameObject targetObject = CreateObject("Target");
-            targetObject.transform.position = new Vector3(0f, 0f, 3f);
-            targetObject.AddComponent<BoxCollider>();
-            ApexTrackedObject target = targetObject.AddComponent<ApexTrackedObject>();
-            source.SetGaze(true, new Ray(Vector3.zero, Vector3.forward), "eye_gaze");
-            Physics.SyncTransforms();
+			public void TelemetryInteraction(string trackedId, string actionName)
+			{
+				Calls.Add("interaction:" + trackedId + ":" + actionName);
+			}
 
-            tracker.Sample();
-            tracker.Sample();
-            Assert.That(provider.Calls, Does.Contain("begin:eye_gaze"));
+			public void TelemetryStepBegin(string stepName)
+			{
+				Calls.Add("step-begin:" + stepName);
+			}
 
-            source.SetGaze(false, default, null);
-            tracker.Sample();
-            Assert.That(provider.Calls, Does.Contain("end:eye_gaze"));
-            Assert.That(provider.LastTrackedObject, Is.SameAs(target));
-        }
+			public void TelemetryStepEnd(string stepName, bool succeeded, double score)
+			{
+				string scoreText = score.ToString(System.Globalization.CultureInfo.InvariantCulture);
+				Calls.Add("step-end:" + stepName + ":" + succeeded + ":" + scoreText);
+			}
 
-        private PixoVRAnalyticsProvider CreateProvider(
-            RecordingSink sink,
-            PixoVRProviderOptions options = null,
-            Func<double> clock = null)
-        {
-            return new PixoVRAnalyticsProvider(
-                sink,
-                options ?? new PixoVRProviderOptions(),
-                clock ?? (() => 0d),
-                () => 1000L);
-        }
+			public bool TelemetryPoseDue()
+			{
+				return PoseDue;
+			}
 
-        private GameObject CreateObject(string name)
-        {
-            GameObject gameObject = new(name);
-            gameObjects.Add(gameObject);
-            return gameObject;
-        }
+			public void TelemetryPose(string trackedId, Vector3 position, Vector3 rotation)
+			{
+				Calls.Add("pose:" + trackedId);
+			}
 
-        private sealed class RecordingSink : IApexTelemetrySink
-        {
-            public List<TelemetryPacket> Packets { get; } = new();
+			public void TelemetryFlush()
+			{
+				Calls.Add("flush");
+			}
+		}
 
-            public TelemetryPacket Last => Packets[Packets.Count - 1];
+		private sealed class RecordingProvider : IApexAnalyticsProvider
+		{
+			public RecordingProvider(string providerName)
+			{
+				Name = providerName;
+			}
 
-            public void Send(TelemetryPacket packet, Action<bool> done)
-            {
-                Packets.Add(packet);
-                done?.Invoke(true);
-            }
-        }
+			public string Name { get; }
+			public List<string> Calls { get; } = new List<string>();
+			public ApexTrackedObject LastTrackedObject { get; private set; }
 
-        private sealed class RecordingProvider : IApexAnalyticsProvider
-        {
-            public RecordingProvider(string name)
-            {
-                Name = name;
-            }
+			public void OnTrackedObjectRegistered(ApexTrackedObject trackedObject)
+			{
+				LastTrackedObject = trackedObject;
+			}
 
-            public string Name { get; }
-            public List<string> Calls { get; } = new();
-            public ApexTrackedObject LastTrackedObject { get; private set; }
+			public void OnEngagementBegin(ApexTrackedObject trackedObject, string engagement)
+			{
+				LastTrackedObject = trackedObject;
+				Calls.Add("begin:" + engagement);
+			}
 
-            public void OnTrackedObjectRegistered(ApexTrackedObject trackedObject)
-            {
-                LastTrackedObject = trackedObject;
-            }
+			public void OnEngagementEnd(ApexTrackedObject trackedObject, string engagement)
+			{
+				LastTrackedObject = trackedObject;
+				Calls.Add("end:" + engagement);
+			}
+		}
 
-            public void OnEngagementBegin(ApexTrackedObject trackedObject, string engagement)
-            {
-                LastTrackedObject = trackedObject;
-                Calls.Add("begin:" + engagement);
-            }
+		private sealed class FakeGazeSource : ApexGazeSource
+		{
+			private bool m_hasGaze;
+			private Ray m_gazeRay;
+			private string m_engagement;
 
-            public void OnEngagementEnd(ApexTrackedObject trackedObject, string engagement)
-            {
-                LastTrackedObject = trackedObject;
-                Calls.Add("end:" + engagement);
-            }
-        }
+			public void SetGaze(bool hasGaze, Ray gazeRay, string engagement)
+			{
+				m_hasGaze = hasGaze;
+				m_gazeRay = gazeRay;
+				m_engagement = engagement;
+			}
 
-        private sealed class FakeGazeSource : ApexGazeSource
-        {
-            private bool hasGaze;
-            private Ray gazeRay;
-            private string engagement;
-
-            public void SetGaze(bool valid, Ray ray, string gazeEngagement)
-            {
-                hasGaze = valid;
-                gazeRay = ray;
-                engagement = gazeEngagement;
-            }
-
-            public override bool TryGetGaze(out Ray ray, out string gazeEngagement)
-            {
-                ray = gazeRay;
-                gazeEngagement = engagement;
-                return hasGaze;
-            }
-        }
-    }
+			public override bool TryGetGaze(out Ray ray, out string engagement)
+			{
+				ray = m_gazeRay;
+				engagement = m_engagement;
+				return m_hasGaze;
+			}
+		}
+	}
 }

@@ -1,77 +1,77 @@
 #if UNITY_EDITOR
-using UnityEditor;
-using UnityEditor.Callbacks;
 using System.IO;
 using PixoVR.Editor;
-
+using UnityEditor;
+using UnityEditor.Callbacks;
 #if UNITY_IOS
 using UnityEditor.iOS.Xcode;
 #endif
 
 public class PixoVRPostBuilder
 {
-    public static PixoVRProjectSettings ProjectSettings =>
-            m_projectSettings == null ? m_projectSettings = EditorUtilities.GetProjectSettings<PixoVRProjectSettings>(false) : m_projectSettings;
-    private static PixoVRProjectSettings m_projectSettings;
+	private static PixoVRProjectSettings m_projectSettings;
 
-    [PostProcessBuild(100)]
-    public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
-    {
-        PostprocessBuildIOS(target, pathToBuiltProject);
-    }
+	public static PixoVRProjectSettings ProjectSettings
+	{
+		get
+		{
+			if (m_projectSettings == null)
+			{
+				m_projectSettings = EditorUtilities.GetProjectSettings<PixoVRProjectSettings>(false);
+			}
 
-    protected static void PostprocessBuildIOS(BuildTarget target, string pathToBuiltProject)
-    {
-        if (string.IsNullOrEmpty(ProjectSettings.CustomURLScheme))
-            return;
+			return m_projectSettings;
+		}
+	}
+
+	[PostProcessBuild(100)]
+	public static void OnPostprocessBuild(BuildTarget buildTarget, string pathToBuiltProject)
+	{
+		PostprocessBuildIOS(buildTarget, pathToBuiltProject);
+	}
+
+	/// <summary>Registers the custom URL scheme in the iOS Info.plist so launcher deep links reach the app.</summary>
+	protected static void PostprocessBuildIOS(BuildTarget buildTarget, string pathToBuiltProject)
+	{
+		if (string.IsNullOrEmpty(ProjectSettings.CustomURLScheme))
+		{
+			return;
+		}
 
 #if UNITY_IOS
-        if (target != BuildTarget.iOS)
-            return;
+		if (buildTarget != BuildTarget.iOS)
+		{
+			return;
+		}
 
-        string plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
+		string plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
+		PlistDocument plist = new PlistDocument();
+		plist.ReadFromFile(plistPath);
+		PlistElementDict rootDictionary = plist.root;
 
-        PlistDocument plist = new PlistDocument();
-        plist.ReadFromFile(plistPath);
+		const string kUrlTypesKey = "CFBundleURLTypes";
+		PlistElementArray urlTypes = rootDictionary.values.ContainsKey(kUrlTypesKey)
+			? rootDictionary[kUrlTypesKey].AsArray()
+			: rootDictionary.CreateArray(kUrlTypesKey);
 
-        PlistElementDict rootDict = plist.root;
+		const string kAppCategoryKey = "LSApplicationCategoryType";
+		if (!rootDictionary.values.ContainsKey(kAppCategoryKey))
+		{
+			rootDictionary.SetString(kAppCategoryKey, "public.app-category.educational-games");
+		}
 
-        const string urlTypesKey = "CFBundleURLTypes";
-        PlistElementArray urlTypes;
+		const string kUsesEncryptionKey = "ITSAppUsesNonExemptEncryption";
+		if (!rootDictionary.values.ContainsKey(kUsesEncryptionKey))
+		{
+			rootDictionary.SetBoolean(kUsesEncryptionKey, false);
+		}
 
-        if (rootDict.values.ContainsKey(urlTypesKey))
-        {
-            urlTypes = rootDict[urlTypesKey].AsArray();
-        }
-        else
-        {
-            urlTypes = rootDict.CreateArray(urlTypesKey);
-        }
-
-        const string appCategoryKey = "LSApplicationCategoryType";
-
-        if(!rootDict.values.ContainsKey(appCategoryKey))
-        {
-            rootDict.SetString(appCategoryKey, "public.app-category.educational-games");
-        }
-
-        const string useEncryptionKey = "ITSAppUsesNonExemptEncryption";
-
-        if(!rootDict.values.ContainsKey(useEncryptionKey))
-        {
-            rootDict.SetBoolean(useEncryptionKey, false);
-        }
-
-        // Add your custom scheme
-        PlistElementDict urlSchemeDict = urlTypes.AddDict();
-        PlistElementArray schemesArray = urlSchemeDict.CreateArray("CFBundleURLSchemes");
-        schemesArray.AddString(ProjectSettings.CustomURLScheme); // <-- this is your custom scheme (myapp://)
-
-        // Save changes
-        plist.WriteToFile(plistPath);
-        UnityEngine.Debug.Log($"Custom URL scheme added to Info.plist: {ProjectSettings.CustomURLScheme}://");
+		PlistElementDict urlSchemeDictionary = urlTypes.AddDict();
+		PlistElementArray schemes = urlSchemeDictionary.CreateArray("CFBundleURLSchemes");
+		schemes.AddString(ProjectSettings.CustomURLScheme);
+		plist.WriteToFile(plistPath);
+		UnityEngine.Debug.Log($"Custom URL scheme added to Info.plist: {ProjectSettings.CustomURLScheme}://");
 #endif
-    }
-
+	}
 }
 #endif
