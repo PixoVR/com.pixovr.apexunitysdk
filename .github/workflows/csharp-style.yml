@@ -25,6 +25,7 @@ jobs:
         run: dotnet run --project "Tools~/StyleCheck" -- .
 
       - name: Check every asset has a .meta file
+        # Unity ignores dotfiles (such as .gitignore), so they need none.
         run: |
           missing=0
           while IFS= read -r path; do
@@ -33,5 +34,5 @@ jobs:
               missing=1
             fi
           done < <(git ls-files Runtime Editor Tests Plugins Samples~ AGENTS.md CLAUDE.md README.md CHANGELOG.md \
-            | grep -v '\.meta$' | grep -v '^Samples~$')
+            | grep -v '\.meta$' | grep -v '/\.[^/]*$')
           exit $missing
