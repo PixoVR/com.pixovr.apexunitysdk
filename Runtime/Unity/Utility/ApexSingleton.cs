@@ -1,99 +1,94 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace PixoVR.Apex
 {
-    public class ApexSingleton<T> : MonoBehaviour where T : MonoBehaviour
-    {
-        private static readonly string MASTER_TAG = "ApexSingleton";
-        private static T instance;
+	/// <summary>
+	/// A MonoBehaviour with one instance per app: the first one initialized wins, later ones are
+	/// destroyed, and <see cref="Instance"/> finds or creates it.
+	/// </summary>
+	public class ApexSingleton<TInstance> : MonoBehaviour where TInstance : MonoBehaviour
+	{
+		private const string kLogTag = "ApexSingleton";
+		private static readonly object kInstanceLock = new object();
+		private static TInstance m_instance;
 
-        private static readonly object lockObject = new object();
+		/// <summary>
+		/// Set when the instance is destroyed. Unity destroys objects in an arbitrary order on quit, and
+		/// creating a new instance then would leave a ghost object in the editor scene.
+		/// </summary>
+		protected static bool ApplicationIsQuitting { get; private set; }
 
-        public bool InitializeInstance(T targetInstance)
-        {
-            lock (lockObject)
-            {
-                if (instance == null)
-                {
-                    instance = targetInstance;
-                    DontDestroyOnLoad(instance);
-                    return true;
-                }
-                else if(instance != targetInstance)
-                {
-                    Debug.unityLogger.Log(LogType.Warning, MASTER_TAG, "Destroying an instance that was created after.");
-                    Destroy(targetInstance.gameObject);
-                }
-            }
+		public static TInstance Instance
+		{
+			get
+			{
+				if (ApplicationIsQuitting)
+				{
+					Debug.unityLogger.Log(LogType.Warning, kLogTag,
+						$"Singleton '{typeof(TInstance)}' won't be created while the application is quitting.");
+					return null;
+				}
 
-            return false;
-        }
+				lock (kInstanceLock)
+				{
+					if (m_instance != null)
+					{
+						return m_instance;
+					}
 
-        public static T Instance
-        {
-            get
-            {
-                if (ApplicationIsQuitting)
-                {
-                    Debug.unityLogger.Log(LogType.Warning, MASTER_TAG, "Singleton Instance '{0}' won't be created while application is quitting.");
-                    return null;
-                }
-
-                lock (lockObject)
-                {
-                    if (instance == null)
-                    {
 #if UNITY_2020_1_OR_NEWER
-                        Object[] existingInstances = FindObjectsByType<T>(FindObjectsSortMode.None);
+					TInstance[] existingInstances = FindObjectsByType<TInstance>(FindObjectsSortMode.None);
 #else
-                        Object[] existingInstances = FindObjectsOfType(typeof(T));
+					TInstance[] existingInstances = (TInstance[])FindObjectsOfType(typeof(TInstance));
 #endif
+					if (existingInstances.Length == 0)
+					{
+						GameObject singletonObject = new GameObject("Singleton_" + typeof(TInstance));
+						m_instance = singletonObject.AddComponent<TInstance>();
+						DontDestroyOnLoad(m_instance);
+						return m_instance;
+					}
 
-                        if (existingInstances.Length <= 0)
-                        {
-                            GameObject singleton = new GameObject();
-                            instance = singleton.AddComponent<T>();
-                            instance.name = "Singleton_" + typeof(T).ToString();
+					m_instance = existingInstances[0];
+					if (existingInstances.Length > 1)
+					{
+						Debug.unityLogger.Log(LogType.Error, kLogTag,
+							$"Multiple instances of '{typeof(TInstance)}' found. There should only be one.");
+					}
 
-                            DontDestroyOnLoad(instance);
-                            return instance;
-                        }
+					return m_instance;
+				}
+			}
+		}
 
-                        instance = existingInstances[0] as T;
+		/// <summary>Makes targetInstance the instance, or destroys it when another one already is.</summary>
+		public bool InitializeInstance(TInstance targetInstance)
+		{
+			lock (kInstanceLock)
+			{
+				if (m_instance == null)
+				{
+					m_instance = targetInstance;
+					DontDestroyOnLoad(m_instance);
+					return true;
+				}
 
-                        if (existingInstances.Length > 1)
-                        {
-                            Debug.unityLogger.Log(LogType.Error, MASTER_TAG, "Multiple instances of '{0}' found. There should only be 1 instances. Reopening the scene might fix the problem.");
-                            return instance;
-                        }
+				if (m_instance != targetInstance)
+				{
+					Debug.unityLogger.Log(LogType.Warning, kLogTag, "Destroying an instance that was created after.");
+					Destroy(targetInstance.gameObject);
+				}
+			}
 
-                        if (instance == null)
-                        {
-                            Debug.unityLogger.Log(LogType.Assert, MASTER_TAG, "An instance was found and is still null.");
-                            return null;
-                        }
-                    }
+			return false;
+		}
 
-                    return instance;
-                }
-            }
-        }
-
-        protected static bool ApplicationIsQuitting = false;
-        /// <summary>
-        /// When Unity quits, it destroys objects in a random order.
-        /// In principle, a Singleton is only destroyed when application quits.
-        /// If any script calls Instance after it have been destroyed, 
-        ///   it will create a buggy ghost object that will stay on the Editor scene
-        ///   even after stopping playing the Application. Really bad!
-        /// So, this was made to be sure we're not creating that buggy ghost object.
-        /// </summary>
-        public virtual void OnDestroy()
-        {
-            Debug.unityLogger.Log(LogType.Log, MASTER_TAG, "On Destroy on singleton called.");
-            ApplicationIsQuitting = true;
-        }
-    }
+		public virtual void OnDestroy()
+		{
+			if (m_instance == this)
+			{
+				ApplicationIsQuitting = true;
+			}
+		}
+	}
 }

@@ -4,120 +4,130 @@ using UnityEngine;
 
 namespace PixoVR.Apex.Analytics
 {
-    public static class ApexAnalytics
-    {
-        private static readonly List<IApexAnalyticsProvider> providers = new();
-        private static readonly List<ApexTrackedObject> trackedObjects = new();
+	/// <summary>The registered analytics providers and tracked objects, and the dispatch between them.</summary>
+	public static class ApexAnalytics
+	{
+		private const string kLogTag = "ApexAnalytics";
 
-        public static IReadOnlyList<IApexAnalyticsProvider> Providers => providers;
-        public static IReadOnlyList<ApexTrackedObject> TrackedObjects => trackedObjects;
+		private static readonly List<IApexAnalyticsProvider> kProviders = new List<IApexAnalyticsProvider>();
+		private static readonly List<ApexTrackedObject> kTrackedObjects = new List<ApexTrackedObject>();
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => Clear();
+		public static IReadOnlyList<IApexAnalyticsProvider> Providers => kProviders;
+		public static IReadOnlyList<ApexTrackedObject> TrackedObjects => kTrackedObjects;
 
-        public static bool Register(IApexAnalyticsProvider provider)
-        {
-            if (provider == null)
-            {
-                Debug.unityLogger.Log(LogType.Warning, "ApexAnalytics", "Cannot register a null provider.");
-                return false;
-            }
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetStatics()
+		{
+			Clear();
+		}
 
-            foreach (IApexAnalyticsProvider registeredProvider in providers)
-            {
-                if (ReferenceEquals(registeredProvider, provider) || registeredProvider.Name == provider.Name)
-                {
-                    Debug.unityLogger.Log(LogType.Warning, "ApexAnalytics", $"Provider '{provider.Name}' is already registered.");
-                    return false;
-                }
-            }
+		public static bool Register(IApexAnalyticsProvider provider)
+		{
+			if (provider == null)
+			{
+				Debug.unityLogger.Log(LogType.Warning, kLogTag, "Cannot register a null provider.");
+				return false;
+			}
 
-            ApexAnalyticsSettings settings = ApexAnalyticsSettings.Load();
-            if (settings != null)
-            {
-                if (!settings.AnalyticsEnabled)
-                {
-                    Debug.unityLogger.Log(LogType.Warning, "ApexAnalytics", "Analytics are disabled by settings.");
-                    return false;
-                }
+			foreach (IApexAnalyticsProvider registeredProvider in kProviders)
+			{
+				if (ReferenceEquals(registeredProvider, provider) || registeredProvider.Name == provider.Name)
+				{
+					Debug.unityLogger.Log(LogType.Warning, kLogTag,
+						$"Provider '{provider.Name}' is already registered.");
+					return false;
+				}
+			}
 
-                foreach (string disabledProvider in settings.DisabledProviders)
-                {
-                    if (disabledProvider == provider.Name)
-                    {
-                        Debug.unityLogger.Log(LogType.Warning, "ApexAnalytics", $"Provider '{provider.Name}' is disabled by settings.");
-                        return false;
-                    }
-                }
-            }
+			ApexAnalyticsSettings settings = ApexAnalyticsSettings.Load();
+			if (settings != null)
+			{
+				if (!settings.AnalyticsEnabled)
+				{
+					Debug.unityLogger.Log(LogType.Warning, kLogTag, "Analytics are disabled by settings.");
+					return false;
+				}
 
-            providers.Add(provider);
-            foreach (ApexTrackedObject trackedObject in trackedObjects.ToArray())
-            {
-                Invoke(provider, p => p.OnTrackedObjectRegistered(trackedObject));
-            }
+				foreach (string disabledProvider in settings.DisabledProviders)
+				{
+					if (disabledProvider == provider.Name)
+					{
+						Debug.unityLogger.Log(LogType.Warning, kLogTag,
+							$"Provider '{provider.Name}' is disabled by settings.");
+						return false;
+					}
+				}
+			}
 
-            return true;
-        }
+			kProviders.Add(provider);
+			foreach (ApexTrackedObject trackedObject in kTrackedObjects.ToArray())
+			{
+				Invoke(provider, registeredProvider => registeredProvider.OnTrackedObjectRegistered(trackedObject));
+			}
 
-        public static bool Unregister(IApexAnalyticsProvider provider)
-        {
-            if (provider == null)
-                return false;
+			return true;
+		}
 
-            return providers.Remove(provider);
-        }
+		public static bool Unregister(IApexAnalyticsProvider provider)
+		{
+			if (provider == null)
+			{
+				return false;
+			}
 
-        public static void Dispatch(Action<IApexAnalyticsProvider> call)
-        {
-            if (call == null)
-                return;
+			return kProviders.Remove(provider);
+		}
 
-            IApexAnalyticsProvider[] providerSnapshot = providers.ToArray();
-            foreach (IApexAnalyticsProvider provider in providerSnapshot)
-            {
-                Invoke(provider, call);
-            }
-        }
+		public static void Dispatch(Action<IApexAnalyticsProvider> providerCall)
+		{
+			if (providerCall == null)
+			{
+				return;
+			}
 
-        internal static void RegisterTrackedObject(ApexTrackedObject trackedObject)
-        {
-            if (trackedObject == null || trackedObjects.Contains(trackedObject))
-                return;
+			foreach (IApexAnalyticsProvider provider in kProviders.ToArray())
+			{
+				Invoke(provider, providerCall);
+			}
+		}
 
-            trackedObjects.Add(trackedObject);
-            Dispatch(provider => provider.OnTrackedObjectRegistered(trackedObject));
-        }
+		internal static void RegisterTrackedObject(ApexTrackedObject trackedObject)
+		{
+			if (trackedObject == null || kTrackedObjects.Contains(trackedObject))
+			{
+				return;
+			}
 
-        internal static void UnregisterTrackedObject(ApexTrackedObject trackedObject)
-        {
-            if (trackedObject == null || !trackedObjects.Remove(trackedObject))
-                return;
+			kTrackedObjects.Add(trackedObject);
+			Dispatch(provider => provider.OnTrackedObjectRegistered(trackedObject));
+		}
 
-            Dispatch(provider => provider.OnTrackedObjectUnregistered(trackedObject));
-        }
+		internal static void UnregisterTrackedObject(ApexTrackedObject trackedObject)
+		{
+			if (trackedObject == null || !kTrackedObjects.Remove(trackedObject))
+			{
+				return;
+			}
 
-        internal static void Clear()
-        {
-            providers.Clear();
-            trackedObjects.Clear();
-        }
+			Dispatch(provider => provider.OnTrackedObjectUnregistered(trackedObject));
+		}
 
-        private static void Invoke(
-            IApexAnalyticsProvider provider,
-            Action<IApexAnalyticsProvider> call)
-        {
-            try
-            {
-                call(provider);
-            }
-            catch (Exception ex)
-            {
-                Debug.unityLogger.Log(
-                    LogType.Error,
-                    "ApexAnalytics",
-                    $"Provider '{provider.Name}' threw: {ex}");
-            }
-        }
-    }
+		internal static void Clear()
+		{
+			kProviders.Clear();
+			kTrackedObjects.Clear();
+		}
+
+		private static void Invoke(IApexAnalyticsProvider provider, Action<IApexAnalyticsProvider> providerCall)
+		{
+			try
+			{
+				providerCall(provider);
+			}
+			catch (Exception exception)
+			{
+				Debug.unityLogger.Log(LogType.Error, kLogTag, $"Provider '{provider.Name}' threw: {exception}");
+			}
+		}
+	}
 }

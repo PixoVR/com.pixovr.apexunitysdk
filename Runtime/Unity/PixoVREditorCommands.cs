@@ -1,117 +1,113 @@
 #if UNITY_EDITOR
 using System.IO;
+using System.Threading.Tasks;
 using UnityEditor;
-using UnityEngine;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
-using UnityEngine.UIElements;
-using System.Threading.Tasks;
+using UnityEngine;
 
 public static class PixoVREditorCommands
 {
-    [MenuItem("PixoVR/Setup")]
-    public static void PixoVRPluginSetup()
-    {
-        string pluginPath = FindPluginPath();
-        string destinationManifestPath = Path.Combine(pluginPath, "Plugins/Android/AndroidManifest.xml");
-        string destinationJavaUtilsPath = Path.Combine(pluginPath, "Plugins/Android/PixoUtils.java");
-        string sourceManifestPath = "";
-        string sourceJavaUtilsPath = "";
+	private const string kPackageName = "com.pixovr.apexunitysdk";
+
+	[MenuItem("PixoVR/Setup")]
+	public static void PixoVRPluginSetup()
+	{
+		string pluginPath = FindPluginPath();
+		string destinationManifestPath = Path.Combine(pluginPath, "Plugins/Android/AndroidManifest.xml");
+		string destinationJavaUtilsPath = Path.Combine(pluginPath, "Plugins/Android/PixoUtils.java");
 #if UNITY_6000_0_OR_NEWER
-        sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Game.xml");
-        sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Game.java");
+		string sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Game.xml");
+		string sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Game.java");
 #else
-        sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Main.xml");
-        sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Main.java");
+		string sourceManifestPath = Path.Combine(pluginPath, "Editor/Others/AndroidManifest_Main.xml");
+		string sourceJavaUtilsPath = Path.Combine(pluginPath, "Editor/Others/PixoUtils_Main.java");
 #endif
-        File.Copy(sourceManifestPath, destinationManifestPath, true);
-        File.Copy(sourceJavaUtilsPath, destinationJavaUtilsPath, true);
-        AssetDatabase.Refresh();
-    }
+		File.Copy(sourceManifestPath, destinationManifestPath, true);
+		File.Copy(sourceJavaUtilsPath, destinationJavaUtilsPath, true);
+		AssetDatabase.Refresh();
+	}
 
-    [MenuItem("PixoVR/Development/Update Plugin Version")]
-    public static async Task PixoVRVersionUpdate()
-    {
-        await VersionUpdate();
+	[MenuItem("PixoVR/Development/Update Plugin Version")]
+	public static async Task PixoVRVersionUpdate()
+	{
+		await VersionUpdate();
+	}
 
-    }
+	/// <summary>Writes the package.json version into Runtime/SDK/ApexUtilsGenerated.cs.</summary>
+	public static async Task VersionUpdate()
+	{
+		ListRequest packageListRequest = Client.List(true);
+		while (!packageListRequest.IsCompleted)
+		{
+			await Task.Delay(500);
+		}
 
-    public static async Task VersionUpdate()
-    {
-        var packageList = Client.List(true);
+		if (packageListRequest.Status != StatusCode.Success)
+		{
+			Debug.Log("Failed to get a list of packages.");
+			return;
+		}
 
-        while (!packageList.IsCompleted)
-        {
-            await Task.Delay(500);
-        }
+		string packageVersion = string.Empty;
+		string packageAssetPath = string.Empty;
+		foreach (UnityEditor.PackageManager.PackageInfo packageInfo in packageListRequest.Result)
+		{
+			if (packageInfo.name.Equals(kPackageName))
+			{
+				Debug.Log($"Package info: {packageInfo.name} v{packageInfo.version} - {packageInfo.assetPath}");
+				packageVersion = packageInfo.version;
+				packageAssetPath = packageInfo.assetPath;
+			}
+		}
 
-        if (packageList.Status != StatusCode.Success)
-        {
-            Debug.Log("Failed to get a list of packages.");
-            return;
-        }
-        else
-        {
-            Debug.Log("Was successful in finding all of the packages.");
-        }
+		if (string.IsNullOrEmpty(packageVersion))
+		{
+			Debug.LogError("Failed to find the PixoVR SDK package or it did not contain a valid version.");
+			return;
+		}
 
-        string packageVersion = "", packageAssetPath = "";
-        foreach (var package in packageList.Result)
-        {
-            if (package.name.Equals("com.pixovr.apexunitysdk"))
-            {
-                Debug.Log($"Package info: {package.name} v{package.version} - {package.assetPath}");
-                packageVersion = package.version;
-                packageAssetPath = package.assetPath;
-            }
-        }
+		if (string.IsNullOrEmpty(packageAssetPath))
+		{
+			Debug.LogError("Failed to find the PixoVR SDK package location.");
+			return;
+		}
 
-        if(string.IsNullOrEmpty(packageVersion))
-        {
-            Debug.LogError($"Failed to find the PixoVR SDK package or it did not contain a valid version.");
-            return;
-        }
+		string projectRootPath = Directory.GetParent(Application.dataPath).FullName;
+		string generatedUtilsPath = Path.Combine(projectRootPath, packageAssetPath,
+			"Runtime/SDK/ApexUtilsGenerated.cs");
+		File.WriteAllText(generatedUtilsPath, BuildVersionSource(packageVersion));
+		Debug.Log($"Generated file {generatedUtilsPath}");
+		AssetDatabase.Refresh();
+	}
 
-        if (string.IsNullOrEmpty(packageAssetPath))
-        {
-            Debug.LogError($"Failed to find the PixoVR SDK package location.");
-            return;
-        }
+	internal static string BuildVersionSource(string packageVersion)
+	{
+		return "// <auto-generated>\n"
+			+ "// The package.json version. Regenerate with PixoVR > Development > Update Plugin Version.\n"
+			+ "// </auto-generated>\n"
+			+ "namespace PixoVR.Apex.Utils\n"
+			+ "{\n"
+			+ "\tpublic static partial class ApexUtils\n"
+			+ "\t{\n"
+			+ "\t\tpublic static string SDKVersion => \"" + packageVersion + "\";\n"
+			+ "\t}\n"
+			+ "}\n";
+	}
 
-        string projectAssetsPath = Application.dataPath;
+	private static string FindPluginPath()
+	{
+		string[] scriptGuids = AssetDatabase.FindAssets("PixoVRPreBuilder t:Script");
+		if (scriptGuids.Length == 0)
+		{
+			return null;
+		}
 
-        // Navigate up one level to get the project root path
-        string projectRootPath = Directory.GetParent(projectAssetsPath).FullName;
-        string generatedPixoUtils = $"namespace PixoVR.Apex.Utils {{ public static partial class ApexUtils {{ public static string SDKVersion => \"{packageVersion}\"; }} }}";
-        string generatedUtilsFile = Path.Combine(projectRootPath, packageAssetPath, "Runtime/SDK/ApexUtilsGenerated.cs");
-
-        Debug.Log($"Generated file {generatedUtilsFile}");
-
-        if(File.Exists(generatedUtilsFile))
-        {
-            File.Delete(generatedUtilsFile);
-        }
-
-        File.WriteAllText(generatedUtilsFile, generatedPixoUtils);
-
-        AssetDatabase.Refresh();
-
-        return;
-    }
-
-    private static string FindPluginPath()
-    {
-        string[] guids = AssetDatabase.FindAssets("PixoVRPreBuilder t:Script");
-        if (guids.Length > 0)
-        {
-            string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-            string[] pathParts = path.Split("/");
-            path = Path.Combine(pathParts[0], pathParts[1]);
-            Debug.Log("Prebuild Script path: " + path);
-            return path;
-        }
-
-        return null;
-    }
+		string scriptPath = AssetDatabase.GUIDToAssetPath(scriptGuids[0]);
+		string[] pathParts = scriptPath.Split('/');
+		string pluginPath = Path.Combine(pathParts[0], pathParts[1]);
+		Debug.Log("Prebuild Script path: " + pluginPath);
+		return pluginPath;
+	}
 }
 #endif

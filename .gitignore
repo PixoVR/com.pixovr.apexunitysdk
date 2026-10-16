@@ -22,6 +22,7 @@ Sessionx.vim
 *~
 # Unity ignores folders ending in ~; this one holds repository tooling.
 !Tools~/
+!Samples~/
 # Auto-generated tag files
 tags
 # Persistent undo
@@ -62,6 +63,8 @@ tags
 ExportedObj/
 .consulo/
 *.csproj
+# The style checker in Tools~ is a .NET project.
+!Tools~/**/*.csproj
 *.unityproj
 *.sln
 *.suo

@@ -1,50 +1,50 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace PixoVR.Apex
 {
-    public class EndpointDisplayAttribute : PropertyAttribute
-    {
-        public List<string> enumDisplayList = new List<string>();
-        public List<PlatformServer> enumList = new List<PlatformServer>();
+	/// <summary>Shows an EPlatformServer field as a list of environment display names.</summary>
+	public class EndpointDisplayAttribute : PropertyAttribute
+	{
+		public EndpointDisplayAttribute()
+		{
+			PlatformServers = Enum.GetValues(typeof(EPlatformServer)).Cast<EPlatformServer>().ToList();
+			DisplayNames = PlatformServers.Select(platformServer => platformServer.ToDisplayString()).ToList();
+		}
 
-        public EndpointDisplayAttribute()
-        {
-            enumList = Enum.GetValues(typeof(PlatformServer)).Cast<PlatformServer>().ToList();
+		public IReadOnlyList<EPlatformServer> PlatformServers { get; }
+		public IReadOnlyList<string> DisplayNames { get; }
+	}
 
-            foreach(PlatformServer enumItem in enumList)
-            {
-                enumDisplayList.Add(enumItem.ToDisplayString());
-            }
-        }
-    }
 #if UNITY_EDITOR
-    [CustomPropertyDrawer(typeof(EndpointDisplayAttribute))]
-    public class EndpointDisplayDrawer : PropertyDrawer
-    {
-        [SerializeField]
-        int selectedIndex = -1;
+	[CustomPropertyDrawer(typeof(EndpointDisplayAttribute))]
+	public class EndpointDisplayDrawer : PropertyDrawer
+	{
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			EndpointDisplayAttribute displayAttribute = (EndpointDisplayAttribute)attribute;
+			if (displayAttribute.DisplayNames.Count == 0)
+			{
+				EditorGUI.PropertyField(position, property, label);
+				return;
+			}
 
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-        {
-            var displayAttribute = (EndpointDisplayAttribute)attribute;
-            if (displayAttribute.enumDisplayList.Count == 0)
-            {
-                EditorGUI.PropertyField(position, property, label);
-                return;
-            }
+			label = EditorGUI.BeginProperty(position, label, property);
+			EditorGUI.BeginChangeCheck();
+			int selectedIndex = EditorGUI.Popup(position, label.text, property.enumValueIndex,
+				displayAttribute.DisplayNames.ToArray());
+			if (EditorGUI.EndChangeCheck())
+			{
+				property.enumValueIndex = selectedIndex;
+			}
 
-            label = EditorGUI.BeginProperty(position, label, property);
-            EditorGUI.BeginChangeCheck();
-            int newIndex = EditorGUI.Popup(position, label.text, property.enumValueIndex,
-                displayAttribute.enumDisplayList.ToArray());
-            if (EditorGUI.EndChangeCheck())
-                property.enumValueIndex = newIndex;
-            EditorGUI.EndProperty();
-        }
-    }
+			EditorGUI.EndProperty();
+		}
+	}
 #endif
 }

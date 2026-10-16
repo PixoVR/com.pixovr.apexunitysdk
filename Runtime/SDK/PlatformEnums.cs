@@ -2,81 +2,84 @@ using System;
 
 namespace PixoVR.Apex
 {
-    [System.AttributeUsage(System.AttributeTargets.Property |
-                            System.AttributeTargets.Field)]
-    public class EndpointAttribute : System.Attribute
-    {
-        public string Display;
-        public string Url;
+	/// <summary>The display name and host of an environment.</summary>
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+	public class EndpointAttribute : Attribute
+	{
+		public EndpointAttribute(string display, string url)
+		{
+			Display = display;
+			Url = url;
+		}
 
-        public EndpointAttribute(string display, string url)
-        {
-            Display = display;
-            Url = url;
-        }
-    }
+		public string Display { get; }
+		public string Url { get; }
+	}
 
-    public enum PlatformServer : int
-    {
-        [Endpoint("North America - Production", PlatformEndpoints.NorthAmerica_ProductionEnvironment)]
-        NA_PRODUCTION = 0,
-        [Endpoint("North America - Staging", PlatformEndpoints.NorthAmerica_StagingEnvironment)]
-        NA_STAGE,
-        [Endpoint("North America - Development", PlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
-        NA_DEV,
-        [Endpoint("Saudi - Production", PlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Local Development", PlatformEndpoints.Local_DevelopmentEnvironment)]
-        LOCAL_DEV
-    }
+	/// <summary>The Apex environment the module talks to, by its Headset API host.</summary>
+	public enum EPlatformServer
+	{
+		[Endpoint("North America - Production", PlatformEndpoints.kNorthAmericaProduction)]
+		NA_PRODUCTION = 0,
+		[Endpoint("North America - Staging", PlatformEndpoints.kNorthAmericaStaging)]
+		NA_STAGE,
+		[Endpoint("North America - Development", PlatformEndpoints.kNorthAmericaDevelopment)]
+		NA_DEV,
+		[Endpoint("Saudi - Production", PlatformEndpoints.kSaudiProduction)]
+		SA_PRODUCTION,
+		[Endpoint("Local Development", PlatformEndpoints.kLocalDevelopment)]
+		LOCAL_DEV,
+	}
 
-    // TODO: Move to new plugin
-    public enum WebPlatformServer : int
-    {
-        [Endpoint("North America - Production", WebPlatformEndpoints.NorthAmerica_ProductionEnvironment)]
-        NA_PRODUCTION = 0,
-        [Endpoint("North America - Staging", WebPlatformEndpoints.NorthAmerica_StagingEnvironment)]
-        NA_STAGE,
-        [Endpoint("North America - Development", WebPlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
-        NA_DEV,
-        [Endpoint("Saudi - Production", WebPlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Local Development", PlatformEndpoints.Local_DevelopmentEnvironment)]
-        LOCAL_DEV
-    }
+	/// <summary>The same environments, by their web app host.</summary>
+	public enum EWebPlatformServer
+	{
+		[Endpoint("North America - Production", WebPlatformEndpoints.kNorthAmericaProduction)]
+		NA_PRODUCTION = 0,
+		[Endpoint("North America - Staging", WebPlatformEndpoints.kNorthAmericaStaging)]
+		NA_STAGE,
+		[Endpoint("North America - Development", WebPlatformEndpoints.kNorthAmericaDevelopment)]
+		NA_DEV,
+		[Endpoint("Saudi - Production", WebPlatformEndpoints.kSaudiProduction)]
+		SA_PRODUCTION,
+		[Endpoint("Local Development", WebPlatformEndpoints.kLocalDevelopment)]
+		LOCAL_DEV,
+	}
 
-    public enum APIPlatformServer : int
-    {
-        [Endpoint("North America - Production", APIPlatformEndpoints.NorthAmerica_ProductionEnvironment)]
-        NA_PRODUCTION = 0,
-        [Endpoint("North America - Staging", APIPlatformEndpoints.NorthAmerica_StagingEnvironment)]
-        NA_STAGE,
-        [Endpoint("North America - Development", APIPlatformEndpoints.NorthAmerica_DevelopmentEnvironment)]
-        NA_DEV,
-        [Endpoint("Saudi - Production", APIPlatformEndpoints.Saudi_ProductionEnvironment)]
-        SA_PRODUCTION,
-        [Endpoint("Local Development", APIPlatformEndpoints.Local_DevelopmentEnvironment)]
-        LOCAL_DEV
-    }
+	/// <summary>The same environments, by their Platform API host.</summary>
+	public enum EAPIPlatformServer
+	{
+		[Endpoint("North America - Production", APIPlatformEndpoints.kNorthAmericaProduction)]
+		NA_PRODUCTION = 0,
+		[Endpoint("North America - Staging", APIPlatformEndpoints.kNorthAmericaStaging)]
+		NA_STAGE,
+		[Endpoint("North America - Development", APIPlatformEndpoints.kNorthAmericaDevelopment)]
+		NA_DEV,
+		[Endpoint("Saudi - Production", APIPlatformEndpoints.kSaudiProduction)]
+		SA_PRODUCTION,
+		[Endpoint("Local Development", APIPlatformEndpoints.kLocalDevelopment)]
+		LOCAL_DEV,
+	}
 
-    public static class PPlatformEnumExtensions
-    {
-        public static string ToDisplayString(this Enum value)
-        {
-            EndpointAttribute[] attributes = (EndpointAttribute[])value
-               .GetType()
-               .GetField(value.ToString())
-               .GetCustomAttributes(typeof(EndpointAttribute), false);
-            return attributes.Length > 0 ? attributes[0].Display : string.Empty;
-        }
+	public static class PlatformEnumExtensions
+	{
+		public static string ToDisplayString(this Enum enumValue)
+		{
+			EndpointAttribute endpoint = FindEndpoint(enumValue);
+			return endpoint != null ? endpoint.Display : string.Empty;
+		}
 
-        public static string ToUrlString(this Enum value)
-        {
-            EndpointAttribute[] attributes = (EndpointAttribute[])value
-               .GetType()
-               .GetField(value.ToString())
-               .GetCustomAttributes(typeof(EndpointAttribute), false);
-            return attributes.Length > 0 ? attributes[0].Url : string.Empty;
-        }
-    }
+		public static string ToUrlString(this Enum enumValue)
+		{
+			EndpointAttribute endpoint = FindEndpoint(enumValue);
+			return endpoint != null ? endpoint.Url : string.Empty;
+		}
+
+		private static EndpointAttribute FindEndpoint(Enum enumValue)
+		{
+			EndpointAttribute[] endpoints = (EndpointAttribute[])enumValue.GetType().GetField(enumValue.ToString())
+				.GetCustomAttributes(typeof(EndpointAttribute), false);
+			return endpoints.Length > 0 ? endpoints[0] : null;
+		}
+	}
 }

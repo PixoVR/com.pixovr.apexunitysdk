@@ -1,16 +1,26 @@
+using System;
+using System.Net.WebSockets;
 using UnityEngine.Events;
 
 namespace PixoVR.Apex.Events
 {
-    [System.Serializable]
-    public class OnWebSocketConnectSuccessful : UnityEvent { };
+	[Serializable]
+	public class OnWebSocketConnectSuccessful : UnityEvent
+	{
+	}
 
-    [System.Serializable]
-    public class OnWebSocketConnectFailed : UnityEvent<string> { };
+	[Serializable]
+	public class OnWebSocketConnectFailed : UnityEvent<string>
+	{
+	}
 
-    [System.Serializable]
-    public class OnWebSocketReceive : UnityEvent<string> { };
+	[Serializable]
+	public class OnWebSocketReceive : UnityEvent<string>
+	{
+	}
 
-    [System.Serializable]
-    public class OnWebSocketClosed : UnityEvent<System.Net.WebSockets.WebSocketCloseStatus> { };
+	[Serializable]
+	public class OnWebSocketClosed : UnityEvent<WebSocketCloseStatus>
+	{
+	}
 }

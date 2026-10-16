@@ -1,0 +1,38 @@
+name: C# style
+
+on:
+  pull_request:
+    branches: [dev, main, '2.0']
+  push:
+    branches: [dev, main, '2.0']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: Company code style (AGENTS.md)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check naming, braces, blank lines, tabs and line length
+        run: dotnet run --project "Tools~/StyleCheck" -- .
+
+      - name: Check every asset has a .meta file
+        # Unity ignores dotfiles (such as .gitignore), so they need none.
+        run: |
+          missing=0
+          while IFS= read -r path; do
+            if [ ! -f "$path.meta" ]; then
+              echo "::error file=$path::$path has no .meta file; run python3 \"Tools~/make_metas.py\""
+              missing=1
+            fi
+          done < <(git ls-files Runtime Editor Tests Plugins Samples~ AGENTS.md CLAUDE.md README.md CHANGELOG.md \
+            | grep -v '\.meta$' | grep -v '/\.[^/]*$')
+          exit $missing

@@ -1,0 +1,85 @@
+# Company code style (see AGENTS.md). IDEs and `dotnet format whitespace` read this file;
+# Tools~/StyleCheck enforces the rules in CI.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+max_line_length = 120
+
+[*.cs]
+# Braces on their own lines, everywhere.
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_preserve_single_line_blocks = false
+csharp_preserve_single_line_statements = false
+
+# Braces around every conditional and loop body.
+csharp_prefer_braces = true:error
+dotnet_diagnostic.IDE0011.severity = error
+
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_after_cast = false
+
+# Naming: PascalCase types and members, I-prefixed interfaces, m_camelCase private fields,
+# k-prefixed constants, camelCase parameters and locals.
+dotnet_naming_symbols.types.applicable_kinds = class, struct, delegate, enum
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.members.applicable_kinds = method, property, event, local_function
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private, protected, internal, protected_internal, private_protected
+dotnet_naming_symbols.parameters_and_locals.applicable_kinds = parameter, local
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.interface_case.capitalization = pascal_case
+dotnet_naming_style.interface_case.required_prefix = I
+dotnet_naming_style.member_case.capitalization = camel_case
+dotnet_naming_style.member_case.required_prefix = m_
+dotnet_naming_style.constant_case.capitalization = pascal_case
+dotnet_naming_style.constant_case.required_prefix = k
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+dotnet_naming_rule.constants.symbols = constants
+dotnet_naming_rule.constants.style = constant_case
+dotnet_naming_rule.constants.severity = error
+dotnet_naming_rule.interfaces.symbols = interfaces
+dotnet_naming_rule.interfaces.style = interface_case
+dotnet_naming_rule.interfaces.severity = error
+dotnet_naming_rule.types.symbols = types
+dotnet_naming_rule.types.style = pascal_case
+dotnet_naming_rule.types.severity = error
+dotnet_naming_rule.members.symbols = members
+dotnet_naming_rule.members.style = pascal_case
+dotnet_naming_rule.members.severity = error
+dotnet_naming_rule.private_fields.symbols = private_fields
+dotnet_naming_rule.private_fields.style = member_case
+dotnet_naming_rule.private_fields.severity = error
+dotnet_naming_rule.parameters_and_locals.symbols = parameters_and_locals
+dotnet_naming_rule.parameters_and_locals.style = camel_case
+dotnet_naming_rule.parameters_and_locals.severity = error
+
+[*.{json,asmdef,yml,yaml}]
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.py]
+indent_style = space
+indent_size = 4

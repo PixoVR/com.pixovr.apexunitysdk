@@ -1,145 +1,147 @@
-
-using Newtonsoft.Json.Linq;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using TinCan.Json;
 using UnityEngine;
 
 namespace PixoVR.Apex.Utils
 {
-    public static partial class ApexUtils
-    {
-        public static string INVALID_IP = "0.0.0.0";
-        public static string INVALID_IPV6 = "::/0";
-        public static string HOME_IP = "127.0.0.1";
-        public static string HOME_IPV6 = "::1/128";
+	public enum EAddressFamily
+	{
+		IPV4,
+		IPV6,
+	}
 
-        public static string GetMacAddress()
-        {
-            string macAddress = "";
+	public static partial class ApexUtils
+	{
+		public const string kInvalidIp = "0.0.0.0";
+		public const string kInvalidIpv6 = "::/0";
+		public const string kHomeIp = "127.0.0.1";
+		public const string kHomeIpv6 = "::1/128";
+
+		public static string GetMacAddress()
+		{
 #if UNITY_WEBGL
-            macAddress = HOME_IP;
+			return kHomeIp;
 #else
-            try
-            {
-                PhysicalAddress physicalMacAddress = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)?.GetPhysicalAddress();
-                macAddress = string.Join(":", Array.ConvertAll(physicalMacAddress.GetAddressBytes(), addressBytes => addressBytes.ToString("X2")));
-            }
-            catch(Exception exception)
-            {
-                Debug.LogError("[ApexUtils] " + exception.Message);
-            }
+			try
+			{
+				PhysicalAddress physicalAddress = NetworkInterface.GetAllNetworkInterfaces()
+					.FirstOrDefault(networkInterface => networkInterface.OperationalStatus == OperationalStatus.Up
+						&& networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+					?.GetPhysicalAddress();
+				if (physicalAddress == null)
+				{
+					return string.Empty;
+				}
+
+				return string.Join(":",
+					physicalAddress.GetAddressBytes().Select(addressByte => addressByte.ToString("X2")));
+			}
+			catch (Exception exception)
+			{
+				Debug.LogError("[ApexUtils] " + exception.Message);
+				return string.Empty;
+			}
 #endif
-            return macAddress;
-        }
+		}
 
-        public static string GetLocalIP()
-        {
+		public static string GetLocalIP()
+		{
 #if UNITY_WEBGL
-            return HOME_IP;
+			return kHomeIp;
 #else
-            string currentIp = GetIP(ADDRESSFAM.IPv4);
-            if(currentIp == INVALID_IP)
-            {
-                currentIp = GetIP(ADDRESSFAM.IPv6);
-            }
+			string localIp = GetIP(EAddressFamily.IPV4);
+			if (localIp == kInvalidIp)
+			{
+				localIp = GetIP(EAddressFamily.IPV6);
+			}
 
-            return currentIp;
+			return localIp;
 #endif
-        }
+		}
 
-        private static string GetIP(ADDRESSFAM Addfam)
-        {
+		private static string GetIP(EAddressFamily addressFamily)
+		{
 #if UNITY_WEBGL
-            return HOME_IP;
+			return kHomeIp;
 #else
-            //Return null if ADDRESSFAM is Ipv6 but Os does not support it
-            if (Addfam == ADDRESSFAM.IPv6 && !Socket.OSSupportsIPv6)
-            {
-                return null;
-            }
+			// Null when IPv6 is requested but the OS does not support it.
+			if (addressFamily == EAddressFamily.IPV6 && !Socket.OSSupportsIPv6)
+			{
+				return null;
+			}
 
-            string output = INVALID_IP;
-
-            foreach (NetworkInterface item in NetworkInterface.GetAllNetworkInterfaces())
-            {
+			string foundAddress = kInvalidIp;
+			try
+			{
+				foreach (NetworkInterface networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+				{
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-                NetworkInterfaceType _type1 = NetworkInterfaceType.Wireless80211;
-                NetworkInterfaceType _type2 = NetworkInterfaceType.Ethernet;
+					NetworkInterfaceType interfaceType = networkInterface.NetworkInterfaceType;
+					bool isWirelessOrEthernet = interfaceType == NetworkInterfaceType.Wireless80211
+						|| interfaceType == NetworkInterfaceType.Ethernet;
+					if (!isWirelessOrEthernet || networkInterface.OperationalStatus != OperationalStatus.Up)
+					{
+						continue;
+					}
 
-                if ((item.NetworkInterfaceType == _type1 || item.NetworkInterfaceType == _type2) && item.OperationalStatus == OperationalStatus.Up)
 #endif
-                {
-                    foreach (UnicastIPAddressInformation ip in item.GetIPProperties().UnicastAddresses)
-                    {
-                        //IPv4
-                        if (Addfam == ADDRESSFAM.IPv4)
-                        {
-                            if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
-                            {
-                                if (ip.Address.ToString() != HOME_IP)
-                                    output = ip.Address.ToString();
-                            }
-                        }
+					UnicastIPAddressInformationCollection unicastAddresses =
+						networkInterface.GetIPProperties().UnicastAddresses;
+					foreach (UnicastIPAddressInformation unicastAddress in unicastAddresses)
+					{
+						string addressText = unicastAddress.Address.ToString();
+						bool isIpv4 = unicastAddress.Address.AddressFamily == AddressFamily.InterNetwork;
+						bool isIpv6 = unicastAddress.Address.AddressFamily == AddressFamily.InterNetworkV6;
+						if (addressFamily == EAddressFamily.IPV4 && isIpv4 && addressText != kHomeIp)
+						{
+							foundAddress = addressText;
+						}
+						else if (addressFamily == EAddressFamily.IPV6 && isIpv6 && addressText != kHomeIpv6)
+						{
+							foundAddress = addressText;
+						}
+					}
+				}
+			}
+			catch (Exception exception)
+			{
+				Debug.LogWarning("[ApexUtils] Could not read network interfaces: " + exception.Message);
+			}
 
-                        //IPv6
-                        else if (Addfam == ADDRESSFAM.IPv6)
-                        {
-                            if (ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                            {
-                                if (ip.Address.ToString() != HOME_IPV6)
-                                    output = ip.Address.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            return output;
+			return foundAddress;
 #endif
-        }
-
-        public enum ADDRESSFAM
-        {
-            IPv4, IPv6
-        }
-
-        public static JObject ConvertStringToJObject(string json)
-        {
-            StringOfJSON stringOfJson = new StringOfJSON(json);
-            return stringOfJson.toJObject();
-        }
-    }
+		}
+	}
 }
 
 public static class StringExtensions
 {
-    public static bool Contains(this string source, string value, StringComparison comp)
-    {
-        return source?.IndexOf(value, comp) >= 0;
-    }
+	public static bool Contains(this string sourceText, string searchedText, StringComparison comparison)
+	{
+		return sourceText?.IndexOf(searchedText, comparison) >= 0;
+	}
 }
-
 
 public static class DateTimeExtensions
 {
-    public static string GetLocalFormattedDateTime(this DateTime? dateTime)
-    {
-        var localTime = dateTime?.ToLocalTime();
-        if (localTime == null)
-        {
-            return String.Empty;
-        }
+	public static string GetLocalFormattedDateTime(this DateTime? dateTime)
+	{
+		DateTime? localTime = dateTime?.ToLocalTime();
+		if (localTime == null)
+		{
+			return string.Empty;
+		}
 
-        return localTime.Value.Date == DateTime.Now.Date
-            ? localTime.Value.ToString("hh:mm tt", CultureInfo.InvariantCulture)
-            : localTime.Value.ToString("MM/dd/yyyy hh:mm tt", CultureInfo.InvariantCulture);
-    }
+		return localTime.Value.Date == DateTime.Now.Date
+			? localTime.Value.ToString("hh:mm tt", CultureInfo.InvariantCulture)
+			: localTime.Value.ToString("MM/dd/yyyy hh:mm tt", CultureInfo.InvariantCulture);
+	}
 
-    public static string GetLocalFormattedDateTime(this DateTime dateTime)
-    {
-        return ((DateTime?)dateTime).GetLocalFormattedDateTime();
-    }
+	public static string GetLocalFormattedDateTime(this DateTime dateTime)
+	{
+		return ((DateTime?)dateTime).GetLocalFormattedDateTime();
+	}
 }

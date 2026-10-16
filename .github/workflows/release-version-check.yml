@@ -21,7 +21,7 @@ jobs:
 
           echo "Checking for version: $STRING"
 
-          MATCH=$(grep -n 'SDKVersion => "$STRING"' Runtime/SDK/ApexUtils.cs || echo "")
+          MATCH=$(grep -n "SDKVersion => \"$STRING\"" Runtime/SDK/ApexUtilsGenerated.cs || echo "")
 
           # Check if STRING exists in the pixo utilities
           if [ -z "$MATCH" ]; then

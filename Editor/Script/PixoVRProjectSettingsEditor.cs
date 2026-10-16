@@ -5,110 +5,73 @@ using UnityEngine;
 
 namespace PixoVR.Editor
 {
-    [CustomEditor(typeof(PixoVRProjectSettings))]
-    internal class PixoVRProjectSettingsEditor : ProjectSettingsEditor<PixoVRProjectSettings>
-    {
-        internal static string SettingsPath = $"Project/PixoVR";
+	[CustomEditor(typeof(PixoVRProjectSettings))]
+	internal class PixoVRProjectSettingsEditor : ProjectSettingsEditor<PixoVRProjectSettings>
+	{
+		internal const string kSettingsPath = "Project/PixoVR";
 
-        [SettingsProvider]
-        static SettingsProvider GetSettingsProvider()
-        {
-            return GetSettingsProvider(PixoVRPreBuilder.ProjectSettings, SettingsPath,
-                typeof(PixoVRProjectSettingsEditor));
-        }
+		// "MAJOR.MINOR.PATCH": a major that does not start with 0, one- or two-digit minor and patch.
+		// The core's ApexModuleVersionIsValid applies the same rule at runtime.
+		private static readonly Regex kModuleVersionPattern = new Regex(@"^[1-9][0-9]*\.[0-9]{1,2}\.[0-9]{1,2}$");
 
-        public override void OnInspectorGUI()
-        {
-            serializedObject.Update();
+		[SettingsProvider]
+		private static SettingsProvider GetSettingsProvider()
+		{
+			return GetSettingsProvider(PixoVRPreBuilder.ProjectSettings, kSettingsPath,
+				typeof(PixoVRProjectSettingsEditor));
+		}
 
-            GUIStyle LabelStyle = new GUIStyle(EditorStyles.label);
-            LabelStyle.normal.textColor = Color.red;
-            LabelStyle.alignment = TextAnchor.MiddleRight;
+		public override void OnInspectorGUI()
+		{
+			serializedObject.Update();
+			GUIStyle warningLabelStyle = new GUIStyle(EditorStyles.label);
+			warningLabelStyle.normal.textColor = Color.red;
+			warningLabelStyle.alignment = TextAnchor.MiddleRight;
+			EditorGUIUtility.labelWidth = 220;
 
-            EditorGUIUtility.labelWidth = 220;
+			DrawProperty(nameof(Target.PlatformTargetServer), new GUIContent("Target Server"));
+			DrawProperty(nameof(Target.ModuleVersion));
+			if (!kModuleVersionPattern.IsMatch(Target.ModuleVersion ?? string.Empty))
+			{
+				EditorGUILayout.LabelField($"Module version {Target.ModuleVersion} is invalid.", warningLabelStyle);
+			}
 
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.PlatformTargetServer)), new GUIContent("Target Server"));
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleVersion)));
-            if(!IsModuleVersionValid(Target.ModuleVersion))
-            {
-                EditorGUILayout.LabelField($"Module version {Target.ModuleVersion} is invalid.", LabelStyle);
-            }
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleName)));
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.ModuleID)));
-            if (Target.ModuleID <= 0)
-            {
-                EditorGUILayout.LabelField($"Module ID {Target.ModuleID} is invalid. Make sure it is greater than 0.", LabelStyle);
-            }
+			DrawProperty(nameof(Target.ModuleName));
+			DrawProperty(nameof(Target.ModuleID));
+			if (Target.ModuleID <= 0)
+			{
+				EditorGUILayout.LabelField($"Module ID {Target.ModuleID} is invalid. Make sure it is greater than 0.",
+					warningLabelStyle);
+			}
 
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.DefaultScenarioName)));
+			DrawProperty(nameof(Target.DefaultScenarioName));
+			DrawProperty(nameof(Target.CustomURLScheme));
+			DrawProperty(nameof(Target.SyncVersionsOnBuildPreProcess));
+			if (Target.SyncVersionsOnBuildPreProcess)
+			{
+				EditorGUI.indentLevel++;
+				DrawProperty(nameof(Target.BuildPreProcessCallbackOrder));
+				EditorGUI.indentLevel--;
+			}
 
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.CustomURLScheme)));
-            EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.SyncVersionsOnBuildPreProcess)));
-            if (Target.SyncVersionsOnBuildPreProcess)
-            {
-                EditorGUI.indentLevel++;
+			if (serializedObject.ApplyModifiedProperties() && Target.SyncVersionsOnBuildPreProcess)
+			{
+				PlayerSettings.bundleVersion = Target.ModuleVersion;
+			}
+		}
 
-                EditorGUILayout.PropertyField(serializedObject.FindBackingFieldProperty(nameof(Target.BuildPreProcessCallbackOrder)));
-
-                EditorGUI.indentLevel--;
-            }
-
-            if(serializedObject.ApplyModifiedProperties())
-            {
-                if(Target.SyncVersionsOnBuildPreProcess)
-                {
-                    PlayerSettings.bundleVersion = Target.ModuleVersion;
-                }
-            }
-        }
-
-        bool IsModuleVersionValid(string moduleVersion)
-        {
-            if (IsModuleVersionOnlyNumerical(moduleVersion) == false)
-                return false;
-
-            string[] moduleVersionParts = moduleVersion.Split('.');
-
-            if (moduleVersionParts.Length != 3)
-                return false;
-
-            if (!IsModuleMajorVersionPartValid(moduleVersionParts[0]))
-                return false;
-
-            if (!IsModuleNonMajorVersionPartValid(moduleVersionParts[1]))
-                return false;
-
-            if (!IsModuleNonMajorVersionPartValid(moduleVersionParts[2]))
-                return false;
-
-            return true;
-        }
-
-        static readonly Regex VersionValidator = new Regex(@"^[0123456789.]+$");
-
-        bool IsModuleVersionOnlyNumerical(string moduleVersion)
-        {
-            return VersionValidator.IsMatch(moduleVersion);
-        }
-
-        bool IsModuleNonMajorVersionPartValid(string modulePart)
-        {
-            if (modulePart.Length <= 0)
-                return false;
-
-            if (modulePart.Length > 2)
-                return false;
-
-            return true;
-        }
-
-        bool IsModuleMajorVersionPartValid(string modulePart)
-        {
-            if (modulePart.Length <= 0)
-                return false;
-
-            return true;
-        }
-    }
+		private void DrawProperty(string propertyName, GUIContent propertyLabel = null)
+		{
+			SerializedProperty backingField = serializedObject.FindBackingFieldProperty(propertyName);
+			if (propertyLabel == null)
+			{
+				EditorGUILayout.PropertyField(backingField);
+			}
+			else
+			{
+				EditorGUILayout.PropertyField(backingField, propertyLabel);
+			}
+		}
+	}
 }
 #endif

@@ -1,72 +1,169 @@
-This is a Unity plugin which implements the Apex API.
+# Apex Unity SDK
 
-Communication to the Apex Server uses REST https JSON requests which follow the xAPI Standard.
+The Unity package for the Apex platform: login (password, launcher token,
+Quick ID, authorization code), module access, the module list, sessions,
+telemetry and returning to the launcher.
 
-xAPI Spec: https://github.com/adlnet/xAPI-Spec
+Since 2.0 the SDK is a thin C# layer over
+[apex-sdk-core](https://github.com/PixoVR/apex-sdk-core), the native library
+the Unity and Unreal SDKs share. The core makes every HTTP call, sends the
+session heartbeat and builds the telemetry packets; C# makes no network calls.
 
-Documentation here: https://docs.pixovr.com/ApexSDK-Unity/
+Documentation: https://docs.pixovr.com/ApexSDK-Unity/
 
-Please make sure to run setup at the start of a new project. Setup can be found in the menu under PixoVR > Setup.
+## Requirements
+
+- Unity 2021.3 LTS or newer.
+- Platforms with a native core: **Windows x64** (editor and player) and
+  **Android arm64** (Quest). Elsewhere (macOS and Linux editors, iOS, WebGL)
+  the SDK loads but every platform call fails with `APEX_ERR_INVALID_STATE`
+  and `ApexSystem.CoreErrorMessage` says why.
+
+## Setup
+
+1. Add the package (Package Manager > Add package from git URL).
+2. Run **PixoVR > Setup** once per project (Android manifest and launcher
+   utilities).
+3. Fill in **Project Settings > PixoVR**: target server, module ID, module
+   version (`MAJOR.MINOR.PATCH`).
+4. Add an `ApexSystem` to your first scene, or let it create itself on first
+   use.
+
+To try every call first, import the **Quick Start** sample (Package Manager >
+Apex Unity SDK > Samples) and open its scene.
+
+## Using ApexSystem
+
+Every call returns at once. Its result arrives on a later frame, on the main
+thread, through the success or failure callback. Both get an `ApexResponse`
+(`Error`, `HttpStatus`, `Message`, `Succeeded`); success also gets the parsed
+result.
+
+```csharp
+ApexSystem.Login(username, password,
+	(response, userInformation) =>
+	{
+		// The module-access check has already run (unless PIXOVR_MODULEACCESS_BYPASS is defined).
+		Debug.Log($"Hello {userInformation.User.First}; access: {ApexSystem.UserHasAccess}");
+	},
+	(response, failure) => Debug.LogWarning($"Login failed: {response}"));
+
+// Launched from the Apex launcher: log in with the token it passed.
+ApexSystem.LoginWithToken(onLoggedIn, onLoginFailed);
+```
+
+### Sessions
+
+Session calls post to the platform's `/event` route. Their data is JSON the
+SDK builds for you, plus anything the module adds:
+
+```csharp
+JObject sessionData = new JObject { ["difficulty"] = "hard" };
+ApexSystem.JoinSession("FireSafety", sessionData, (response, joinResponse) => { }, onFailure);
+
+ApexSystem.SendSessionEvent("extinguisher_used", "Extinguisher", new JObject { ["seconds"] = 4.2 });
+
+SessionData result = new SessionData(score: 85, scaledScore: 0, minimumScore: 0, maximumScore: 100,
+	durationSeconds: 312, complete: true, success: true);
+ApexSystem.CompleteSession(result, new JObject { ["mistakes"] = 1 });
+```
+
+| Call | Data sent |
+| --- | --- |
+| `JoinSession` | `{"scenarioId", "moduleName", "moduleVersion", "platform", "deviceId", "deviceModel", "deviceSerial", "sdkVersion", "sdkSourceHash", "coreVersion", "moduleAccessChecked", "data"}` |
+| `SendSessionEvent` | `{"action", "target", "scenarioId", "data"}` |
+| `CompleteSession` | `{"scenarioId", "score", "scaledScore", "minimumScore", "maximumScore", "durationSeconds", "complete", "success", "data"}` |
+
+`data` is what the module passed, or `null`. A module with its own format uses
+`JoinSessionWithRawData`, `SendSessionEventWithRawData` and
+`CompleteSessionWithRawData`, which send the bytes as they are. The core
+base64-encodes the data and sends the session heartbeat while a session is
+active.
+
+### Returning to the launcher
+
+`ApexSystem.ExitApplication(nextTarget)` opens the app or URL that launched
+the module (passing the login and its `optional` data on), then quits.
+
+### Migrating from 1.x and earlier 2.0 builds
+
+- Replace `HttpResponseMessage` with `ApexResponse` in callbacks.
+- Replace xAPI `Statement` and `Extension` arguments with `JObject` data
+  (`SendSimpleSessionEvent` is now `SendSessionEvent`).
+- `GetUser`, the reporting queries and `ApexAPIHandler` are gone.
+- Model fields are properties now, and enums are renamed (`PlatformServer` is
+  `EPlatformServer`). See CHANGELOG.md.
 
 ## Analytics providers
 
-Analytics integrations can be supplied by a separate package through `IApexAnalyticsProvider`:
+Analytics integrations can be supplied by a separate package through
+`IApexAnalyticsProvider`; every method has an empty default:
 
 ```csharp
 public sealed class MyAnalyticsProvider : IApexAnalyticsProvider
 {
-    public string Name => "MyAnalytics";
+	public string Name => "MyAnalytics";
 }
 
 public static class MyAnalyticsRegistration
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Register()
-    {
-        ApexAnalytics.Register(new MyAnalyticsProvider());
-    }
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+	private static void Register()
+	{
+		ApexAnalytics.Register(new MyAnalyticsProvider());
+	}
 }
 ```
 
-Add `ApexTrackedObject` to objects that an analytics provider should track. Providers receive
-registration, unregistration, and engagement callbacks for those objects. Create an
-`ApexAnalyticsSettings` asset in a `Resources` folder to disable analytics globally or list
-provider names under `disabledProviders`. Providers registered after tracked objects are enabled
-also receive `OnTrackedObjectRegistered` for those existing objects. Providers can implement only
-the callbacks they need. Providers receive detached copies of payloads, so mutations are not sent
-to Apex.
+Add `ApexTrackedObject` to objects providers should track; providers get
+registration, unregistration, engagement and interaction callbacks for them,
+including objects enabled before the provider registered. `ApexInteractable`,
+`ApexGazeTracker` (with an `ApexGazeSource` such as `ApexHeadGazeSource` or
+the OpenXR eye-gaze source), `ApexStepTracker` and `ApexSpatialSampler`
+provide interaction, gaze, step and head-pose hooks. The optional OpenXR and
+XRI bridges live in their own assemblies.
 
-## PixoVR provider & telemetry packet
+## PixoVR telemetry
 
-The built-in `PixoVR` provider records compact telemetry and sends one JSON
-packet per flush through a pluggable sink. Packets contain short field names:
+The built-in `PixoVR` provider hands everything to the core, which numbers
+objects, timestamps and rounds the records (centimeters, whole degrees), drops
+unchanged poses, and batches them into compact JSON packets
+([schema](https://github.com/PixoVR/apex-sdk-core/blob/main/spec/schema/telemetry_packet.json)).
+A packet goes out every 10 s while a session is active, at 500 records, when
+the app pauses, and when the session ends. Each packet's `r` is the session's
+UUID, which links it to the session events.
 
-| Field | Meaning |
-| --- | --- |
-| `v`, `seq`, `t0` | Version, sequence, and Unix-millisecond packet start |
-| `s`, `r`, `u`, `m`, `sc` | Session, registration, user, module, and scenario |
-| `ob` | Object table entries referenced by the packet |
-| `ev` | Relative-time records |
-| `end` | Final session packet marker |
+Create an `ApexAnalyticsSettings` asset in a `Resources` folder to choose the
+sink (`NONE`, `LOG`, `FILE` under `persistentDataPath/ApexTelemetry`, or
+`HTTP` to a URL), the flush interval, the pose sampling rate and the packet
+size, or to disable analytics or individual providers. Without the asset,
+packets go to the log.
 
-Records use `r`/`u` for object registration, `e`/`x` for engagement,
-`i` for interactions, `sb`/`se` for steps, and `p` for poses. Pose positions
-are centimeters and rotations are whole-degree Euler values. Available sinks
-are `LogTelemetrySink`, `FileTelemetrySink`, and `HttpTelemetrySink`.
+## The native core
 
-Create an `ApexAnalyticsSettings` asset in `Resources` to configure provider
-enablement, sink type, HTTP URL, flush interval, pose sampling rate, and
-maximum records per packet. Without an asset, the provider is enabled with the
-log sink. `ApexInteractable`, `ApexGazeTracker`, `ApexStepTracker`, and
-`ApexSpatialSampler` provide module-facing interaction, gaze, step, and head
-sampling hooks. `ApexGazeTracker` consumes an `ApexGazeSource`; the built-in
-`ApexHeadGazeSource` uses a configured head, `ApexSpatialSampler.Head`, or its
-own transform. The optional `ApexOpenXREyeGazeSource` is isolated in the
-`PixoVR.ApexUnitySDK.OpenXR` assembly and falls back to head gaze when enabled.
-The optional XRI bridge is in the `PixoVR.ApexUnitySDK.XRI` assembly.
+`Plugins/Windows/x86_64/apex_core.dll` and
+`Plugins/Android/arm64-v8a/libapex_core.so` come from an apex-sdk-core release;
+`Plugins/ApexCoreVersion.txt` names it. Update them with:
+
+```sh
+python3 "Tools~/update_core.py" v0.1.0
+```
+
+On Android the SDK loads the library through `System.loadLibrary`, so the
+core's HTTP backend gets the JavaVM; nothing else is needed. The core's own
+log lines appear in the Unity log under the `ApexCore` tag.
 
 ## SDK source hash
 
-`ApexUtils.SDKSourceHash` is a SHA-256 of every `.cs` and `.asmdef` file under `Runtime/` (excluding the generated files). It is sent as `sdk_source_hash` with every xAPI statement, so you can tell whether two builds contain identical SDK code regardless of the version number.
+`ApexUtils.SDKSourceHash` is a SHA-256 of every `.cs` and `.asmdef` file under
+`Runtime/` (excluding the generated files). It is sent in each session's join
+data, so you can tell whether two builds contain identical SDK code
+regardless of the version number. The editor regenerates
+`Runtime/SDK/ApexSourceHashGenerated.cs` when the package is embedded or
+local; outside Unity run `python3 "Tools~/source_hash.py" --write`. CI fails
+if it is stale.
 
-The value lives in `Runtime/SDK/ApexSourceHashGenerated.cs`. When the package is embedded or local, the Unity editor regenerates it after every script reload. When editing outside Unity, run `python3 "Tools~/source_hash.py" --write` before committing; the `Validate SDK source hash` workflow fails if it is stale.
+## Development
+
+The code follows the company style described in [AGENTS.md](AGENTS.md); CI
+checks it with `dotnet run --project "Tools~/StyleCheck" -- .`.
