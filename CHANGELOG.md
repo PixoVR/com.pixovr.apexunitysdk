@@ -134,5 +134,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Adds pluggable gaze sources, a head gaze source, and an isolated OpenXR eye-gaze source stub.
 
 ### [Unreleased]
- - Added **ApexUtils.SDKSourceHash**, a SHA-256 of the SDK Runtime sources, and sends it as `sdk_source_hash` in the xAPI context extensions alongside `sdk_version`. It changes whenever ApexSystem or any code it compiles against changes, independent of the package version.
+ - Added **ApexUtils.SDKSourceHash**, a SHA-256 of the SDK Runtime sources, sent as `sdkSourceHash` in the session's join data alongside `sdkVersion`. It changes whenever ApexSystem or any code it compiles against changes, independent of the package version.
  - The editor regenerates the hash automatically when the package is embedded or local. Outside Unity, run `python3 "Tools~/source_hash.py" --write`. CI fails if the committed hash is stale.
+ - **The SDK runs on apex-sdk-core.** Every platform call, the session heartbeat and telemetry now run in the native apex-sdk-core library (Windows x64 and Android arm64 binaries in `Plugins/`), shared with the Unreal plugin. C# makes no network calls. Minimum Unity version: 2021.3 LTS.
+ - Breaking: success and failure callbacks receive an **ApexResponse** (error, HTTP status, message) in place of `HttpResponseMessage`.
+ - Breaking: sessions send JSON data instead of xAPI statements. **JoinSession**`(scenarioId, sessionData)` sends the scenario, module and device details; **SendSessionEvent**`(action, targetObject, eventData)` replaces `SendSimpleSessionEvent` and the `Statement` overload; **CompleteSession**`(sessionData, resultData)` sends the score and result. `*WithRawData` variants send module-defined bytes. TinCan.NET and the xAPI types are removed.
+ - Breaking: removed `GetUser`/`GetCurrentUser` (the platform deprecated the endpoint; the user comes with the login), the reporting queries (`GetUserMetricsForCurrentUsersOrg`, `GetDevicesForOrg`, `GetSesssionHistory`), `ApexAPIHandler` and `OnPlatformResponse`.
+ - Breaking: models expose properties instead of public fields; the module list uses the core's schema (`Module.Name`, `IconUrl`, `Distributor`, `Languages`, `Player`, `Versions[].Platforms` as names); `PlatformPlayer` and its downloads use PascalCase; enums are renamed `EPlatformServer`, `EAPIPlatformServer`, `EWebPlatformServer`, `ETelemetrySinkType` with UPPER_CASE values; endpoint constants are `k`-prefixed.
+ - The PixoVR telemetry provider forwards to the core, which builds and sends the packets (same format; the scenario now travels in the join data, linked through `r`). The HTTP sink is sent by the core; log and file sinks still write in C#.
+ - Added **Logout**, **SessionId**, **CoreVersion**, **IsCoreAvailable** and a settable **DeviceSerialNumber** (ManageXR's serial reaches the core when it arrives).
+ - Fixed: login success callbacks ran twice when the module-access check was on; they now run once, after the check.
+ - Fixed: desktop launch arguments (`-pixotoken value`) were read with empty names, and **OpenApplication** refused every non-empty path.
+ - Added the Quick Start sample (Package Manager > Samples).
+ - Code style: the package follows the company style in AGENTS.md, checked in CI by `Tools~/StyleCheck`. Serialized fields were renamed with `FormerlySerializedAs`, so scenes and assets keep their values.

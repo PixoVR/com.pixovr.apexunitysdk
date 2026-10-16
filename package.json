@@ -2,9 +2,8 @@
   "name": "com.pixovr.apexunitysdk",
   "version": "2.0.0",
   "displayName": "Apex Unity SDK",
-  "description": "Unity Plugin for the implementation of the Apex API.",
-  "unity": "2021.1",
-  "unityRelease": "0b5",
+  "description": "Apex platform SDK for Unity: login, module access, sessions, telemetry and launcher hand-off, running on the native apex-sdk-core library.",
+  "unity": "2021.3",
   "documentationUrl": "https://example.com/",
   "changelogUrl": "https://example.com/changelog.html",
   "licensesUrl": "https://example.com/licensing.html",
@@ -25,5 +24,12 @@
   "type": "library",
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Quick Start",
+      "description": "A scene with a panel that drives every ApexSystem call against a real environment.",
+      "path": "Samples~/QuickStart"
+    }
+  ]
 }

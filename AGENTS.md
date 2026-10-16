@@ -17,7 +17,7 @@ interface (`Runtime/Native/ApexNative.cs` mirrors its `Apex.h`). Read
 - The binaries in `Plugins/` come from a tagged apex-sdk-core release. Update
   them with `python3 "Tools~/update_core.py" vX.Y.Z`, never by hand; the script
   also writes their import settings and records the tag in
-  `Plugins/ApexCore/CORE_VERSION`.
+  `Plugins/ApexCoreVersion.txt`.
 - `ApexNative.kExpectedAbiMajor`/`kExpectedAbiMinor` must match the release's
   `APEX_ABI_MAJOR`/`APEX_ABI_MINOR`. When `Apex.h` changes, update
   `ApexNativeTypes.cs` and `ApexNative.cs` field for field and function for
