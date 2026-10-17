@@ -699,6 +699,30 @@ namespace PixoVR.Apex
 			return true;
 		}
 
+		/// <summary>
+		/// One page of the current user's modules, keeping versions built for platformName (null or empty: any
+		/// platform) in one of the given lifecycles, and modules with at least one such version, sorted by
+		/// sortOrder. pageIndex starts at 0. The first call fetches the whole list; later pages, filters and
+		/// sort orders reuse it until logout, the next login, <see cref="GetModulesList"/>, or refresh = true.
+		/// A page served that way has HttpStatus 0.
+		/// </summary>
+		public static bool GetModulesPage(string platformName, int pageIndex, int pageSize,
+			EModuleLifecycle lifecycles, EModuleSortOrder sortOrder, bool refresh,
+			Action<ApexResponse, ModulePageResponse> success = null,
+			Action<ApexResponse, FailureResponse> failure = null)
+		{
+			if (CurrentUser == null)
+			{
+				Fail(failure, EApexError.APEX_ERR_NOT_LOGGED_IN, "No user logged in.");
+				return false;
+			}
+
+			Instance.RequireCore(failure)?.GetModulePage(platformName, lifecycles, sortOrder, pageIndex, pageSize,
+				refresh, (response, payloadJson) =>
+					Deliver(response, success, failure, () => ModulePageResponse.FromJson(payloadJson)));
+			return true;
+		}
+
 		/// <summary>A one-time login code for the current user. success gets a GeneratedAssistedLogin.</summary>
 		public static bool GenerateOneTimeLoginForCurrentUser(Action<ApexResponse, object> success,
 			Action<ApexResponse, FailureResponse> failure)

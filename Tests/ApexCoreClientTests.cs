@@ -74,6 +74,13 @@ namespace PixoVR.Apex.Tests
 
 			Assert.That(moduleListResponse, Is.Not.Null);
 			Assert.That(moduleListResponse.Error, Is.EqualTo(EApexError.APEX_ERR_NOT_LOGGED_IN));
+
+			ApexResponse modulePageResponse = null;
+			coreClient.GetModulePage("android", EModuleLifecycle.RELEASED | EModuleLifecycle.QA, EModuleSortOrder.NAME,
+				0, 10, false, (response, payloadJson) => modulePageResponse = response);
+			coreClient.Poll(2.0);
+			Assert.That(modulePageResponse, Is.Not.Null);
+			Assert.That(modulePageResponse.Error, Is.EqualTo(EApexError.APEX_ERR_NOT_LOGGED_IN));
 			Assert.That(coreClient.IsLoggedIn(), Is.False);
 			Assert.That(coreClient.GetCurrentUserJson(), Is.Empty);
 		}

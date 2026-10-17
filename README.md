@@ -52,6 +52,32 @@ ApexSystem.Login(username, password,
 ApexSystem.LoginWithToken(onLoggedIn, onLoginFailed);
 ```
 
+### Modules
+
+`GetModulesPage` pages through the modules the user can launch on a platform.
+The first call fetches the whole list; later pages, other filters and other
+sort orders reuse it until logout, the next login, `GetModulesList`, or
+`refresh: true`. A page served from the kept list has `HttpStatus` 0.
+
+```csharp
+ApexSystem.GetModulesPage("android", pageIndex: 0, pageSize: 20,
+	EModuleLifecycle.RELEASED | EModuleLifecycle.UAT, EModuleSortOrder.NAME, refresh: false,
+	(response, page) =>
+	{
+		Debug.Log($"Page {page.PageIndex + 1} of {page.PageCount}, {page.TotalCount} modules");
+		foreach (Module module in page.Modules)
+		{
+			Debug.Log($"{module.Name}: {module.Versions[0].Version} ({module.Versions[0].Lifecycle.Name})");
+		}
+	}, onFailure);
+```
+
+Each version has a `Lifecycle` (`Id`, `Name`, `Stage`). Pages keep versions in
+the requested lifecycles, `RELEASED` by default, and modules with at least one
+such version. `Stage` maps the platform's lifecycle names: Released,
+Development, QA and UAT to their own flags, any other name to `OTHER`.
+Archived versions are never returned.
+
 ### Sessions
 
 Session calls post to the platform's `/event` route. Their data is JSON the
@@ -146,7 +172,7 @@ packets go to the log.
 `Plugins/ApexCoreVersion.txt` names it. Update them with:
 
 ```sh
-python3 "Tools~/update_core.py" v0.1.0
+python3 "Tools~/update_core.py" v0.2.0
 ```
 
 On Android the SDK loads the library through `System.loadLibrary`, so the

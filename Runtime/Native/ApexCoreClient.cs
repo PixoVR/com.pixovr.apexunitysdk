@@ -381,6 +381,14 @@ namespace PixoVR.Apex.Native
 				ApexNative.ToUtf8(platformName), kResultCallback, SelfPointer), onResult);
 		}
 
+		public ulong GetModulePage(string platformName, EModuleLifecycle lifecycles, EModuleSortOrder sortOrder,
+			int pageIndex, int pageSize, bool refresh, Action<ApexResponse, string> onResult)
+		{
+			return StartCall(() => ApexNative.ApexGetModulePage(m_nativeClient, ApexNative.ToUtf8(platformName),
+				(uint)lifecycles, (int)sortOrder, pageIndex, pageSize, refresh ? 1 : 0, kResultCallback,
+				SelfPointer), onResult);
+		}
+
 		// ---------------------------------------------------------------- Sessions
 
 		public ulong JoinSession(byte[] moduleData, Action<ApexResponse, string> onResult)

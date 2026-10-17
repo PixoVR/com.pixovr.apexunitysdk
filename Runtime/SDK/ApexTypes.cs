@@ -358,8 +358,11 @@ namespace PixoVR.Apex
 		/// <summary>Android package name of this build.</summary>
 		public string ApkName { get; set; }
 		public string URL { get; set; }
+		/// <summary>The lifecycle name of a module version; the status of a player version.</summary>
 		public string Status { get; set; }
 		public string ExternalId { get; set; }
+		/// <summary>The lifecycle Status maps to, for module versions.</summary>
+		public EModuleLifecycle Lifecycle { get; set; } = EModuleLifecycle.OTHER;
 	}
 
 	/// <summary>The player app a module runs in, with its builds.</summary>
@@ -484,6 +487,74 @@ namespace PixoVR.Apex
 		}
 	}
 
+	/// <summary>One page of the current user's modules (spec/schema/module_page.json).</summary>
+	[Serializable]
+	public class ModulePageResponse
+	{
+		/// <summary>At most PageSize modules; empty past the last page.</summary>
+		public List<Module> Modules { get; set; } = new List<Module>();
+		public int PageIndex { get; set; }
+		public int PageSize { get; set; }
+		public int PageCount { get; set; }
+		/// <summary>Modules matching the filters, across every page.</summary>
+		public int TotalCount { get; set; }
+
+		internal static ModulePageResponse FromJson(string payloadJson)
+		{
+			ModulePageResponse pageResponse = JsonConvert.DeserializeObject<ModulePageResponse>(payloadJson);
+			if (pageResponse == null)
+			{
+				return new ModulePageResponse();
+			}
+
+			pageResponse.Modules ??= new List<Module>();
+			return pageResponse;
+		}
+	}
+
+	/// <summary>
+	/// Module version lifecycles, as flags for <see cref="ApexSystem.GetModulesPage"/>. Mirrors EApexLifecycle
+	/// in Apex.h. A lifecycle named anything other than Released, Development, QA, UAT or Archived, or no
+	/// lifecycle, is OTHER. Archived versions are never returned.
+	/// </summary>
+	[Flags]
+	public enum EModuleLifecycle
+	{
+		RELEASED = 1,
+		DEVELOPMENT = 2,
+		QA = 4,
+		UAT = 8,
+		OTHER = 16,
+		/// <summary>Every lifecycle the SDK returns: all but Archived.</summary>
+		ALL = RELEASED | DEVELOPMENT | QA | UAT | OTHER,
+	}
+
+	/// <summary>
+	/// Order of the modules <see cref="ApexSystem.GetModulesPage"/> pages through. Mirrors EApexModuleSort.
+	/// </summary>
+	public enum EModuleSortOrder
+	{
+		/// <summary>The order the platform returns.</summary>
+		PLATFORM = 0,
+		/// <summary>Name A-Z, ignoring case.</summary>
+		NAME = 1,
+		/// <summary>Module ID, lowest first.</summary>
+		ID = 2,
+		/// <summary>Newest matching version (CreatedAt) first.</summary>
+		NEWEST_VERSION = 3,
+	}
+
+	/// <summary>A module version's lifecycle.</summary>
+	[Serializable]
+	public class ModuleLifecycle
+	{
+		public int? Id { get; set; }
+		/// <summary>As the platform names it; null when the version has no lifecycle.</summary>
+		public string Name { get; set; }
+		/// <summary>The lifecycle the name maps to; a single flag.</summary>
+		public EModuleLifecycle Stage { get; set; } = EModuleLifecycle.OTHER;
+	}
+
 	/// <summary>A module as the core returns it, with versions already filtered to one platform.</summary>
 	[Serializable]
 	public class Module
@@ -536,9 +607,11 @@ namespace PixoVR.Apex
 		/// <summary>Android package name of this version's build.</summary>
 		public string Package { get; set; }
 		public string CreatedAt { get; set; }
+		/// <summary>Names of the controls this version supports.</summary>
 		public List<string> Controls { get; set; } = new List<string>();
 		/// <summary>Short name, or name when the short name is empty.</summary>
 		public List<string> Platforms { get; set; } = new List<string>();
+		public ModuleLifecycle Lifecycle { get; set; } = new ModuleLifecycle();
 	}
 
 	public static class ModuleExtensions
@@ -632,6 +705,8 @@ namespace PixoVR.Apex
 				download.Version = moduleVersion.Version;
 				download.ApkName = moduleVersion.Package;
 				download.Platform = platformName;
+				download.Status = moduleVersion.Lifecycle?.Name;
+				download.Lifecycle = moduleVersion.Lifecycle?.Stage ?? EModuleLifecycle.OTHER;
 				downloads.Add(download);
 			}
 

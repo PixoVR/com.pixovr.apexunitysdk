@@ -37,9 +37,11 @@ namespace PixoVR.Apex.Tests
 			""versions"": [
 				{ ""id"": 301, ""version"": ""1.0.0"", ""package"": ""com.example.module"",
 					""createdAt"": ""2026-01-01T00:00:00Z"", ""controls"": [""Control 1""],
-					""platforms"": [""android"", ""windows""] },
+					""platforms"": [""android"", ""windows""],
+					""lifecycle"": { ""id"": 1, ""name"": ""Released"", ""stage"": ""RELEASED"" } },
 				{ ""id"": 302, ""version"": ""2.0.0"", ""package"": null, ""createdAt"": null, ""controls"": [],
-					""platforms"": [""webgl""] }
+					""platforms"": [""webgl""],
+					""lifecycle"": { ""id"": 8, ""name"": ""Beta"", ""stage"": ""OTHER"" } }
 			]
 		}
 	]
@@ -95,6 +97,12 @@ namespace PixoVR.Apex.Tests
 			AssertDownload(orgModule, 301, "1.0.0", "com.example.module", "android");
 			AssertDownload(orgModule, 301, "1.0.0", "com.example.module", "windows");
 			AssertDownload(orgModule, 302, "2.0.0", null, "webgl");
+			OrgModuleDownload releasedDownload = orgModule.Downloads.First(download => download.VersionID == 301);
+			Assert.That(releasedDownload.Status, Is.EqualTo("Released"));
+			Assert.That(releasedDownload.Lifecycle, Is.EqualTo(EModuleLifecycle.RELEASED));
+			OrgModuleDownload customDownload = orgModule.Downloads.First(download => download.VersionID == 302);
+			Assert.That(customDownload.Status, Is.EqualTo("Beta"));
+			Assert.That(customDownload.Lifecycle, Is.EqualTo(EModuleLifecycle.OTHER));
 
 			Assert.That(orgModule.Player, Is.Not.Null);
 			Assert.That(orgModule.Player.Id, Is.EqualTo(201));

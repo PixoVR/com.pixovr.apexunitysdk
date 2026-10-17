@@ -35,7 +35,16 @@ namespace PixoVR.Apex.Samples
 		[SerializeField, Tooltip("Platform name used to filter the module list, e.g. android or windows.")]
 		private string m_modulePlatform = "android";
 
+		[SerializeField, Tooltip("Modules per page for the paged module list.")]
+		private int m_modulePageSize = 5;
+
+		private static readonly string[] kSortOrderLabels = { "Platform", "Name", "ID", "Newest" };
+
 		private readonly List<string> m_logLines = new List<string>();
+		private int m_modulePageIndex;
+		private int m_modulePageCount;
+		private bool m_includeUnreleasedModules;
+		private EModuleSortOrder m_moduleSortOrder = EModuleSortOrder.NAME;
 		private string m_password = string.Empty;
 		private string m_serialNumber = string.Empty;
 		private string m_scoreText = "80";
@@ -199,6 +208,59 @@ namespace PixoVR.Apex.Samples
 			}
 
 			GUILayout.EndHorizontal();
+			DrawModulePages();
+		}
+
+		private void DrawModulePages()
+		{
+			GUILayout.BeginHorizontal();
+			m_includeUnreleasedModules = GUILayout.Toggle(m_includeUnreleasedModules, "Include unreleased");
+			m_moduleSortOrder = (EModuleSortOrder)GUILayout.Toolbar((int)m_moduleSortOrder, kSortOrderLabels);
+			GUILayout.EndHorizontal();
+
+			GUILayout.BeginHorizontal();
+			if (GUILayout.Button("First page (refresh)"))
+			{
+				RequestModulePage(0, true);
+			}
+
+			if (GUILayout.Button("Previous page") && m_modulePageIndex > 0)
+			{
+				RequestModulePage(m_modulePageIndex - 1, false);
+			}
+
+			if (GUILayout.Button("Next page") && m_modulePageIndex + 1 < m_modulePageCount)
+			{
+				RequestModulePage(m_modulePageIndex + 1, false);
+			}
+
+			GUILayout.EndHorizontal();
+		}
+
+		private void RequestModulePage(int pageIndex, bool refresh)
+		{
+			EModuleLifecycle lifecycles = m_includeUnreleasedModules ? EModuleLifecycle.ALL : EModuleLifecycle.RELEASED;
+			ApexSystem.GetModulesPage(m_modulePlatform, pageIndex, Mathf.Max(1, m_modulePageSize), lifecycles,
+				m_moduleSortOrder, refresh, OnModulePage, LogFailure("Module page"));
+		}
+
+		private void OnModulePage(ApexResponse response, ModulePageResponse pageResponse)
+		{
+			m_modulePageIndex = pageResponse.PageIndex;
+			m_modulePageCount = pageResponse.PageCount;
+			string sourceText = response.HttpStatus == 0 ? "kept list" : "fetched";
+			AddLog($"Page {pageResponse.PageIndex + 1} of {pageResponse.PageCount}, {pageResponse.TotalCount} "
+				+ $"module(s) in all ({sourceText})");
+			foreach (Module module in pageResponse.Modules)
+			{
+				List<string> versionLabels = new List<string>();
+				foreach (ModuleVersion moduleVersion in module.Versions)
+				{
+					versionLabels.Add($"{moduleVersion.Version} {moduleVersion.Lifecycle?.Name ?? "no lifecycle"}");
+				}
+
+				AddLog($"  {module.Id}: {module.Name} [{string.Join(", ", versionLabels)}]");
+			}
 		}
 
 		private void DrawSession()

@@ -6,6 +6,6 @@ namespace PixoVR.Apex.Utils
 {
 	public static partial class ApexUtils
 	{
-		public static string SDKSourceHash => "2ec6dd5a28067d7586baad04adad435f35f6996d0baf87e1ba92db276187a922";
+		public static string SDKSourceHash => "c378f5a8d2af16ede2ea0338ef13b351bb15df3450a9057b75111a15c3c235d5";
 	}
 }
