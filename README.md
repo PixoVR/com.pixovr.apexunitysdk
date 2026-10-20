@@ -52,10 +52,38 @@ ApexSystem.Login(username, password,
 ApexSystem.LoginWithToken(onLoggedIn, onLoginFailed);
 ```
 
+### Modules
+
+`GetModulesPage` pages through the modules the user can launch on a platform.
+The first call fetches the whole list; later pages, other filters and other
+sort orders reuse it until logout, the next login, `GetModulesList`, or
+`refresh: true`. A page served from the kept list has `HttpStatus` 0.
+
+```csharp
+ApexSystem.GetModulesPage("android", pageIndex: 0, pageSize: 20,
+	EModuleLifecycle.RELEASED | EModuleLifecycle.UAT, EModuleSortOrder.NAME, refresh: false,
+	(response, page) =>
+	{
+		Debug.Log($"Page {page.PageIndex + 1} of {page.PageCount}, {page.TotalCount} modules");
+		foreach (Module module in page.Modules)
+		{
+			Debug.Log($"{module.Name}: {module.Versions[0].Version} ({module.Versions[0].Lifecycle.Name})");
+		}
+	}, onFailure);
+```
+
+Each version has a `Lifecycle` (`Id`, `Name`, `Stage`). Pages keep versions in
+the requested lifecycles, `RELEASED` by default, and modules with at least one
+such version. `Stage` maps the platform's lifecycle names: Released,
+Development, QA and UAT to their own flags, any other name to `OTHER`.
+Archived versions are never returned.
+
 ### Sessions
 
 Session calls post to the platform's `/event` route. Their data is JSON the
-SDK builds for you, plus anything the module adds:
+SDK builds for you, plus anything the module adds. By default the core sends
+it as xAPI statements, as the 1.x SDK did (see
+[xAPI sessions](#xapi-sessions)):
 
 ```csharp
 JObject sessionData = new JObject { ["difficulty"] = "hard" };
@@ -74,11 +102,46 @@ ApexSystem.CompleteSession(result, new JObject { ["mistakes"] = 1 });
 | `SendSessionEvent` | `{"action", "target", "scenarioId", "data"}` |
 | `CompleteSession` | `{"scenarioId", "score", "scaledScore", "minimumScore", "maximumScore", "durationSeconds", "complete", "success", "data"}` |
 
-`data` is what the module passed, or `null`. A module with its own format uses
+`data` is what the module passed, or `null`. With xAPI off, the JSON itself is
+sent, base64-encoded, and a module with its own format can use
 `JoinSessionWithRawData`, `SendSessionEventWithRawData` and
-`CompleteSessionWithRawData`, which send the bytes as they are. The core
-base64-encodes the data and sends the session heartbeat while a session is
-active.
+`CompleteSessionWithRawData`, which send the bytes as they are. Either way the
+core sends the session heartbeat while a session is active.
+
+#### xAPI sessions
+
+Until the platform's new session route is live, sessions send the xAPI
+statements the 1.x SDK sent. This is the default: **Send xAPI Session
+Events** in **Project Settings > PixoVR** is on, also in projects whose
+settings predate it. Turn it off, or set `ApexSystem.SendXapiSessionEvents =
+false` (it applies from the next join), to send the module's data in the new
+format described above. With xAPI, the same calls send:
+
+| Call | Statement |
+| --- | --- |
+| `JoinSession` | verb `joined_session`, object `https://pixovr.com/xapi/objects/<moduleId>/<scenarioId>`, `sessionData` as context extensions |
+| `SendSessionEvent` | verb `https://pixovr.com/xapi/verbs/<action>`, object `.../<scenarioId>/<target>` (lowercase, spaces as `_`), `eventData` as context extensions |
+| `CompleteSession` | verb `completed_session`, the score, success and duration as the result, `resultData` as result extensions |
+
+- **Every statement** carries the user's email as the actor, the session as
+  `context.registration`, the module version and platform, and the standard
+  extensions (`moduleIds`, `device_id`, `device_model`, `sdk_version`,
+  `sdk_source_hash`, `module_access_checked`, `device_serial`).
+- **Extensions:** each key becomes `https://pixovr.com/xapi/extension/<key>`
+  and each value becomes text.
+- **Statements you build yourself:** the 1.x `SendSessionEvent(Statement)` is
+  `SendSessionStatement(JObject)`:
+
+```csharp
+ApexSystem.SendSessionStatement(new JObject
+{
+	["verb"] = new JObject { ["id"] = "https://pixovr.com/xapi/verbs/opened", ["display"] = new JObject { ["en"] = "Opened" } },
+	["object"] = new JObject { ["objectType"] = "Activity", ["id"] = "https://pixovr.com/xapi/objects/13/FireSafety/door" },
+});
+```
+
+The `*WithRawData` calls need a JSON object in this mode: the SDK's session
+JSON or a statement.
 
 ### Returning to the launcher
 
@@ -89,7 +152,9 @@ the module (passing the login and its `optional` data on), then quits.
 
 - Replace `HttpResponseMessage` with `ApexResponse` in callbacks.
 - Replace xAPI `Statement` and `Extension` arguments with `JObject` data
-  (`SendSimpleSessionEvent` is now `SendSessionEvent`).
+  (`SendSimpleSessionEvent` is now `SendSessionEvent`, `SendSessionEvent(Statement)`
+  is `SendSessionStatement(JObject)`). Sessions still send xAPI statements
+  by default (**Send xAPI Session Events**).
 - `GetUser`, the reporting queries and `ApexAPIHandler` are gone.
 - Model fields are properties now, and enums are renamed (`PlatformServer` is
   `EPlatformServer`). See CHANGELOG.md.
@@ -146,7 +211,7 @@ packets go to the log.
 `Plugins/ApexCoreVersion.txt` names it. Update them with:
 
 ```sh
-python3 "Tools~/update_core.py" v0.1.0
+python3 "Tools~/update_core.py" v0.2.0
 ```
 
 On Android the SDK loads the library through `System.loadLibrary`, so the

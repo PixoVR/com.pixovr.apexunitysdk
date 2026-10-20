@@ -13,7 +13,8 @@ a Windows build.
      the logged-in user.
    - **Join**, **Send event** and **Complete** run a session. Join sends the
      scenario ID with the module and device details; events and completion
-     send JSON data.
+     send JSON data. By default these reach the platform as xAPI statements
+     (**Send xAPI Session Events** in Project Settings > PixoVR).
    - **Begin/Complete step** and the cube buttons record telemetry, which the
      core batches into packets. Without an `ApexAnalyticsSettings` asset the
      packets go to the console; while a session is active they are sent every

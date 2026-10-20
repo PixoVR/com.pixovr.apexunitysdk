@@ -71,6 +71,40 @@ namespace PixoVR.Apex.Tests
 		}
 
 		[Test]
+		public void ModulePageIsReadFromTheCoreSchema()
+		{
+			ModulePageResponse modulePage = ModulePageResponse.FromJson(@"{
+				""modules"": [ { ""id"": 7, ""name"": ""Forklift"", ""versions"": [
+					{ ""id"": 70, ""version"": ""1.2.0"", ""platforms"": [""android""],
+						""lifecycle"": { ""id"": 2, ""name"": ""Development"", ""stage"": ""DEVELOPMENT"" } },
+					{ ""id"": 71, ""version"": ""1.1.0"", ""platforms"": [""android""],
+						""lifecycle"": { ""id"": null, ""name"": null, ""stage"": ""OTHER"" } } ] } ],
+				""pageIndex"": 1, ""pageSize"": 1, ""pageCount"": 3, ""totalCount"": 3 }");
+
+			Assert.That(modulePage.PageIndex, Is.EqualTo(1));
+			Assert.That(modulePage.PageSize, Is.EqualTo(1));
+			Assert.That(modulePage.PageCount, Is.EqualTo(3));
+			Assert.That(modulePage.TotalCount, Is.EqualTo(3));
+			Module module = modulePage.Modules[0];
+			Assert.That(module.Id, Is.EqualTo(7));
+			Assert.That(module.Versions[0].Lifecycle.Id, Is.EqualTo(2));
+			Assert.That(module.Versions[0].Lifecycle.Name, Is.EqualTo("Development"));
+			Assert.That(module.Versions[0].Lifecycle.Stage, Is.EqualTo(EModuleLifecycle.DEVELOPMENT));
+			Assert.That(module.Versions[1].Lifecycle.Name, Is.Null);
+			Assert.That(module.Versions[1].Lifecycle.Stage, Is.EqualTo(EModuleLifecycle.OTHER));
+			Assert.That(ModulePageResponse.FromJson("null").Modules, Is.Empty);
+		}
+
+		[Test]
+		public void LifecycleFlagsMatchTheCore()
+		{
+			Assert.That((int)EModuleLifecycle.RELEASED, Is.EqualTo(1));
+			Assert.That((int)EModuleLifecycle.OTHER, Is.EqualTo(16));
+			Assert.That((int)EModuleLifecycle.ALL, Is.EqualTo(31));
+			Assert.That((int)EModuleSortOrder.NEWEST_VERSION, Is.EqualTo(3));
+		}
+
+		[Test]
 		public void MalformedJsonReadsAsEmpty()
 		{
 			Assert.That(JsonReading.ParseObject("not json").Count, Is.EqualTo(0));

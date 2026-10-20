@@ -16,7 +16,7 @@ namespace PixoVR.Apex.Native
 
 		/// <summary>The ABI this binding was written against: (major &lt;&lt; 16) | minor.</summary>
 		internal const uint kExpectedAbiMajor = 0;
-		internal const uint kExpectedAbiMinor = 6;
+		internal const uint kExpectedAbiMinor = 7;
 
 		// ---------------------------------------------------------------- Library
 
@@ -86,6 +86,10 @@ namespace PixoVR.Apex.Native
 		internal static extern ulong ApexGetModuleList(IntPtr client, byte[] platformName, ApexResultCallback onResult,
 			IntPtr userData);
 
+		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern ulong ApexGetModulePage(IntPtr client, byte[] platformName, uint lifecycleMask,
+			int sortOrder, int pageIndex, int pageSize, int refresh, ApexResultCallback onResult, IntPtr userData);
+
 		// ---------------------------------------------------------------- Sessions
 
 		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -113,6 +117,9 @@ namespace PixoVR.Apex.Native
 
 		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
 		internal static extern void ApexSetDeviceId(IntPtr client, byte[] deviceId);
+
+		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern void ApexSetSessionFormat(IntPtr client, int sessionFormat);
 
 		// ---------------------------------------------------------------- Launch arguments
 

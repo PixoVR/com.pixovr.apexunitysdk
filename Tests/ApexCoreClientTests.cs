@@ -44,6 +44,23 @@ namespace PixoVR.Apex.Tests
 				"ApexConfigData no longer matches ApexConfig in Apex.h.");
 			Assert.That(config.HeartbeatIntervalSeconds, Is.EqualTo(5.0));
 			Assert.That(config.RequestTimeoutMilliseconds, Is.EqualTo(30000u));
+			Assert.That(config.SessionFormat, Is.EqualTo((int)EApexSessionFormat.APEX_SESSION_FORMAT_DATA));
+		}
+
+		[Test]
+		public void XapiSessionsCanBeChosenAtCreationAndChangedLater()
+		{
+			ApexCoreSettings coreSettings = new ApexCoreSettings();
+			coreSettings.SendXapiSessionEvents = true;
+			ApexCoreClient coreClient = CreateClient(coreSettings);
+			coreClient.SetSendXapiSessionEvents(false);
+			coreClient.SetSendXapiSessionEvents(true);
+
+			ApexResponse joinResponse = null;
+			coreClient.JoinSession(System.Text.Encoding.UTF8.GetBytes("{}"),
+				(response, payloadJson) => joinResponse = response);
+			coreClient.Poll(1.0);
+			Assert.That(joinResponse.Error, Is.EqualTo(EApexError.APEX_ERR_NOT_LOGGED_IN));
 		}
 
 		[Test]
@@ -74,6 +91,13 @@ namespace PixoVR.Apex.Tests
 
 			Assert.That(moduleListResponse, Is.Not.Null);
 			Assert.That(moduleListResponse.Error, Is.EqualTo(EApexError.APEX_ERR_NOT_LOGGED_IN));
+
+			ApexResponse modulePageResponse = null;
+			coreClient.GetModulePage("android", EModuleLifecycle.RELEASED | EModuleLifecycle.QA, EModuleSortOrder.NAME,
+				0, 10, false, (response, payloadJson) => modulePageResponse = response);
+			coreClient.Poll(2.0);
+			Assert.That(modulePageResponse, Is.Not.Null);
+			Assert.That(modulePageResponse.Error, Is.EqualTo(EApexError.APEX_ERR_NOT_LOGGED_IN));
 			Assert.That(coreClient.IsLoggedIn(), Is.False);
 			Assert.That(coreClient.GetCurrentUserJson(), Is.Empty);
 		}
