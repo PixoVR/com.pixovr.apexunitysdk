@@ -118,6 +118,9 @@ namespace PixoVR.Apex.Native
 		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
 		internal static extern void ApexSetDeviceId(IntPtr client, byte[] deviceId);
 
+		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern void ApexSetSessionFormat(IntPtr client, int sessionFormat);
+
 		// ---------------------------------------------------------------- Launch arguments
 
 		[DllImport(kLibraryName, CallingConvention = CallingConvention.Cdecl)]

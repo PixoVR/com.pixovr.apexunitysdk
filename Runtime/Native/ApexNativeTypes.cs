@@ -46,6 +46,13 @@ namespace PixoVR.Apex.Native
 		APEX_LOG_ERROR = 3,
 	}
 
+	/// <summary>Mirrors EApexSessionFormat in Apex.h.</summary>
+	internal enum EApexSessionFormat
+	{
+		APEX_SESSION_FORMAT_DATA = 0,
+		APEX_SESSION_FORMAT_XAPI = 1,
+	}
+
 	/// <summary>Mirrors EApexTelemetrySink in Apex.h.</summary>
 	internal enum EApexTelemetrySink
 	{
@@ -102,6 +109,8 @@ namespace PixoVR.Apex.Native
 		public double TelemetryFlushIntervalSeconds;
 		public double TelemetryPoseSamplesPerSecond;
 		public int TelemetryMaximumRecordsPerPacket;
+
+		public int SessionFormat;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

@@ -54,6 +54,8 @@ namespace PixoVR.Apex
 #endif
 		protected float m_heartbeatIntervalSeconds = 5.0f;
 
+		protected bool m_sendXapiSessionEvents;
+
 		protected string m_deviceId = string.Empty;
 		protected string m_deviceModel = string.Empty;
 		protected string m_platformName = string.Empty;
@@ -157,6 +159,24 @@ namespace PixoVR.Apex
 			}
 		}
 
+		/// <summary>
+		/// Session calls send xAPI statements, as the Unity SDK 1.x did, instead of the module's data. A bridge
+		/// until the platform's new session route is live. Starts from Project Settings > PixoVR; a change
+		/// applies from the next <see cref="JoinSession"/>, and an active session keeps its format.
+		/// </summary>
+		public static bool SendXapiSessionEvents
+		{
+			get
+			{
+				return Instance.m_sendXapiSessionEvents;
+			}
+			set
+			{
+				Instance.m_sendXapiSessionEvents = value;
+				Instance.m_coreClient?.SetSendXapiSessionEvents(value);
+			}
+		}
+
 		public static ApexAnalyticsContext AnalyticsContext => Instance.BuildAnalyticsContext();
 
 		/// <summary>The login token the launcher passed ("pixotoken"), or an empty string.</summary>
@@ -241,6 +261,7 @@ namespace PixoVR.Apex
 				m_moduleName = projectSettings.ModuleName;
 				m_moduleId = projectSettings.ModuleID;
 				m_platformTargetServer = projectSettings.PlatformTargetServer;
+				m_sendXapiSessionEvents = projectSettings.SendXapiSessionEvents;
 			}
 
 			ReadDeviceInformation();
@@ -353,6 +374,7 @@ namespace PixoVR.Apex
 			coreSettings.PlatformName = m_platformName;
 			coreSettings.ClientIp = m_clientIp;
 			coreSettings.HeartbeatIntervalSeconds = m_heartbeatIntervalSeconds;
+			coreSettings.SendXapiSessionEvents = m_sendXapiSessionEvents;
 
 			ApexAnalyticsSettings analyticsSettings = ApexAnalyticsSettings.Load();
 			if (ApexAnalyticsSettings.IsPixoVRProviderEnabled(analyticsSettings))
@@ -783,7 +805,10 @@ namespace PixoVR.Apex
 			JoinSessionWithRawData(Encoding.UTF8.GetBytes(joinData.ToString(Formatting.None)), success, failure);
 		}
 
-		/// <summary>Starts a session, sending moduleData as the join data exactly as given.</summary>
+		/// <summary>
+		/// Starts a session, sending moduleData as the join data exactly as given. With
+		/// <see cref="SendXapiSessionEvents"/> it must be a JSON object: the SDK's join JSON or a statement.
+		/// </summary>
 		public static void JoinSessionWithRawData(byte[] moduleData,
 			Action<ApexResponse, JoinSessionResponse> success = null,
 			Action<ApexResponse, FailureResponse> failure = null)
@@ -847,7 +872,34 @@ namespace PixoVR.Apex
 			SendSessionEventWithRawData(Encoding.UTF8.GetBytes(eventBody.ToString(Formatting.None)), success, failure);
 		}
 
-		/// <summary>Sends moduleData as a session event's data exactly as given.</summary>
+		/// <summary>
+		/// Sends an xAPI statement as a session event, as the Unity SDK 1.x's SendSessionEvent(Statement) did.
+		/// The statement needs a verb and an object; the core sets the actor, the session's context and the
+		/// standard extensions. Needs <see cref="SendXapiSessionEvents"/>.
+		/// </summary>
+		public static void SendSessionStatement(JObject statement, Action<ApexResponse, object> success = null,
+			Action<ApexResponse, FailureResponse> failure = null)
+		{
+			if (!SendXapiSessionEvents)
+			{
+				Fail(failure, EApexError.APEX_ERR_INVALID_STATE, "Statements need SendXapiSessionEvents.");
+				return;
+			}
+
+			if (statement?["verb"] == null || statement["object"] == null)
+			{
+				Fail(failure, EApexError.APEX_ERR_INVALID_ARGUMENT, "The statement needs a verb and an object.");
+				return;
+			}
+
+			SendSessionEventWithRawData(Encoding.UTF8.GetBytes(statement.ToString(Formatting.None)), success,
+				failure);
+		}
+
+		/// <summary>
+		/// Sends moduleData as a session event's data exactly as given. With
+		/// <see cref="SendXapiSessionEvents"/> it must be a JSON object: the SDK's event JSON or a statement.
+		/// </summary>
 		public static void SendSessionEventWithRawData(byte[] moduleData, Action<ApexResponse, object> success = null,
 			Action<ApexResponse, FailureResponse> failure = null)
 		{
@@ -890,7 +942,10 @@ namespace PixoVR.Apex
 			CompleteSessionWithRawData(completeData, success, failure);
 		}
 
-		/// <summary>Completes the session, sending moduleData as its data exactly as given.</summary>
+		/// <summary>
+		/// Completes the session, sending moduleData as its data exactly as given. With
+		/// <see cref="SendXapiSessionEvents"/> it must be a JSON object: the SDK's completion JSON or a statement.
+		/// </summary>
 		public static void CompleteSessionWithRawData(byte[] moduleData, Action<ApexResponse, object> success = null,
 			Action<ApexResponse, FailureResponse> failure = null)
 		{

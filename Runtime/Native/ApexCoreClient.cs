@@ -33,6 +33,8 @@ namespace PixoVR.Apex.Native
 		public string PlatformName { get; set; }
 		public string ClientIp { get; set; }
 		public double HeartbeatIntervalSeconds { get; set; } = 5.0;
+		/// <summary>Session calls send xAPI statements, as the Unity SDK 1.x did.</summary>
+		public bool SendXapiSessionEvents { get; set; }
 		public ETelemetryDestination TelemetryDestination { get; set; } = ETelemetryDestination.OFF;
 		public string TelemetryUrl { get; set; }
 		public double TelemetryFlushIntervalSeconds { get; set; }
@@ -207,6 +209,7 @@ namespace PixoVR.Apex.Native
 				config.TelemetryFlushIntervalSeconds = settings.TelemetryFlushIntervalSeconds;
 				config.TelemetryPoseSamplesPerSecond = settings.TelemetryPoseSamplesPerSecond;
 				config.TelemetryMaximumRecordsPerPacket = settings.TelemetryMaximumRecordsPerPacket;
+				config.SessionFormat = (int)ToNativeSessionFormat(settings.SendXapiSessionEvents);
 
 				// The handle is created before the client so the telemetry callback can find it.
 				ApexCoreClient coreClient = new ApexCoreClient(IntPtr.Zero, default, settings.TelemetryPacketHandler);
@@ -440,6 +443,15 @@ namespace PixoVR.Apex.Native
 			if (m_nativeClient != IntPtr.Zero)
 			{
 				ApexNative.ApexSetDeviceId(m_nativeClient, ApexNative.ToUtf8(serialNumber ?? string.Empty));
+			}
+		}
+
+		/// <summary>Applies from the next join; an active session keeps its format.</summary>
+		public void SetSendXapiSessionEvents(bool sendXapiSessionEvents)
+		{
+			if (m_nativeClient != IntPtr.Zero)
+			{
+				ApexNative.ApexSetSessionFormat(m_nativeClient, (int)ToNativeSessionFormat(sendXapiSessionEvents));
 			}
 		}
 
@@ -749,6 +761,13 @@ namespace PixoVR.Apex.Native
 				default:
 					return EApexEnvironment.APEX_ENV_NA_PRODUCTION;
 			}
+		}
+
+		private static EApexSessionFormat ToNativeSessionFormat(bool sendXapiSessionEvents)
+		{
+			return sendXapiSessionEvents
+				? EApexSessionFormat.APEX_SESSION_FORMAT_XAPI
+				: EApexSessionFormat.APEX_SESSION_FORMAT_DATA;
 		}
 
 		private static EApexTelemetrySink ToNativeTelemetrySink(ETelemetryDestination telemetryDestination)

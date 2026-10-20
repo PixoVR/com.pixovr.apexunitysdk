@@ -16,5 +16,11 @@ namespace PixoVR.Editor
 		[field: SerializeField] public string ModuleName { get; set; }
 		[field: SerializeField] public string DefaultScenarioName { get; set; } = "Default";
 		[field: SerializeField] public bool SyncModuleWithApplicationVersion { get; set; }
+
+		/// <summary>
+		/// Session calls send xAPI statements, as the Unity SDK 1.x did, until the platform's new session
+		/// route is live. See <see cref="PixoVR.Apex.ApexSystem.SendXapiSessionEvents"/>.
+		/// </summary>
+		[field: SerializeField] public bool SendXapiSessionEvents { get; set; }
 	}
 }

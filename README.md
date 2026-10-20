@@ -106,6 +106,39 @@ ApexSystem.CompleteSession(result, new JObject { ["mistakes"] = 1 });
 base64-encodes the data and sends the session heartbeat while a session is
 active.
 
+#### xAPI sessions
+
+Until the platform's new session route is live, sessions can send the xAPI
+statements the 1.x SDK sent. Turn on **Send xAPI Session Events** in
+**Project Settings > PixoVR**, or set `ApexSystem.SendXapiSessionEvents` (it
+applies from the next join). The same calls then send:
+
+| Call | Statement |
+| --- | --- |
+| `JoinSession` | verb `joined_session`, object `https://pixovr.com/xapi/objects/<moduleId>/<scenarioId>`, `sessionData` as context extensions |
+| `SendSessionEvent` | verb `https://pixovr.com/xapi/verbs/<action>`, object `.../<scenarioId>/<target>` (lowercase, spaces as `_`), `eventData` as context extensions |
+| `CompleteSession` | verb `completed_session`, the score, success and duration as the result, `resultData` as result extensions |
+
+- **Every statement** carries the user's email as the actor, the session as
+  `context.registration`, the module version and platform, and the standard
+  extensions (`moduleIds`, `device_id`, `device_model`, `sdk_version`,
+  `sdk_source_hash`, `module_access_checked`, `device_serial`).
+- **Extensions:** each key becomes `https://pixovr.com/xapi/extension/<key>`
+  and each value becomes text.
+- **Statements you build yourself:** the 1.x `SendSessionEvent(Statement)` is
+  `SendSessionStatement(JObject)`:
+
+```csharp
+ApexSystem.SendSessionStatement(new JObject
+{
+	["verb"] = new JObject { ["id"] = "https://pixovr.com/xapi/verbs/opened", ["display"] = new JObject { ["en"] = "Opened" } },
+	["object"] = new JObject { ["objectType"] = "Activity", ["id"] = "https://pixovr.com/xapi/objects/13/FireSafety/door" },
+});
+```
+
+The `*WithRawData` calls need a JSON object in this mode: the SDK's session
+JSON or a statement.
+
 ### Returning to the launcher
 
 `ApexSystem.ExitApplication(nextTarget)` opens the app or URL that launched
@@ -115,7 +148,9 @@ the module (passing the login and its `optional` data on), then quits.
 
 - Replace `HttpResponseMessage` with `ApexResponse` in callbacks.
 - Replace xAPI `Statement` and `Extension` arguments with `JObject` data
-  (`SendSimpleSessionEvent` is now `SendSessionEvent`).
+  (`SendSimpleSessionEvent` is now `SendSessionEvent`, `SendSessionEvent(Statement)`
+  is `SendSessionStatement(JObject)`). To keep sending xAPI statements to the
+  platform, turn on **Send xAPI Session Events**.
 - `GetUser`, the reporting queries and `ApexAPIHandler` are gone.
 - Model fields are properties now, and enums are renamed (`PlatformServer` is
   `EPlatformServer`). See CHANGELOG.md.
