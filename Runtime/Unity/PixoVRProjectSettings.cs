@@ -19,8 +19,9 @@ namespace PixoVR.Editor
 
 		/// <summary>
 		/// Session calls send xAPI statements, as the Unity SDK 1.x did, until the platform's new session
-		/// route is live. See <see cref="PixoVR.Apex.ApexSystem.SendXapiSessionEvents"/>.
+		/// route is live. On by default, also for settings saved before it existed.
+		/// See <see cref="PixoVR.Apex.ApexSystem.SendXapiSessionEvents"/>.
 		/// </summary>
-		[field: SerializeField] public bool SendXapiSessionEvents { get; set; }
+		[field: SerializeField] public bool SendXapiSessionEvents { get; set; } = true;
 	}
 }

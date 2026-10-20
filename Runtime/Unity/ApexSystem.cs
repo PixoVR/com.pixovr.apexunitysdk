@@ -54,7 +54,8 @@ namespace PixoVR.Apex
 #endif
 		protected float m_heartbeatIntervalSeconds = 5.0f;
 
-		protected bool m_sendXapiSessionEvents;
+		// xAPI until the platform's new session route is live; Project Settings > PixoVR can turn it off.
+		protected bool m_sendXapiSessionEvents = true;
 
 		protected string m_deviceId = string.Empty;
 		protected string m_deviceModel = string.Empty;
@@ -160,9 +161,10 @@ namespace PixoVR.Apex
 		}
 
 		/// <summary>
-		/// Session calls send xAPI statements, as the Unity SDK 1.x did, instead of the module's data. A bridge
-		/// until the platform's new session route is live. Starts from Project Settings > PixoVR; a change
-		/// applies from the next <see cref="JoinSession"/>, and an active session keeps its format.
+		/// Session calls send xAPI statements, as the Unity SDK 1.x did, instead of the module's data. On by
+		/// default, as a bridge until the platform's new session route is live. Starts from Project Settings >
+		/// PixoVR; a change applies from the next <see cref="JoinSession"/>, and an active session keeps its
+		/// format.
 		/// </summary>
 		public static bool SendXapiSessionEvents
 		{

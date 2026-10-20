@@ -46,8 +46,8 @@ namespace PixoVR.Editor
 
 			DrawProperty(nameof(Target.DefaultScenarioName));
 			DrawProperty(nameof(Target.SendXapiSessionEvents), new GUIContent("Send xAPI Session Events",
-				"Sessions send xAPI statements, as the Unity SDK 1.x did, until the platform's new session "
-					+ "route is live."));
+				"Sessions send xAPI statements, as the Unity SDK 1.x did (the default), until the platform's new "
+					+ "session route is live. Off sends the module's data in the new format."));
 			DrawProperty(nameof(Target.CustomURLScheme));
 			DrawProperty(nameof(Target.SyncVersionsOnBuildPreProcess));
 			if (Target.SyncVersionsOnBuildPreProcess)

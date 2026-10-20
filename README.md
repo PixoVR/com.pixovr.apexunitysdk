@@ -81,7 +81,9 @@ Archived versions are never returned.
 ### Sessions
 
 Session calls post to the platform's `/event` route. Their data is JSON the
-SDK builds for you, plus anything the module adds:
+SDK builds for you, plus anything the module adds. By default the core sends
+it as xAPI statements, as the 1.x SDK did (see
+[xAPI sessions](#xapi-sessions)):
 
 ```csharp
 JObject sessionData = new JObject { ["difficulty"] = "hard" };
@@ -100,18 +102,20 @@ ApexSystem.CompleteSession(result, new JObject { ["mistakes"] = 1 });
 | `SendSessionEvent` | `{"action", "target", "scenarioId", "data"}` |
 | `CompleteSession` | `{"scenarioId", "score", "scaledScore", "minimumScore", "maximumScore", "durationSeconds", "complete", "success", "data"}` |
 
-`data` is what the module passed, or `null`. A module with its own format uses
+`data` is what the module passed, or `null`. With xAPI off, the JSON itself is
+sent, base64-encoded, and a module with its own format can use
 `JoinSessionWithRawData`, `SendSessionEventWithRawData` and
-`CompleteSessionWithRawData`, which send the bytes as they are. The core
-base64-encodes the data and sends the session heartbeat while a session is
-active.
+`CompleteSessionWithRawData`, which send the bytes as they are. Either way the
+core sends the session heartbeat while a session is active.
 
 #### xAPI sessions
 
-Until the platform's new session route is live, sessions can send the xAPI
-statements the 1.x SDK sent. Turn on **Send xAPI Session Events** in
-**Project Settings > PixoVR**, or set `ApexSystem.SendXapiSessionEvents` (it
-applies from the next join). The same calls then send:
+Until the platform's new session route is live, sessions send the xAPI
+statements the 1.x SDK sent. This is the default: **Send xAPI Session
+Events** in **Project Settings > PixoVR** is on, also in projects whose
+settings predate it. Turn it off, or set `ApexSystem.SendXapiSessionEvents =
+false` (it applies from the next join), to send the module's data in the new
+format described above. With xAPI, the same calls send:
 
 | Call | Statement |
 | --- | --- |
@@ -149,8 +153,8 @@ the module (passing the login and its `optional` data on), then quits.
 - Replace `HttpResponseMessage` with `ApexResponse` in callbacks.
 - Replace xAPI `Statement` and `Extension` arguments with `JObject` data
   (`SendSimpleSessionEvent` is now `SendSessionEvent`, `SendSessionEvent(Statement)`
-  is `SendSessionStatement(JObject)`). To keep sending xAPI statements to the
-  platform, turn on **Send xAPI Session Events**.
+  is `SendSessionStatement(JObject)`). Sessions still send xAPI statements
+  by default (**Send xAPI Session Events**).
 - `GetUser`, the reporting queries and `ApexAPIHandler` are gone.
 - Model fields are properties now, and enums are renamed (`PlatformServer` is
   `EPlatformServer`). See CHANGELOG.md.
