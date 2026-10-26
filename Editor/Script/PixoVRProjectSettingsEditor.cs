@@ -88,6 +88,9 @@ namespace PixoVR.Editor
 
         bool IsModuleVersionOnlyNumerical(string moduleVersion)
         {
+            if (moduleVersion == null)
+                return false;
+            
             return VersionValidator.IsMatch(moduleVersion);
         }
 
