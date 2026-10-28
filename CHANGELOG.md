@@ -119,3 +119,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Added more logging.
  - Aligned variable usage to prevent errors.
  - Removes use of old API url.
+
+### [1.9.1] - 2026-09-14
+ - Converts remaining event-based ApexSystem APIs to success/failure callbacks.
+ - Removes obsolete UnityEvent-based login, user, module, authorization-code, Quick ID user, and assisted-login events and all unused event classes from ApexEvents.cs.
+ - **GetUserMetricsForCurrentUsersOrg** success callback is now `Action<HttpResponseMessage, UserMetricsResponse>` to match the rest of the SDK.
+
+### [1.10.0] - 2026-09-16
+ - Added **SubmitLog** to upload a log file (.txt, .log or .zip) for the signed-in user. The log is filed under the configured module ID and the user's organization and account.
+
+### [Unreleased]
+ - Added **ApexUtils.SDKSourceHash**, a SHA-256 of the SDK Runtime sources, and sends it as `sdk_source_hash` in the xAPI context extensions alongside `sdk_version`. It changes whenever ApexSystem or any code it compiles against changes, independent of the package version.
+ - The editor regenerates the hash automatically when the package is embedded or local. Outside Unity, run `python3 "Tools~/source_hash.py" --write`. CI fails if the committed hash is stale.

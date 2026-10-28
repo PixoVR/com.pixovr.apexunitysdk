@@ -10,7 +10,7 @@ using UnityEngine.Networking;
 
 namespace PixoVR.Apex
 {
-    public class WebGLPlatformAPIHandler : BaseAPIHandler
+    public class PixoPlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
@@ -80,10 +80,10 @@ namespace PixoVR.Apex
         // Constructor / endpoint setup
         // ---------------------------------------------------------------------------
 
-        public WebGLPlatformAPIHandler()
+        public PixoPlatformAPIHandler()
             : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
-        public WebGLPlatformAPIHandler(string endpointUrl)
+        public PixoPlatformAPIHandler(string endpointUrl)
         {
             SetEndpoint(endpointUrl);
         }
@@ -91,7 +91,7 @@ namespace PixoVR.Apex
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
-            Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
+            Debug.Log("[PixoPlatformAPIHandler] Set Endpoint to " + URL);
         }
 
         public override void SetPlatformEndpoint(string endpointUrl)
@@ -196,7 +196,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             var paramsInput = new
             {
@@ -226,7 +226,6 @@ namespace PixoVR.Apex
                     var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                     if (failureResponse != null)
                     {
-                        OnAPIResponse?.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
                         failure?.Invoke(response, failureResponse);
                         return;
                     }
@@ -235,7 +234,7 @@ namespace PixoVR.Apex
                     var userMetricsResponse = JsonConvert.DeserializeObject<UserMetricsResponse>(userMetricsJSON.ToString());
                     userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
 
-                    success?.Invoke(userMetricsResponse, response);
+                    success?.Invoke(response, userMetricsResponse);
                 }
                 catch (Exception ex)
                 {
@@ -412,7 +411,7 @@ namespace PixoVR.Apex
             }
         }
 
-        public override async void GetUserData(string authToken, int userId)
+        public override async void GetUserData(string authToken, int userId, Action<HttpResponseMessage, GetUserResponseContent> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             using (UnityWebRequest uwr = MakeGet(URL, string.Format("/user/{0}", userId), authToken))
             {
@@ -420,17 +419,19 @@ namespace PixoVR.Apex
                 HttpResponseMessage response = ToHttpResponse(uwr);
                 string body = uwr.downloadHandler.text;
 
-                object responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
-                if ((responseContent as GetUserResponseContent).HasErrored())
+                GetUserResponseContent responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
+                if (responseContent.HasErrored())
                 {
-                    responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    failure?.Invoke(response, failureResponse);
+                    return;
                 }
 
-                OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+                success?.Invoke(response, responseContent);
             }
         }
 
-        public override async void GetUserModules(string authToken, int userId)
+        public override async void GetUserModules(string authToken, int userId, Action<HttpResponseMessage, GetUserModulesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             UserModulesRequestData usersModulesRequest = new UserModulesRequestData();
             usersModulesRequest.UserIds.Add(userId);
@@ -441,21 +442,23 @@ namespace PixoVR.Apex
                 HttpResponseMessage response = ToHttpResponse(uwr);
                 string body = uwr.downloadHandler.text;
 
-                object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
-                if ((responseContent as GetUserModulesResponse).HasErrored())
+                GetUserModulesResponse responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
+                if (responseContent.HasErrored())
                 {
-                    responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    failure?.Invoke(response, failureResponse);
+                    return;
                 }
                 else
                 {
-                    (responseContent as GetUserModulesResponse).ParseData();
+                    responseContent.ParseData();
                 }
 
-                OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
+                success?.Invoke(response, responseContent);
             }
         }
 
-        public override async void GetQuickIDAuthenticationUsers(string serialNumber)
+        public override async void GetQuickIDAuthenticationUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             using (UnityWebRequest uwr = MakeGet(apiURL, string.Format("/v2/auth/quick-id/get-users?serialNumber={0}", serialNumber)))
             {
@@ -464,13 +467,15 @@ namespace PixoVR.Apex
                 string body = uwr.downloadHandler.text;
                 Debug.Log($"[WebGLPA] Body returned as {body}");
 
-                object responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
-                if ((responseContent as QuickIDAuthGetUsersResponse).HasErrored())
+                QuickIDAuthGetUsersResponse responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
+                if (responseContent.HasErrored())
                 {
-                    responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                    failure?.Invoke(response, failureResponse);
+                    return;
                 }
 
-                OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_GET_USERS, response, responseContent);
+                success?.Invoke(response, responseContent);
             }
         }
 
@@ -640,7 +645,116 @@ namespace PixoVR.Apex
             }
         }
 
-        public override async void GetModuleList(string authToken, string platform)
+        public override async void GetModuleList(string authToken, int userID, string platform, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            var graphqlRequest = new
+            {
+                operationName = "user",
+                variables = new { id = userID },
+                query = "query user($id: ID!) { user(id: $id) { modules { id abbreviation externalId imageLink developer description shortDesc longDesc industry details categories isAvailable isAuthenticatedLaunch availableLanguages { displayName } modulePlayer { id name launchProtocol versions { id version status fileLink fileSize platforms { id name shortName } } } versions { id version createdAt fileLink fileSize controls { id name } platforms { id name shortName } } } } }"
+                // TODO: Use this query when lifecycles is added to production - query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } lifecycle { id name } } } } }"
+            };
+
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
+            using (UnityWebRequest uwr = MakePost(apiURL, "/v2/query", jsonContent, authToken))
+            {
+                HttpResponseMessage response;
+                try
+                {
+                    await SendAsync(uwr);
+                    response = ToHttpResponse(uwr);
+                    string body = uwr.downloadHandler.text;
+                    Debug.Log("Body: " + body);
+
+                    JObject jsonResponse = JObject.Parse(body);
+                    var failureResponse = GetGQLFailureResponse(jsonResponse, "user");
+                    if (failureResponse != null)
+                    {
+                        failure?.Invoke(response, failureResponse);
+                        return;
+                    }
+
+                    var userModulesJSON = jsonResponse["data"]["user"];
+                    var userModulesResponse =
+                        JsonConvert.DeserializeObject<UserModulesResponse>(userModulesJSON.ToString());
+                    FilterLatestPlatformModules(ref userModulesResponse, platform);
+                    success?.Invoke(response, userModulesResponse);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error retrieving users: {ex.Message}");
+                    response = InternalErrorResponse();
+                    failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
+                }
+            }
+        }
+
+        public override async void SubmitLog(LogSubmissionRequest request, Action<HttpResponseMessage, SubmitLogResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
+        {
+            var form = new List<IMultipartFormSection>();
+            foreach (var field in request.FormFields)
+                form.Add(new MultipartFormDataSection(field.Key, field.Value));
+            form.Add(new MultipartFormFileSection("file", request.FileData, request.FileName, "application/octet-stream"));
+
+            string uri = apiURL.TrimEnd('/') + "/v2/builder/logs/submit";
+            using (UnityWebRequest uwr = UnityWebRequest.Post(uri, form))
+            {
+                uwr.SetRequestHeader("Accept", "application/json");
+                uwr.SetRequestHeader("Authorization", "Bearer " + request.AuthToken);
+
+                try
+                {
+                    await SendAsync(uwr);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error submitting log: {ex.Message}");
+                    failure?.Invoke(InternalErrorResponse(), new FailureResponse { Error = "true", Message = ex.Message });
+                    return;
+                }
+
+                HttpResponseMessage response = ToHttpResponse(uwr);
+                FailureResponse failureResponse = LogSubmission.Interpret(uwr.responseCode, uwr.downloadHandler?.text, out SubmitLogResponse submitLogResponse);
+                if (failureResponse != null)
+                {
+                    failure?.Invoke(response, failureResponse);
+                    return;
+                }
+
+                success?.Invoke(response, submitLogResponse);
+            }
+        }
+
+        private void FilterLatestPlatformModules(ref UserModulesResponse modulesResponse, string platform)
+        {
+            List<Module> modules = new List<Module>();
+            foreach (Module module in modulesResponse.modules)
+            {
+                module.versions = GetLatestPlatformModule(module.versions, platform);
+                if (module.versions.Count > 0)
+                {
+                    modules.Add(module);
+                }
+            }
+
+            modulesResponse.modules = modules;
+        }
+
+        private List<ModuleVersion> GetLatestPlatformModule(List<ModuleVersion> moduleVersions, string platform)
+        {
+            List<ModuleVersion> latestModuleVersion = new List<ModuleVersion>();
+            foreach (ModuleVersion version in moduleVersions)
+            {
+                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase)) != null)
+                {
+                    latestModuleVersion.Add(version);
+                }
+            }
+
+            return latestModuleVersion;
+        }
+
+        public async void GetModuleList_Old(string authToken, string platform)
         {
             string path = "/modules";
             if (!string.IsNullOrEmpty(platform))

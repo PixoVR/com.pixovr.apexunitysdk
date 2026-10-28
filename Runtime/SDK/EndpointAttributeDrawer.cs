@@ -27,37 +27,23 @@ namespace PixoVR.Apex
     {
         [SerializeField]
         int selectedIndex = -1;
-        
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            EndpointDisplayAttribute displayAttribute = attribute as EndpointDisplayAttribute;
-
-            if (displayAttribute.enumDisplayList.Count > 0)
+            var displayAttribute = (EndpointDisplayAttribute)attribute;
+            if (displayAttribute.enumDisplayList.Count == 0)
             {
-                int newIndex = EditorGUI.Popup(position, property.name, selectedIndex, displayAttribute.enumDisplayList.ToArray());
-                if (newIndex < 0)
-                {
-                    newIndex = property.enumValueIndex;
-                }
-
-                if (newIndex != selectedIndex)
-                {
-                    selectedIndex = newIndex;
-                    property.enumValueIndex = selectedIndex;
-                    UnityEngine.Object dirtyObject = property.serializedObject.targetObject;
-
-                    if (dirtyObject != null)
-                    {
-                        Debug.Log("Selected Index: " + selectedIndex);
-                        EditorUtility.SetDirty(dirtyObject);
-                    }
-                }
-            }
-            else
-            {
-                Debug.Log("Reset");
                 EditorGUI.PropertyField(position, property, label);
+                return;
             }
+
+            label = EditorGUI.BeginProperty(position, label, property);
+            EditorGUI.BeginChangeCheck();
+            int newIndex = EditorGUI.Popup(position, label.text, property.enumValueIndex,
+                displayAttribute.enumDisplayList.ToArray());
+            if (EditorGUI.EndChangeCheck())
+                property.enumValueIndex = newIndex;
+            EditorGUI.EndProperty();
         }
     }
 #endif

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace PixoVR.Apex
 {
@@ -27,11 +29,19 @@ namespace PixoVR.Apex
 
         public virtual void CloseCurrentApplication()
         {
-
+            #if UNITY_EDITOR
+            if (EditorApplication.isPlaying)
+            {
+                EditorApplication.isPlaying = false;
+            }
+            #else
+            Application.Quit();
+            #endif
         }
 
         public virtual Dictionary<string, string> ParseURLArguments(string url)
         {
+            url = UnityWebRequest.UnEscapeURL(url);
             Debug.Log($"Parsing URL Arguments {url}");
             string urlData = url.Substring(url.IndexOf('?') + 1);
 
@@ -48,16 +58,15 @@ namespace PixoVR.Apex
             if (optionalDataSplit.Length > 1)
             {
                 Debug.Log($"Optional data parts {optionalDataSplit[0]}  --  {optionalDataSplit[1]}");
+                urlData = optionalDataSplit[0];
                 string optionalData = optionalDataSplit[1];
                 int jsonEndPosition = optionalData.LastIndexOf('}');
                 string isolatedOptionalData = optionalData.Substring(0, jsonEndPosition + 1);
-                Debug.Log($"Isolated data: {isolatedOptionalData}");
                 parameters.Add("optional", isolatedOptionalData);
 
                 if(jsonEndPosition < optionalData.Length - 1)
                 {
                     string otherData = optionalData.Substring(jsonEndPosition + 1);
-                    Debug.Log($"Other data: {otherData}");
                     string baseData = optionalDataSplit[0];
                     if (baseData.Length > 0 && baseData.EndsWith('&'))
                     {

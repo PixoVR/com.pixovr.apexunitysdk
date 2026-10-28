@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using PixoVR.Apex.Utils;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -41,6 +42,16 @@ namespace PixoVR.Editor
                 {
                     throw new BuildFailedException("Build aborted: Please run the PixoVR Setup. Look in the PixoVR menu in the toolbar.");
                 }
+            }
+
+            if (ApexSourceHash.IsUpToDate(out string currentSourceHash))
+            {
+                Debug.Log($"Apex SDK source hash is {ApexUtils.SDKSourceHash}.");
+            }
+            else
+            {
+                Debug.LogWarning($"Apex SDK source hash {ApexUtils.SDKSourceHash} does not match the SDK sources ({currentSourceHash}). " +
+                    "The SDK was modified without regenerating Runtime/SDK/ApexSourceHashGenerated.cs.");
             }
 
             if (!ProjectSettings.SyncVersionsOnBuildPreProcess)

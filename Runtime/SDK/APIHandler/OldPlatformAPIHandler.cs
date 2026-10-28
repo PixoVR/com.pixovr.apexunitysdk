@@ -23,7 +23,7 @@ namespace PixoVR.Apex
         RT_GET_USER_METRICS_FOR_ORG,
     }
 
-    public class PlatformAPIHandler : BaseAPIHandler
+    public class OldPlatformAPIHandler : BaseAPIHandler
     {
         public delegate void APIResponse(ResponseType type, HttpResponseMessage message, object responseData);
         public APIResponse OnAPIResponse;
@@ -31,15 +31,14 @@ namespace PixoVR.Apex
         protected string URL = "";
         protected HttpClient handlingClient = null;
 
-
         // Need to migrate to this in the future
         protected string apiURL = "";
         protected HttpClient apiHandlingClient = null;
 
-        public PlatformAPIHandler()
+        public OldPlatformAPIHandler()
             : this(PlatformEndpoints.NorthAmerica_ProductionEnvironment) { }
 
-        public PlatformAPIHandler(string endpointUrl)
+        public OldPlatformAPIHandler(string endpointUrl)
         {
             handlingClient = new HttpClient();
             SetEndpoint(endpointUrl);
@@ -58,7 +57,7 @@ namespace PixoVR.Apex
         public override void SetEndpoint(string endpointUrl)
         {
             URL = endpointUrl;
-            Debug.Log("[PlatformAPIHandler] Set Endpoint to " + URL);
+            Debug.Log("[OldPlatformAPIHandler] Set Endpoint to " + URL);
             handlingClient.BaseAddress = new Uri(URL);
         }
 
@@ -169,7 +168,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<UserMetricsResponse, object> success, Action<HttpResponseMessage, FailureResponse> failure)
+        public override async void GetUserMetricsForOrg(string authToken, int orgID, int page, FilterParams filterParams, Action<HttpResponseMessage, UserMetricsResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -202,7 +201,6 @@ namespace PixoVR.Apex
                 var failureResponse = GetGQLFailureResponse(jsonResponse, "userMetrics");
                 if (failureResponse != null)
                 {
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_USER_METRICS_FOR_ORG, response, failureResponse);
                     failure?.Invoke(response, failureResponse);
                     return;
                 }
@@ -212,7 +210,7 @@ namespace PixoVR.Apex
                 userMetricsResponse.result.ForEach(u => u.RefreshDisplayFields());
                 responseContent = userMetricsResponse;
 
-                success?.Invoke(userMetricsResponse, response);
+                success?.Invoke(response, userMetricsResponse);
             }
             catch (Exception ex)
             {
@@ -296,7 +294,7 @@ namespace PixoVR.Apex
                 variables = new
                 {
                     userId = sessionFilters.userIDs[0],
-                    limit = 10,  
+                    limit = 10,
                     page = page,
 
                     @params = paramsInput,
@@ -386,7 +384,7 @@ namespace PixoVR.Apex
             success?.Invoke(response, userInformation);
         }
 
-        public override async void GetUserData(string authToken, int userId)
+        public override async void GetUserData(string authToken, int userId, Action<HttpResponseMessage, GetUserResponseContent> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -394,17 +392,18 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.GetAsync(string.Format("/user/{0}", userId));
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
-            GetUserResponseContent userInfo = responseContent as GetUserResponseContent;
-            if ((responseContent as GetUserResponseContent).HasErrored())
+            GetUserResponseContent responseContent = JsonConvert.DeserializeObject<GetUserResponseContent>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
-        public override async void GetUserModules(string authToken, int userId)
+        public override async void GetUserModules(string authToken, int userId, Action<HttpResponseMessage, GetUserModulesResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             handlingClient.DefaultRequestHeaders.Clear();
             handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -417,20 +416,22 @@ namespace PixoVR.Apex
 
             HttpResponseMessage response = await handlingClient.PostAsync("/access/users", loginRequestContent);
             string body = await response.Content.ReadAsStringAsync();
-            object responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
-            if ((responseContent as GetUserModulesResponse).HasErrored())
+            GetUserModulesResponse responseContent = JsonConvert.DeserializeObject<GetUserModulesResponse>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
             else
             {
-                (responseContent as GetUserModulesResponse).ParseData();
+                responseContent.ParseData();
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_GET_USER_MODULES, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
-        public override async void GetQuickIDAuthenticationUsers(string serialNumber)
+        public override async void GetQuickIDAuthenticationUsers(string serialNumber, Action<HttpResponseMessage, QuickIDAuthGetUsersResponse> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
             apiHandlingClient.DefaultRequestHeaders.Clear();
             apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -440,13 +441,15 @@ namespace PixoVR.Apex
 
             Debug.Log($"[Platform API] Body returned as {body}");
 
-            object responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
-            if ((responseContent as QuickIDAuthGetUsersResponse).HasErrored())
+            QuickIDAuthGetUsersResponse responseContent = JsonConvert.DeserializeObject<QuickIDAuthGetUsersResponse>(body);
+            if (responseContent.HasErrored())
             {
-                responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
+                FailureResponse failureResponse = JsonConvert.DeserializeObject<FailureResponse>(body);
+                failure?.Invoke(response, failureResponse);
+                return;
             }
 
-            OnAPIResponse.Invoke(ResponseType.RT_QUICK_ID_AUTH_GET_USERS, response, responseContent);
+            success?.Invoke(response, responseContent);
         }
 
         public override async void QuickIDLogin(QuickIDLoginData login, Action<HttpResponseMessage, ActiveUserInformation> success, Action<HttpResponseMessage, FailureResponse> failure)
@@ -631,52 +634,82 @@ namespace PixoVR.Apex
             success?.Invoke(response, null);
         }
 
-        public override async void GetModuleList(string authToken, string platform)
+        private static HttpResponseMessage InternalErrorResponse()
+            => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+
+        public override async void GetModuleList(string authToken, int userID, string platform, Action<HttpResponseMessage, object> success, Action<HttpResponseMessage, FailureResponse> failure)
         {
-            handlingClient.DefaultRequestHeaders.Clear();
-            handlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            handlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            apiHandlingClient.DefaultRequestHeaders.Clear();
+            apiHandlingClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            apiHandlingClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            string endpoint = "/modules";
-            if (platform != null && platform.Length > 0)
+            var graphqlRequest = new
             {
-                endpoint += $"?platform={platform}";
-            }
+                operationName = "user",
+                variables = new { id = userID },
+                query = "query user($id: ID!) { user(id: $id) { modules { id abbreviation externalId imageLink developer description shortDesc longDesc industry details categories isAvailable isAuthenticatedLaunch availableLanguages { displayName } modulePlayer { id name launchProtocol versions { id version status fileLink fileSize platforms { id name shortName } } } versions { id version createdAt fileLink fileSize controls { id name } platforms { id name shortName } } } } }"
+                // TODO: Use this query when lifecycles is added to production - query = "query user($id: ID!) { user(id: $id) { modules { id imageLink developer description shortDesc isAvailable modulePlayer { id } versions { id createdAt controls { id name } platforms { id name shortName } lifecycle { id name } } } } }"
+            };
 
-            Debug.Log($"GetModuleList built endpoint: {endpoint}");
+            string jsonContent = JsonConvert.SerializeObject(graphqlRequest);
 
-            HttpResponseMessage response = await handlingClient.GetAsync(endpoint);
-            string body = await response.Content.ReadAsStringAsync();
-
+            HttpContent requestContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            HttpResponseMessage response;
             try
             {
-                if (body.Contains("\"Error\":", StringComparison.CurrentCultureIgnoreCase))
+                response = await apiHandlingClient.PostAsync("/v2/query", requestContent);
+                string body = await response.Content.ReadAsStringAsync();
+                Debug.Log("Body: " + body);
+
+                JObject jsonResponse = JObject.Parse(body);
+                var failureResponse = GetGQLFailureResponse(jsonResponse, "user");
+                if (failureResponse != null)
                 {
-                    var responseContent = JsonConvert.DeserializeObject<FailureResponse>(body);
-                    OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, responseContent);
+                    failure?.Invoke(response, failureResponse);
                     return;
                 }
+
+                var userModulesJSON = jsonResponse["data"]["user"];
+                var userModulesResponse =
+                    JsonConvert.DeserializeObject<UserModulesResponse>(userModulesJSON.ToString());
+                FilterLatestPlatformModules(ref userModulesResponse, platform);
+                success?.Invoke(response, userModulesResponse);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning(ex);
+                Debug.LogError($"Error retrieving users: {ex.Message}");
+                response = InternalErrorResponse();
+                failure?.Invoke(response, new FailureResponse { Error = "true", Message = ex.Message });
             }
+        }
 
-            List<OrgModule> orgModules = new List<OrgModule>();
-            JArray array = JArray.Parse(body);
-            if (array != null)
+        private void FilterLatestPlatformModules(ref UserModulesResponse modulesResponse, string platform)
+        {
+            List<Module> modules = new List<Module>();
+            foreach (Module module in modulesResponse.modules)
             {
-                var tokens = array.Children();
-                foreach (JToken selectedToken in tokens)
+                module.versions = GetLatestPlatformModule(module.versions, platform);
+                if (module.versions.Count > 0)
                 {
-                    OrgModule orgModule = new OrgModule();
-                    orgModule.Parse(selectedToken);
-                    orgModules.Add(orgModule);
+                    modules.Add(module);
                 }
             }
 
-            Debug.Log(orgModules.Count.ToString());
-            OnAPIResponse.Invoke(ResponseType.RT_GET_MODULES_LIST, response, orgModules);
+            modulesResponse.modules = modules;
+        }
+
+        private List<ModuleVersion> GetLatestPlatformModule(List<ModuleVersion> moduleVersions, string platform)
+        {
+            List<ModuleVersion> latestModuleVersion = new List<ModuleVersion>();
+            foreach (ModuleVersion version in moduleVersions)
+            {
+                if (version.platforms.Find((versionPlatform) => string.Equals(versionPlatform.name, platform, StringComparison.OrdinalIgnoreCase)) != null)
+                {
+                    latestModuleVersion.Add(version);
+                }
+            }
+
+            return latestModuleVersion;
         }
 
         private FailureResponse GetGQLFailureResponse(JObject jsonResponse, string jsonDataObjectKey)
