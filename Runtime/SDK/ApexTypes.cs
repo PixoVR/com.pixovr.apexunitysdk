@@ -147,6 +147,7 @@ namespace PixoVR.Apex
         public string Role;
         public Organization Org;
         public int MinimumPassingScore;
+        public List<License> Licenses = new List<License>();
 
         public bool HasErrored()
         {
@@ -159,6 +160,24 @@ namespace PixoVR.Apex
             var isPlatformOrg = Org != null && !String.IsNullOrEmpty(Org.Type) && Org.Type.Equals("platform", StringComparison.CurrentCultureIgnoreCase);
             return isPlatformOrg && isSuperAdmin;
         }
+
+        public bool HasLicense(string type)
+        {
+            return Licenses != null && Licenses.Exists(license => license.Type == type);
+        }
+    }
+
+    public static class LicenseTypes
+    {
+        public const string PixoBuilder = "pixo-builder";
+    }
+
+    [Serializable]
+    public class License
+    {
+        public int Id;
+        public string Type;
+        public string Name;
     }
 
     [Serializable]
@@ -532,6 +551,7 @@ namespace PixoVR.Apex
         public int OrgId { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string AuthToken { get; set; }
+        public List<License> Licenses { get; set; }
     }
 
 
