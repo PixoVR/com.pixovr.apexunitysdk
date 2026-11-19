@@ -514,6 +514,7 @@ namespace PixoVR.Apex
                     loginResponseContent.Email = platformLoginResponse.User.Email;
                     loginResponseContent.Role = platformLoginResponse.User.Role;
                     loginResponseContent.Org = platformLoginResponse.User.Org;
+                    loginResponseContent.Licenses = platformLoginResponse.User.Licenses ?? new List<License>();
                 }
                 else
                 {
